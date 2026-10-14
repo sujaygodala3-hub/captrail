@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microscope | Captrail</title>
+<meta name="description" content="Connect the Celestron USB microscope, capture nailfold images, calibrate to micrometers and send scans to the Captrail model.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  .page-hero{padding:140px 0 44px}
+  .page-hero h1{font-size:clamp(46px,7vw,96px)}
+  .page-hero .sub{font-size:clamp(16px,1.5vw,19px);max-width:760px;margin-top:22px;color:#2c2422}
+  .how3{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+  .how3 span{font-size:14px;padding:8px 14px;border-radius:999px;background:var(--paper);border:1px solid var(--line)}
+  .how3 b{color:var(--red);font-weight:600;margin-right:6px}
+
+  .lab{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;padding-bottom:110px;align-items:start}
+  .stage-wrap{background:var(--dark);border-radius:20px;padding:14px;color:#fff;position:sticky;top:76px}
+  .stage{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;max-height:calc(100vh - 260px);margin:0 auto}
+  .stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .stage video{object-fit:contain}
+  #overlay{cursor:default;touch-action:none}
+  .stage.picking #overlay{cursor:crosshair}
+  .empty-state{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:rgba(255,255,255,.7);
+    background:radial-gradient(600px 300px at 50% 120%,rgba(176,30,44,.45),transparent 70%)}
+  .empty-state svg{width:54px;height:54px;color:#E0535F;margin:0 auto 14px}
+  .empty-state b{display:block;color:#fff;font:500 22px/1.2 var(--display);margin-bottom:6px}
+  .hud{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+  .hud span{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+  .hud .live{color:#fff}.hud .live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#E0535F;margin-right:7px;animation:blink 1.4s infinite}
+  .hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font-size:13px;padding:8px 14px;border-radius:999px;background:var(--red);color:#fff;white-space:nowrap;pointer-events:none}
+
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 2px 2px}
+  .tb{display:inline-flex;align-items:center;gap:8px;font:500 14px/1 var(--body);padding:11px 15px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;transition:background .2s,border-color .2s}
+  .tb:hover:not(:disabled){background:rgba(255,255,255,.14)}
+  .tb:disabled{opacity:.35;cursor:not-allowed}
+  .tb.primary{background:var(--red);border-color:var(--red)}
+  .tb.primary:hover:not(:disabled){background:#a3222d}
+  .tb.on{background:#fff;color:var(--ink);border-color:#fff}
+  .tb svg{width:16px;height:16px}
+  .bar .spacer{flex:1}
+
+  .gallery{display:flex;gap:10px;overflow-x:auto;padding:14px 2px 4px;scrollbar-width:thin}
+  .thumb{position:relative;flex:none;width:120px;aspect-ratio:16/10;border-radius:8px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:#222;padding:0}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb.sel{border-color:#E0535F}
+  .thumb .sc{position:absolute;left:5px;bottom:5px;font-size:10.5px;padding:3px 6px;border-radius:5px;background:rgba(0,0,0,.65);color:#fff}
+  .thumb .best{position:absolute;right:5px;top:5px;font-size:10px;font-weight:600;letter-spacing:.08em;padding:3px 6px;border-radius:5px;background:var(--red);color:#fff}
+  .live-thumb{display:grid;place-items:center;color:#fff;font-size:12px;background:linear-gradient(135deg,#3a0a10,#1a0507)}
+  .gallery-empty{font-size:13px;color:rgba(255,255,255,.5);padding:10px 4px}
+
+  .side{display:grid;gap:14px}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px}
+  .panel h3{font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .panel h3 .n{font:600 11px/1 var(--body);letter-spacing:.1em;color:#fff;background:var(--red);border-radius:999px;padding:5px 8px}
+  .panel p{font-size:14.5px;color:var(--muted);margin:0 0 14px}
+  .panel label{display:block;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+  .panel select,.panel input[type=number]{width:100%;font:inherit;font-size:15px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .pb{font:500 14px/1 var(--body);padding:11px 16px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+  .pb:hover:not(:disabled){background:var(--ink);color:#fff}
+  .pb.red{background:var(--red);border-color:var(--red);color:#fff}
+  .pb.red:hover:not(:disabled){background:var(--red-deep);border-color:var(--red-deep)}
+  .pb:disabled{opacity:.4;cursor:not-allowed}
+  .status{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--bg)}
+  .status i{width:8px;height:8px;border-radius:50%;background:#bdb3b0;flex:none}
+  .status.ok i{background:#2f9e5b}.status.warn i{background:#d08a1c}.status.err i{background:var(--red)}
+  .big-val{font:500 34px/1 var(--display);letter-spacing:-.03em;color:var(--red);margin-top:4px}
+  .big-val small{font-size:15px;color:var(--muted);letter-spacing:0;margin-left:4px}
+  .mlist{list-style:none;margin:12px 0 0;padding:0;font-size:14.5px}
+  .mlist li{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
+  .mlist li button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+  .findings{list-style:none;margin:12px 0 0;padding:0;font-size:14.5px}
+  .findings li{padding:10px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+  .findings b{font-weight:500}
+  .note{font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.5}
+  .note code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
+  .calib-form{display:none;margin-top:12px;padding:14px;border-radius:12px;background:var(--red-tint)}
+  .calib-form.show{display:block}
+  .calib-form label{margin-top:0}
+  .privacy{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:flex-start;padding:14px 4px 0}
+  .privacy svg{width:18px;height:18px;flex:none;color:var(--red);margin-top:1px}
+
+  @media (max-width:1060px){
+    .lab{grid-template-columns:1fr}
+    .stage-wrap{position:relative;top:0}
+    .stage{max-height:none}
+  }
+  @media (max-width:560px){
+    .stage-wrap{padding:10px;border-radius:16px}
+    .tb{padding:10px 12px;font-size:13px}
+    .tb .lbl{display:none}
+    .hint{font-size:12px;white-space:normal;width:90%;text-align:center}
+  }
+</style>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap">
+  <section class="page-hero">
+    <p class="eyebrow">Microscope</p>
+    <h1>Connect the Celestron</h1>
+    <p class="sub">The Celestron Labs microscope shows up as a USB camera, so this page can read it directly: live view, capture, calibration to micrometers, and sending scans to the Captrail model. Already saving images in Celestron’s own app? Upload them here instead.</p>
+    <div class="how3"><span><b>1</b>Plug in over USB</span><span><b>2</b>Calibrate with the slide</span><span><b>3</b>Capture, measure, analyze</span></div>
+  </section>
+
+  <section class="lab">
+    <div class="stage-wrap">
+      <div class="stage" id="stage">
+        <video id="video" playsinline muted hidden></video>
+        <canvas id="view" hidden></canvas>
+        <canvas id="overlay" hidden></canvas>
+        <div class="empty-state" id="empty">
+          <div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h4l-1 7H10z"/><path d="M11 10v3"/><circle cx="11" cy="15" r="2"/><path d="M15 11a6 6 0 0 1 0 9M4 21h16"/></svg>
+            <b>No microscope connected</b>
+            Plug in the Celestron, then press Connect.<br>Or upload images saved from the Celestron app.
+          </div>
+        </div>
+        <div class="hud" id="hud"></div>
+        <div class="hint" id="hint" hidden></div>
+      </div>
+
+      <div class="bar">
+        <button class="tb primary" id="btnCapture" disabled title="Capture one frame (Space)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><span class="lbl">Capture</span></button>
+        <button class="tb" id="btnBurst" disabled title="Take 8 frames and keep the sharpest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="M7 4h12a2 2 0 0 1 2 2v9"/></svg><span class="lbl">Best of 8</span></button>
+        <button class="tb" id="btnLive" disabled title="Back to live view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg><span class="lbl">Live</span></button>
+        <span class="spacer"></span>
+        <button class="tb" id="btnEnhance" disabled title="Green-channel contrast boost to make capillaries stand out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl">Enhance</span></button>
+        <button class="tb" id="btnMeasure" disabled title="Click two points to measure">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2"/></svg><span class="lbl">Measure</span></button>
+        <button class="tb" id="btnDownload" disabled title="Save this image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Save</span></button>
+        <button class="tb" id="btnDelete" disabled title="Remove this image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button>
+      </div>
+      <div class="gallery" id="gallery"><div class="gallery-empty">Captured and uploaded images appear here, scored for sharpness.</div></div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <h3><span class="n">01</span>Connect</h3>
+        <p>Use Chrome, Edge or Safari. Your browser will ask for camera permission.</p>
+        <div class="row"><button class="pb red" id="btnConnect">Connect microscope</button>
+          <label class="pb" style="display:inline-flex;align-items:center;margin:0;text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;color:var(--ink)">Upload images<input type="file" id="fileIn" accept="image/*" multiple hidden></label></div>
+        <label for="devSel">Camera</label>
+        <select id="devSel" disabled><option>Connect first</option></select>
+        <label for="resSel">Resolution</label>
+        <select id="resSel"><option value="1920x1080" selected>1920 × 1080 (Celestron max)</option><option value="1280x720">1280 × 720</option><option value="640x480">640 × 480</option></select>
+        <div class="status" id="connStatus"><i></i><span>Not connected</span></div>
+      </div>
+
+      <div class="panel">
+        <h3><span class="n">02</span>Calibrate</h3>
+        <p>Capture the 0.01 mm slide at the same height and zoom you’ll use for the finger, then click two tick marks a known distance apart.</p>
+        <div class="big-val" id="calVal">— <small>µm / px</small></div>
+        <div class="row"><button class="pb" id="btnCal" disabled>Calibrate on this image</button><button class="pb" id="btnCalClear">Reset</button></div>
+        <div class="calib-form" id="calForm">
+          <label for="calUm">Distance between your two clicks (µm)</label>
+          <input type="number" id="calUm" value="100" min="1" step="1">
+          <div class="row"><button class="pb red" id="calSave">Save calibration</button><button class="pb" id="calCancel">Cancel</button></div>
+        </div>
+        <div class="status" id="calStatus"><i></i><span>Not calibrated</span></div>
+      </div>
+
+      <div class="panel">
+        <h3><span class="n">03</span>Measurements</h3>
+        <p>Pick Measure in the toolbar and click across a capillary loop.</p>
+        <ul class="mlist" id="mlist"><li style="color:var(--muted)">None yet</li></ul>
+      </div>
+
+      <div class="panel">
+        <h3><span class="n">04</span>AI analysis</h3>
+        <p>Sends the selected image and calibration to the Captrail model. Results are for a clinician to review, never a diagnosis.</p>
+        <div class="row"><button class="pb red" id="btnAnalyze" disabled>Analyze this image</button></div>
+        <div class="status" id="aiStatus"><i></i><span>Model not connected yet</span></div>
+        <ul class="findings" id="findings"></ul>
+        <p class="note">Developers: set <code>ANALYZE_ENDPOINT</code> in scan.html. It receives a POST with <code>image</code> (PNG) and <code>um_per_px</code>, and returns JSON like <code>{"findings":[{"label":"giant loop","confidence":0.82,"box":[x,y,w,h]}],"width_um":21.4,"density_per_mm":7.1}</code>.</p>
+      </div>
+
+      <div class="privacy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg>
+        <span>Images stay in this browser tab and disappear when you close it. Nothing is uploaded unless you press Analyze. Get consent before imaging anyone.</span>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="site.js"></script>
+<script>
+(() => {
+  /* Where the Captrail model lives. Leave '' until the model is deployed. */
+  const ANALYZE_ENDPOINT = '';
+
+  const $ = id => document.getElementById(id);
+  const video = $('video'), view = $('view'), overlay = $('overlay'), stage = $('stage'), hint = $('hint');
+  const vctx = view.getContext('2d'), octx = overlay.getContext('2d');
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem('captrail.' + k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem('captrail.' + k, JSON.stringify(v)); } catch {} },
+  };
+
+  let stream = null, frames = [], sel = null, mode = 'none', pts = [], enhance = false;
+  let calib = store.get('calib'); // { umPerPx, w, h, at }
+
+  /* ---------- status helpers ---------- */
+  function setStatus(el, kind, text) { el.className = 'status ' + (kind || ''); el.querySelector('span').textContent = text; }
+  function showHint(t) { hint.hidden = !t; hint.textContent = t || ''; }
+
+  /* ---------- camera ---------- */
+  const scopeRx = /celestron|microscope|scope|digital|usb|uvc/i, builtInRx = /facetime|integrated|built-in|front|back|virtual|obs/i;
+  async function listDevices(preferId) {
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const ds = $('devSel');
+    ds.innerHTML = devs.map((d, i) => `<option value="${d.deviceId}">${d.label || 'Camera ' + (i + 1)}</option>`).join('');
+    ds.disabled = !devs.length;
+    const saved = preferId || store.get('deviceId');
+    const pick = devs.find(d => d.deviceId === saved) || devs.find(d => scopeRx.test(d.label) && !builtInRx.test(d.label)) || devs[0];
+    if (pick) ds.value = pick.deviceId;
+    return pick;
+  }
+  async function startCamera(deviceId) {
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setStatus($('connStatus'), 'err', 'Camera access needs https:// or localhost.'); return;
+    }
+    stopCamera();
+    const [w, h] = $('resSel').value.split('x').map(Number);
+    try {
+      setStatus($('connStatus'), '', 'Connecting…');
+      stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: deviceId ? { exact: deviceId } : undefined, width: { ideal: w }, height: { ideal: h } }, audio: false });
+      const track = stream.getVideoTracks()[0];
+      const label = track.label || 'Camera';
+      const id = track.getSettings().deviceId;
+      // First connect only reveals device names after permission, so re-pick the microscope if we grabbed a built-in camera.
+      if (!deviceId) {
+        const pick = await listDevices();
+        if (pick && pick.deviceId !== id) return startCamera(pick.deviceId);
+      } else await listDevices(id);
+      store.set('deviceId', id);
+      video.srcObject = stream; await video.play();
+      const s = track.getSettings();
+      const looksLikeScope = scopeRx.test(label) && !builtInRx.test(label);
+      setStatus($('connStatus'), looksLikeScope ? 'ok' : 'warn', looksLikeScope ? `${label} · ${s.width}×${s.height}` : `${label} · ${s.width}×${s.height}. Is this the microscope? Pick it above.`);
+      $('btnConnect').textContent = 'Reconnect';
+      goLive();
+    } catch (e) {
+      setStatus($('connStatus'), 'err', e.name === 'NotAllowedError' ? 'Camera permission was blocked. Allow it in the address bar.' : e.name === 'NotFoundError' ? 'No camera found. Is the microscope plugged in?' : 'Could not start: ' + e.message);
+    }
+  }
+  function stopCamera() { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
+  $('btnConnect').onclick = () => startCamera($('devSel').disabled ? null : $('devSel').value);
+  $('devSel').onchange = e => startCamera(e.target.value);
+  $('resSel').onchange = () => stream && startCamera($('devSel').value);
+  navigator.mediaDevices?.addEventListener?.('devicechange', () => stream && listDevices());
+
+  /* ---------- views ---------- */
+  function goLive() {
+    sel = null; setMode('none');
+    $('empty').hidden = true; video.hidden = false; view.hidden = overlay.hidden = true;
+    stage.style.aspectRatio = (video.videoWidth || 16) + '/' + (video.videoHeight || 9);
+    renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings();
+  }
+  function showFrame(f) {
+    sel = f; setMode('none');
+    $('empty').hidden = true; video.hidden = true; view.hidden = overlay.hidden = false;
+    view.width = overlay.width = f.w; view.height = overlay.height = f.h;
+    stage.style.aspectRatio = f.w + '/' + f.h;
+    drawFrame(); renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings();
+  }
+  function drawFrame() {
+    if (!sel) return;
+    vctx.drawImage(enhance ? (sel.enh ||= enhanceCanvas(sel.canvas)) : sel.canvas, 0, 0);
+    drawOverlay();
+  }
+  function renderHud() {
+    const h = $('hud'); const bits = [];
+    if (!sel && stream) bits.push('<span class="live">Live</span>');
+    if (sel) bits.push(`<span>${sel.source === 'scope' ? 'Captured' : 'Uploaded'} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
+    if (enhance && sel) bits.push('<span>Enhanced view</span>');
+    h.innerHTML = bits.join('');
+  }
+  function syncButtons() {
+    const live = !!stream && !sel;
+    $('btnCapture').disabled = $('btnBurst').disabled = !live;
+    $('btnLive').disabled = !stream || !sel;
+    ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
+    $('btnAnalyze').disabled = !sel;
+    $('btnEnhance').classList.toggle('on', enhance);
+    $('btnMeasure').classList.toggle('on', mode === 'measure');
+  }
+
+  /* ---------- capture ---------- */
+  function grab() {
+    const c = document.createElement('canvas'); c.width = video.videoWidth; c.height = video.videoHeight;
+    c.getContext('2d').drawImage(video, 0, 0); return c;
+  }
+  function addFrame(canvas, source, name) {
+    const f = { id: crypto.randomUUID?.() || String(Date.now() + Math.random()), canvas, w: canvas.width, h: canvas.height, source, name,
+      at: new Date(), score: sharpness(canvas), measures: [], ai: null, thumb: thumbOf(canvas) };
+    frames.push(f); return f;
+  }
+  $('btnCapture').onclick = () => { if (stream && !sel) showFrame(addFrame(grab(), 'scope')); };
+  $('btnBurst').onclick = async () => {
+    const b = $('btnBurst'); b.disabled = true;
+    const shots = [];
+    for (let i = 0; i < 8; i++) { showHint(`Hold still… ${i + 1}/8`); shots.push(grab()); await new Promise(r => setTimeout(r, 140)); }
+    showHint('');
+    const scored = shots.map(c => [sharpness(c), c]).sort((a, b) => b[0] - a[0]);
+    showFrame(addFrame(scored[0][1], 'scope'));
+  };
+  $('btnLive').onclick = goLive;
+  $('fileIn').onchange = async e => {
+    let last;
+    for (const file of e.target.files) {
+      try {
+        const bmp = await createImageBitmap(file);
+        const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height; c.getContext('2d').drawImage(bmp, 0, 0);
+        last = addFrame(c, 'upload', file.name);
+      } catch { /* skip unreadable files */ }
+    }
+    e.target.value = '';
+    if (last) showFrame(last);
+  };
+
+  /* ---------- image processing ---------- */
+  // Sharpness = variance of the Laplacian on a downscaled grayscale copy. Higher is sharper.
+  function sharpness(src) {
+    const W = 320, H = Math.round(src.height * W / src.width);
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0, W, H);
+    const d = x.getImageData(0, 0, W, H).data, g = new Float32Array(W * H);
+    for (let i = 0; i < W * H; i++) g[i] = .299 * d[i * 4] + .587 * d[i * 4 + 1] + .114 * d[i * 4 + 2];
+    let sum = 0, sum2 = 0, n = 0;
+    for (let y = 1; y < H - 1; y++) for (let xx = 1; xx < W - 1; xx++) {
+      const i = y * W + xx, l = g[i - 1] + g[i + 1] + g[i - W] + g[i + W] - 4 * g[i];
+      sum += l; sum2 += l * l; n++;
+    }
+    return Math.round(sum2 / n - (sum / n) ** 2);
+  }
+  // Capillaries absorb green light, so the green channel shows them darkest. Stretch its contrast and sharpen.
+  function enhanceCanvas(src) {
+    const { width: W, height: H } = src;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0);
+    const img = x.getImageData(0, 0, W, H), d = img.data, n = W * H;
+    const hist = new Uint32Array(256), g = new Uint8ClampedArray(n);
+    for (let i = 0; i < n; i++) { g[i] = d[i * 4 + 1]; hist[g[i]]++; }
+    let lo = 0, hi = 255, acc = 0;
+    for (; lo < 255; lo++) { acc += hist[lo]; if (acc > n * .01) break; }
+    acc = 0; for (; hi > 0; hi--) { acc += hist[hi]; if (acc > n * .01) break; }
+    const span = Math.max(1, hi - lo), s = new Float32Array(n);
+    for (let i = 0; i < n; i++) s[i] = (g[i] - lo) * 255 / span;
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      const i = y * W + xx;
+      let v = s[i];
+      if (y > 0 && y < H - 1 && xx > 0 && xx < W - 1) v = 2 * v - (s[i - 1] + s[i + 1] + s[i - W] + s[i + W] + v) / 5;
+      d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255;
+    }
+    x.putImageData(img, 0, 0); return c;
+  }
+  function thumbOf(src) {
+    const c = document.createElement('canvas'); c.width = 240; c.height = Math.round(src.height * 240 / src.width);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', .8);
+  }
+  $('btnEnhance').onclick = () => { enhance = !enhance; drawFrame(); renderHud(); syncButtons(); };
+
+  /* ---------- gallery ---------- */
+  function renderGallery() {
+    const g = $('gallery');
+    if (!frames.length && !stream) { g.innerHTML = '<div class="gallery-empty">Captured and uploaded images appear here, scored for sharpness.</div>'; return; }
+    const best = frames.reduce((m, f) => Math.max(m, f.score), -1);
+    g.innerHTML = (stream ? `<button class="thumb live-thumb${sel ? '' : ' sel'}" data-live>● Live</button>` : '') +
+      frames.map(f => `<button class="thumb${sel === f ? ' sel' : ''}" data-id="${f.id}" title="${f.name || 'Capture'}"><img src="${f.thumb}" alt=""><span class="sc">${f.score}</span>${frames.length > 1 && f.score === best ? '<span class="best">SHARPEST</span>' : ''}</button>`).join('');
+    g.querySelectorAll('.thumb').forEach(b => b.onclick = () => b.dataset.live !== undefined ? goLive() : showFrame(frames.find(f => f.id === b.dataset.id)));
+  }
+  $('btnDelete').onclick = () => {
+    if (!sel) return;
+    frames = frames.filter(f => f !== sel);
+    if (frames.length) showFrame(frames[frames.length - 1]);
+    else if (stream) goLive();
+    else { sel = null; video.hidden = view.hidden = overlay.hidden = true; $('empty').hidden = false; stage.style.aspectRatio = '16/9'; renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings(); }
+  };
+  $('btnDownload').onclick = () => {
+    if (!sel) return;
+    const out = document.createElement('canvas'); out.width = sel.w; out.height = sel.h;
+    const x = out.getContext('2d'); x.drawImage(view, 0, 0); x.drawImage(overlay, 0, 0);
+    out.toBlob(b => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+      a.download = `captrail-${sel.at.toISOString().replace(/[:.]/g, '-')}.png`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }, 'image/png');
+  };
+
+  /* ---------- clicking on the image: calibrate + measure ---------- */
+  function setMode(m) {
+    mode = m; pts = [];
+    stage.classList.toggle('picking', m !== 'none');
+    showHint(m === 'calibrate' ? 'Click two tick marks on the calibration slide' : m === 'measure' ? 'Click two points to measure. Esc to stop.' : '');
+    if (m !== 'calibrate') $('calForm').classList.remove('show');
+    syncButtons(); drawOverlay();
+  }
+  $('btnMeasure').onclick = () => setMode(mode === 'measure' ? 'none' : 'measure');
+  $('btnCal').onclick = () => setMode('calibrate');
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape') setMode('none');
+    if (e.code === 'Space' && !e.target.closest('input,select,button,textarea') && !$('btnCapture').disabled) { e.preventDefault(); $('btnCapture').click(); }
+  });
+  overlay.addEventListener('pointerdown', e => {
+    if (mode === 'none' || !sel) return;
+    const r = overlay.getBoundingClientRect();
+    pts.push([(e.clientX - r.left) * sel.w / r.width, (e.clientY - r.top) * sel.h / r.height]);
+    if (pts.length === 2) {
+      const px = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+      if (mode === 'measure') { sel.measures.push({ a: pts[0], b: pts[1], px }); pts = []; renderMeasures(); }
+      else if (mode === 'calibrate') { showHint(''); $('calForm').classList.add('show'); $('calUm').focus(); }
+    } else if (pts.length > 2) pts = [pts[2]];
+    drawOverlay();
+  });
+  $('calSave').onclick = () => {
+    const um = parseFloat($('calUm').value);
+    if (pts.length !== 2 || !(um > 0)) return;
+    const px = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+    calib = { umPerPx: um / px, w: sel.w, h: sel.h, at: Date.now() };
+    store.set('calib', calib); setMode('none'); renderCalib(); renderMeasures();
+  };
+  $('calCancel').onclick = () => setMode('none');
+  $('btnCalClear').onclick = () => { calib = null; store.set('calib', null); renderCalib(); renderMeasures(); };
+  function umPerPx() { return calib && sel && calib.w === sel.w && calib.h === sel.h ? calib.umPerPx : null; }
+  function renderCalib() {
+    $('calVal').innerHTML = calib ? `${calib.umPerPx.toFixed(3)} <small>µm / px</small>` : '— <small>µm / px</small>';
+    if (!calib) return setStatus($('calStatus'), '', 'Not calibrated');
+    if (sel && (calib.w !== sel.w || calib.h !== sel.h)) return setStatus($('calStatus'), 'warn', `Calibrated at ${calib.w}×${calib.h}; this image is ${sel.w}×${sel.h}. Recalibrate.`);
+    setStatus($('calStatus'), 'ok', `Calibrated ${new Date(calib.at).toLocaleDateString()} at ${calib.w}×${calib.h}. Recalibrate if zoom or height changes.`);
+  }
+  function renderMeasures() {
+    renderCalib();
+    const l = $('mlist'), k = umPerPx();
+    if (!sel || !sel.measures.length) { l.innerHTML = '<li style="color:var(--muted)">None yet</li>'; drawOverlay(); return; }
+    l.innerHTML = sel.measures.map((m, i) => `<li><span>#${i + 1}</span><span><b>${k ? (m.px * k).toFixed(1) + ' µm' : m.px.toFixed(0) + ' px'}</b>${k ? '' : ' (calibrate for µm)'}</span><button data-i="${i}" aria-label="Remove">×</button></li>`).join('');
+    l.querySelectorAll('button').forEach(b => b.onclick = () => { sel.measures.splice(+b.dataset.i, 1); renderMeasures(); });
+    drawOverlay();
+  }
+  function drawOverlay() {
+    if (!sel) return;
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    const lw = Math.max(2, sel.w / 640), k = umPerPx();
+    octx.lineWidth = lw; octx.font = `600 ${Math.round(lw * 9)}px Inter, sans-serif`;
+    const dot = (p, c) => { octx.fillStyle = c; octx.beginPath(); octx.arc(p[0], p[1], lw * 2.6, 0, 7); octx.fill(); };
+    const label = (t, x, y) => { const w = octx.measureText(t).width + lw * 8; octx.fillStyle = 'rgba(0,0,0,.7)'; octx.fillRect(x - w / 2, y - lw * 14, w, lw * 11); octx.fillStyle = '#fff'; octx.textAlign = 'center'; octx.fillText(t, x, y - lw * 5.5); };
+    sel.measures.forEach((m, i) => {
+      octx.strokeStyle = '#FFD166'; octx.beginPath(); octx.moveTo(...m.a); octx.lineTo(...m.b); octx.stroke();
+      dot(m.a, '#FFD166'); dot(m.b, '#FFD166');
+      label(`#${i + 1} ${k ? (m.px * k).toFixed(1) + ' µm' : m.px.toFixed(0) + ' px'}`, (m.a[0] + m.b[0]) / 2, Math.min(m.a[1], m.b[1]));
+    });
+    (sel.ai?.findings || []).forEach(f => {
+      if (!Array.isArray(f.box)) return;
+      const [x, y, w, h] = f.box;
+      octx.strokeStyle = '#E0535F'; octx.strokeRect(x, y, w, h);
+      label(`${f.label}${f.confidence != null ? ' ' + Math.round(f.confidence * 100) + '%' : ''}`, x + w / 2, y);
+    });
+    if (pts.length) {
+      const c = mode === 'calibrate' ? '#7CE0A3' : '#FFD166';
+      pts.forEach(p => dot(p, c));
+      if (pts.length === 2) { octx.strokeStyle = c; octx.beginPath(); octx.moveTo(...pts[0]); octx.lineTo(...pts[1]); octx.stroke(); }
+    }
+  }
+
+  /* ---------- AI ---------- */
+  function renderFindings() {
+    const l = $('findings');
+    if (!ANALYZE_ENDPOINT) setStatus($('aiStatus'), 'warn', 'Model not connected yet. Capture and calibrate now; analysis turns on once the model is deployed.');
+    else if (!sel?.ai) setStatus($('aiStatus'), '', sel ? 'Ready to analyze' : 'Select an image');
+    if (!sel?.ai) { l.innerHTML = ''; return; }
+    const a = sel.ai, rows = [];
+    if (a.width_um != null) rows.push(['Mean loop width', `${a.width_um} µm`]);
+    if (a.density_per_mm != null) rows.push(['Density', `${a.density_per_mm} per mm`]);
+    (a.findings || []).forEach(f => rows.push([f.label, f.confidence != null ? Math.round(f.confidence * 100) + '% confidence' : 'flagged']));
+    if (!rows.length) rows.push(['No patterns flagged', '']);
+    l.innerHTML = rows.map(([k, v]) => `<li><b>${String(k).replace(/</g, '&lt;')}</b><span>${String(v).replace(/</g, '&lt;')}</span></li>`).join('');
+    setStatus($('aiStatus'), 'ok', 'For clinician review only. Not a diagnosis.');
+  }
+  $('btnAnalyze').onclick = async () => {
+    if (!sel) return;
+    if (!ANALYZE_ENDPOINT) { renderFindings(); return; }
+    const f = sel, b = $('btnAnalyze'); b.disabled = true;
+    setStatus($('aiStatus'), '', 'Analyzing…');
+    try {
+      const blob = await new Promise(r => f.canvas.toBlob(r, 'image/png'));
+      const fd = new FormData(); fd.append('image', blob, 'scan.png');
+      const k = umPerPx(); if (k) fd.append('um_per_px', k);
+      const res = await fetch(ANALYZE_ENDPOINT, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      f.ai = await res.json();
+      if (sel === f) { renderFindings(); drawOverlay(); }
+    } catch (e) {
+      setStatus($('aiStatus'), 'err', 'Analysis failed: ' + e.message);
+    } finally { b.disabled = !sel; }
+  };
+
+  renderCalib(); renderFindings(); syncButtons();
+  addEventListener('pagehide', stopCamera);
+})();
+</script>
+</body>
+</html>

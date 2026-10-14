@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Captrail | Nailfold screening at the fingertip</title>
+<meta name="description" content="Captrail is a low-cost nailfold microscope that uses AI to flag early signs of autoimmune and vascular disease for a doctor to review.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<div class="announce" id="announce">
+  <span class="dot"></span>Research prototype in development: testing begins once our microscope arrives
+  <button aria-label="Dismiss" onclick="this.parentElement.remove()">×</button>
+</div>
+
+<div id="site-header"></div>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-mark" aria-hidden="true">
+      <svg viewBox="0 0 640 640">
+        <path class="loop-bg" d="M150 590V330c0-70 90-70 90 0v260"/>
+        <path class="loop-bg" d="M270 590V170c0-110 130-110 130 0v420"/>
+        <path class="loop-bg" d="M430 590V290c0-80 90-80 90 0v300"/>
+        <path class="loop-flow" d="M150 590V330c0-70 90-70 90 0v260"/>
+        <path class="loop-flow" d="M270 590V170c0-110 130-110 130 0v420"/>
+        <path class="loop-flow" d="M430 590V290c0-80 90-80 90 0v300"/>
+      </svg>
+    </div>
+    <div class="hero-inner">
+      <h1>See disease<br>where it starts</h1>
+      <p>Captrail is a low-cost nailfold microscope that uses AI to flag early signs of autoimmune and vascular disease, so a doctor can take a closer look sooner.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-ghost" href="#how">How it works</a>
+        <a class="btn btn-red" href="#build">See the build</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>AI pattern flagging</span><span>Clinician in the loop</span><span>Built for referral, not diagnosis</span>
+      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>AI pattern flagging</span><span>Clinician in the loop</span><span>Built for referral, not diagnosis</span>
+    </div>
+  </div>
+
+  <!-- PURPOSE QUOTES -->
+  <section class="purpose" id="purpose">
+    <div class="quotes">
+      <figure class="quote on">
+        <blockquote>“The earliest signs of systemic sclerosis can show up in vessels thinner than a hair. Everyone deserves to have them looked at, <em>not just people near a specialist clinic.</em>”</blockquote>
+        <div class="who">Our purpose</div><div class="role">The Captrail team</div>
+      </figure>
+      <figure class="quote">
+        <blockquote>“Captrail doesn’t diagnose. It gives a doctor <em>a clearer, earlier reason</em> to look closer.”</blockquote>
+        <div class="who">How we think about AI</div><div class="role">The Captrail team</div>
+      </figure>
+      <figure class="quote">
+        <blockquote>“If the hardware fits on a desk and costs a fraction of clinical equipment, <em>screening can go where patients already are.</em>”</blockquote>
+        <div class="who">Why low cost matters</div><div class="role">The Captrail team</div>
+      </figure>
+    </div>
+    <div class="dots" id="dots" role="tablist" aria-label="Purpose statements"></div>
+  </section>
+
+  <!-- DARK STATEMENT -->
+  <section class="statement" data-header="dark">
+    <p class="eyebrow rv">The Captrail scan</p>
+    <h2 class="rv">A specialist’s first look, built from parts that fit on a desk</h2>
+    <p class="rv">Captrail turns a USB microscope, a 3D-printed finger cradle and a calibration slide into a repeatable scan: every image measured in micrometers, every flag explained, and every decision left to a clinician.</p>
+    <div class="scroll-hint">SCROLL<i></i></div>
+  </section>
+
+  <!-- STACK -->
+  <section class="stack-sec" id="how">
+    <div class="stack-sticky">
+      <div class="stack-copy">
+        <div class="intro">
+          <p class="eyebrow">How it works</p>
+          <h2>From fingertip to flag, layer by layer</h2>
+          <p>Hardware at the bottom, software on top. Scroll, or tap any layer, to see what each one does.</p>
+        </div>
+        <div class="detail" aria-live="polite">
+          <div class="swap">
+            <div class="num" id="dNum">01</div>
+            <h3 id="dTitle"></h3>
+            <p id="dText"></p>
+            <span class="ph-tag" id="dTag" hidden>In progress</span>
+          </div>
+          <div class="progress" id="progress"></div>
+        </div>
+      </div>
+
+      <div class="stack" id="stack">
+        <button class="layer" style="z-index:6;--f:#FFFFFF;--s:#D3CBC9;--t:#F3EEEC;--c:#17110F"
+          data-title="Clinician review" data-text="Captrail never makes the call. Every flagged scan goes to a doctor with the images, the measurements and the reason it was flagged, so a person decides whether to refer.">
+          <span class="top"></span><span class="side"></span>
+          <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.9.7 3.2 2.4 3.5 5.2"/></svg>Clinician review</span>
+        </button>
+        <button class="layer" style="z-index:5;--f:#F8ECEC;--s:#CDBDBD;--t:#F8ECEC;--c:#17110F"
+          data-title="AI pattern detection" data-tag="1" data-text="A model trained on labeled capillaroscopy images looks for enlarged and giant loops, microhemorrhages and missing capillaries, then marks where it saw them and how confident it is. Dataset and accuracy will be published here once we have real numbers.">
+          <span class="top"></span><span class="side"></span>
+          <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>AI pattern detection</span>
+        </button>
+        <button class="layer" style="z-index:4;--f:#EFD3D5;--s:#C3A2A5;--t:#EFD3D5;--c:#17110F"
+          data-title="Calibrated measurement" data-text="A 0.01 mm calibration slide converts pixels into micrometers, so each scan reports real numbers, like loop width in µm and capillaries per millimeter, instead of just a picture.">
+          <span class="top"></span><span class="side"></span>
+          <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2M15.5 4.5 17 6"/></svg>Calibrated measurement</span>
+        </button>
+        <button class="layer" style="z-index:3;--f:#DDA3A9;--s:#B47A80;--t:#DDA3A9;--c:#2A0609"
+          data-title="Image capture" data-text="Our software pulls frames from the microscope over USB and keeps the sharpest ones for analysis. The same finger position and lighting every time means images can be compared scan to scan.">
+          <span class="top"></span><span class="side"></span>
+          <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H8l1.5-2h5L16 6h2.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.5"/></svg>Image capture</span>
+        </button>
+        <button class="layer" style="z-index:2;--f:#A8333F;--s:#7E1F29;--t:#A8333F;--c:#FFFFFF"
+          data-title="USB microscope" data-text="A Celestron Labs 2MP digital microscope on a stand images the nailfold, the skin at the base of the fingernail where capillaries run close to the surface. A drop of mineral oil makes the skin clear enough to see them.">
+          <span class="top"></span><span class="side"></span>
+          <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h4l-1 7H10z"/><path d="M11 10v3"/><circle cx="11" cy="15" r="2"/><path d="M15 11a6 6 0 0 1 0 9M4 21h16"/></svg>USB microscope</span>
+        </button>
+        <button class="layer" style="z-index:1;--f:#7A1520;--s:#4E0B12;--t:#7A1520;--c:#FFFFFF"
+          data-title="Finger cradle" data-text="A 3D-printed rest, adapted from Attune’s open design, holds the finger at the same angle and distance under the lens. A repeatable position means comparable images.">
+          <span class="top"></span><span class="side"></span>
+          <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16h18v3H3z"/><path d="M6 16c0-3 2-5 6-5s6 2 6 5"/><path d="M10 11V5.5a2 2 0 0 1 4 0V11"/></svg>Finger cradle</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HARDWARE -> SOFTWARE FLOW -->
+  <section class="flow-sec" id="flow">
+    <div class="wrap">
+      <div class="flow-head">
+        <div>
+          <p class="eyebrow rv">Hardware to software</p>
+          <h2 class="rv">How the build talks to the model</h2>
+        </div>
+        <p class="rv">Four physical parts feed one software pipeline. What comes out is a set of measurements and flags a doctor can check, never a diagnosis.</p>
+      </div>
+
+      <div class="flow rv" id="flowBox">
+        <svg class="wires" id="wires" aria-hidden="true"></svg>
+
+        <div class="col hw" id="hwCol">
+          <div class="col-label">Hardware</div>
+          <div class="node" id="n-cradle"><i class="pin"></i><div><b>Source 01</b><span>3D-printed finger cradle</span></div></div>
+          <div class="node" id="n-scope"><i class="pin"></i><div><b>Source 02</b><span>Celestron Labs 2MP USB microscope</span></div></div>
+          <div class="node" id="n-slide"><i class="pin"></i><div><b>Source 03</b><span>0.01 mm calibration slide</span></div></div>
+          <div class="node soft" id="n-oil"><i class="pin"></i><div><b>Support</b><span>Mineral oil for clear skin</span></div></div>
+        </div>
+
+        <div class="core" id="core">
+          <div class="badge">CAPTRAIL SOFTWARE</div>
+          <h3>Analysis</h3>
+          <ol>
+            <li><b>01</b><div>Capture <span>· sharpest frames over USB</span></div></li>
+            <li><b>02</b><div>Calibrate <span>· pixels to micrometers</span></div></li>
+            <li><b>03</b><div>Detect <span>· AI marks abnormal patterns</span></div></li>
+          </ol>
+          <div class="foot">Every measurement traces back to the calibration slide.</div>
+        </div>
+
+        <div class="col out" id="outCol">
+          <div class="col-label out-label">Output</div>
+          <div class="node" id="o-width"><i class="pin"></i><div><b>Measure</b><span>Loop width in µm</span></div></div>
+          <div class="node" id="o-density"><i class="pin"></i><div><b>Measure</b><span>Capillaries per mm</span></div></div>
+          <div class="node" id="o-flags"><i class="pin"></i><div><b>Flags</b><span>Giant loops, bleeds, dropout</span></div></div>
+          <div class="node" id="o-doc"><i class="pin"></i><div><b>Then</b><span>Sent to a clinician for review</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO IT'S FOR -->
+  <section class="forsec" data-header="dark">
+    <!-- PHOTO: replace .photo's background with your real setup photo, e.g.
+         style="background:url('setup.jpg') center/cover" -->
+    <div class="photo" aria-hidden="true"></div>
+    <span class="ph-tag photo-note">Photo placeholder: your setup</span>
+    <div class="wrap">
+      <p class="eyebrow">Who it's for</p>
+      <h2>Earlier referrals, wherever patients are.</h2>
+      <p class="tab-copy" id="tabCopy"></p>
+      <div class="tabs" id="tabs" role="tablist"></div>
+    </div>
+  </section>
+
+  <!-- THE BUILD -->
+  <section class="build" id="build">
+    <div class="wrap">
+      <div class="build-grid">
+        <div>
+          <p class="eyebrow rv">The build</p>
+          <h2 class="rv">Everything it takes, on one list</h2>
+          <p class="lead rv">One 3D-printed part, a USB microscope with its own stand, and a few inexpensive supplies. No motors, no custom mount, no second focusing mechanism.</p>
+          <div class="cost rv">
+            <div class="label">Total build cost</div>
+            <div class="big">$—</div>
+            <div class="note">Add the real total once every part is tallied.</div>
+          </div>
+        </div>
+        <div class="rv">
+          <table class="parts">
+            <tr><td class="n">01</td><td class="what"><b>Celestron Labs Digital 2MP Handheld Microscope + included stand</b><span>1920 × 1080 images, 20–200× advertised magnification, built-in LED lighting</span></td><td class="price">$ TBD</td></tr>
+            <tr><td class="n">02</td><td class="what"><b>Attune 3D-printed finger rest</b><span>Steadies the finger without pressing on the nailfold</span></td><td class="price">$ TBD</td></tr>
+            <tr><td class="n">03</td><td class="what"><b>MUHWA 0.01 mm calibration slide</b><span>10 µm divisions to convert pixels into micrometers</span></td><td class="price">$ TBD</td></tr>
+            <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$ TBD</td></tr>
+            <tr><td class="n">05</td><td class="what"><b>Microfiber cloth and cotton swabs</b><span>Cleaning the lens and applying or removing oil</span></td><td class="price">$ TBD</td></tr>
+            <tr><td class="n">06</td><td class="what"><b>Black cardstock (optional)</b><span>Blocks reflections and stray light</span></td><td class="price">$ TBD</td></tr>
+          </table>
+          <p class="credit">Finger rest design credit: <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune (dlx-designlab)</a>. Plus a computer and the microscope’s USB cable.</p>
+          <a class="link-arrow" href="build.html" style="margin-top:26px">Read the full build guide <span>→</span></a>
+        </div>
+      </div>
+      <div class="shots">
+        <div class="shot rv"><span class="ph-tag">Photo</span><b>The printed finger rest</b></div>
+        <div class="shot rv"><span class="ph-tag">Photo</span><b>The microscope on its stand</b></div>
+        <div class="shot rv"><span class="ph-tag">Photo</span><b>The full setup</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS: scroll-driven journey. Fill in the JOURNEY data in the script at the bottom. -->
+  <section class="journey" id="results">
+    <div class="journey-sticky">
+      <div class="j-left">
+        <p class="eyebrow">Results</p>
+        <h2>Real data only</h2>
+        <p class="j-lead">Scroll through each stage. Every number here comes from our own tests, and blank means we don’t have it yet.</p>
+        <ol class="j-rail" id="jRail"><i class="j-fill" id="jFill"></i></ol>
+      </div>
+      <div class="j-card" id="jCard" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- SAFETY -->
+  <section class="safety" data-header="dark">
+    <div class="wrap">
+      <p class="eyebrow">Safety and limits</p>
+      <blockquote class="rv">Captrail is a research prototype for screening and referral, not a diagnostic tool. It does not replace a doctor.</blockquote>
+      <div class="safety-grid">
+        <div class="rv"><b>Consent first</b><p>We get consent before imaging anyone, every time.</p></div>
+        <div class="rv"><b>How images are handled</b><p>Whether scans are stored, how they are anonymized and who can see them.</p><span class="ph-tag">Fill in your policy</span></div>
+        <div class="rv"><b>A doctor decides</b><p>Flags are a reason to look closer. Only a clinician interprets them.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="team" id="team">
+    <div class="wrap">
+      <div class="team-head">
+        <div>
+          <p class="eyebrow rv">Who we are</p>
+          <h2 class="rv">The founders</h2>
+        </div>
+        <p class="rv">Four students building a cheaper, faster way to spot disease in the smallest blood vessels.</p>
+      </div>
+      <!-- PHOTOS: add <img src="name.jpg" alt="Full name"> inside each .pic to replace the initials -->
+      <div class="people">
+        <article class="person rv"><div class="pic"><span class="ini">SG</span><span class="ph-tag">Add photo</span></div><h3>Sujay Godala</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
+        <article class="person rv"><div class="pic"><span class="ini">SR</span><span class="ph-tag">Add photo</span></div><h3>Smyan Reddy</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
+        <article class="person rv"><div class="pic"><span class="ini">AS</span><span class="ph-tag">Add photo</span></div><h3>Aryan Senthilkumar</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
+        <article class="person rv"><div class="pic"><span class="ini">AM</span><span class="ph-tag">Add photo</span></div><h3>Ansh Mishra</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="contact">
+    <div class="wrap cta-grid">
+      <div>
+        <p class="eyebrow rv">Get in touch</p>
+        <h2 class="rv">Help us take<br>a closer look.</h2>
+        <p class="rv">Clinicians, researchers and anyone curious about nailfold capillaroscopy: we’d love to hear from you.</p>
+        <div class="cta-actions rv">
+          <a class="btn btn-red" href="mailto:your-email@example.com">Email the team</a>
+          <a class="link-arrow" href="#">View on GitHub <span>→</span></a>
+        </div>
+      </div>
+      <div class="scope rv" aria-hidden="true">
+        <svg viewBox="0 0 300 300">
+          <g fill="none" stroke="#8E1B24" stroke-width="9" stroke-linecap="round" opacity=".85">
+            <path d="M40 260V150c0-30 34-30 34 0v110"/>
+            <path d="M92 260V120c0-40 44-40 44 0v140"/>
+            <path d="M154 260V100c0-56 62-56 62 0v160" stroke-width="12"/>
+            <path d="M234 260V145c0-30 32-30 32 0v115"/>
+          </g>
+          <circle cx="250" cy="210" r="4" fill="#8E1B24"/><circle cx="58" cy="210" r="3" fill="#8E1B24"/>
+        </svg>
+        <div class="lbl">Nailfold · illustrative</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="site.js"></script>
+<script>
+(() => {
+  /* purpose quotes */
+  const quotes = [...document.querySelectorAll('.quote')], dots = document.getElementById('dots');
+  let qi = 0, qt;
+  quotes.forEach((_, i) => { const b = document.createElement('button'); b.setAttribute('aria-label', 'Statement ' + (i + 1)); b.onclick = () => showQ(i, true); dots.appendChild(b); });
+  function showQ(i, user) {
+    qi = i;
+    quotes.forEach((q, j) => q.classList.toggle('on', j === i));
+    [...dots.children].forEach((d, j) => d.classList.toggle('on', j === i));
+    clearTimeout(qt); qt = setTimeout(() => showQ((qi + 1) % quotes.length), user ? 9000 : 6500);
+  }
+  showQ(0);
+
+  /* stack: scroll-driven layer selection */
+  const sec = document.querySelector('.stack-sec');
+  const layers = [...document.querySelectorAll('.layer')];
+  const N = layers.length;
+  const dNum = document.getElementById('dNum'), dTitle = document.getElementById('dTitle'), dText = document.getElementById('dText'), dTag = document.getElementById('dTag');
+  const swap = document.querySelector('.detail .swap'), prog = document.getElementById('progress');
+  layers.forEach(() => prog.appendChild(document.createElement('i')));
+  let cur = -2;
+  function setActive(i) {
+    if (i === cur) return;
+    cur = i;
+    sec.classList.toggle('has-active', i >= 0);
+    layers.forEach((l, j) => { l.classList.toggle('active', j === i); l.setAttribute('aria-pressed', j === i); });
+    [...prog.children].forEach((p, j) => p.classList.toggle('on', j === i));
+    if (i < 0) return;
+    const L = layers[i];
+    swap.style.opacity = 0;
+    setTimeout(() => {
+      dNum.textContent = String(i + 1).padStart(2, '0');
+      dTitle.textContent = L.dataset.title;
+      dText.textContent = L.dataset.text;
+      dTag.hidden = !L.dataset.tag;
+      swap.style.opacity = 1;
+    }, 160);
+  }
+  const stackSpan = () => sec.offsetHeight - innerHeight;
+  function stackScroll() {
+    const r = sec.getBoundingClientRect();
+    const p = Math.min(Math.max(-r.top / stackSpan(), 0), 0.9999);
+    setActive(Math.floor(p * (N + 1)) - 1);
+  }
+  layers.forEach((l, i) => l.addEventListener('click', () => {
+    const top = sec.getBoundingClientRect().top + scrollY + stackSpan() * ((i + 1.5) / (N + 1));
+    scrollTo({ top, behavior: 'smooth' });
+    setActive(i);
+  }));
+
+  /* hardware -> software wires */
+  const box = document.getElementById('flowBox'), wires = document.getElementById('wires');
+  const $ = id => document.getElementById(id);
+  function drawWires() {
+    const B = box.getBoundingClientRect();
+    const stacked = matchMedia('(max-width:980px)').matches;
+    const links = stacked
+      ? [['hwCol', 'core'], ['core', 'outCol']]
+      : [['n-cradle', 'core'], ['n-scope', 'core'], ['n-slide', 'core'], ['n-oil', 'core', 1],
+         ['core', 'o-width'], ['core', 'o-density'], ['core', 'o-flags'], ['core', 'o-doc', 1]];
+    let svg = '';
+    links.forEach(([a, b, dashed]) => {
+      const A = $(a).getBoundingClientRect(), C = $(b).getBoundingClientRect();
+      let d;
+      if (!stacked) {
+        const x1 = A.right - B.left, y1 = A.top + A.height / 2 - B.top;
+        const x2 = C.left - B.left, y2 = C.top + C.height / 2 - B.top;
+        const mx = (x1 + x2) / 2;
+        d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+      } else {
+        const x = A.left + A.width / 2 - B.left, y1 = A.bottom - B.top, y2 = C.top - B.top;
+        d = `M${x},${y1} L${x},${y2}`;
+      }
+      svg += `<path class="base${dashed ? ' dashed' : ''}" d="${d}"/>${dashed ? '' : `<path class="pulse" d="${d}"/>`}`;
+    });
+    wires.innerHTML = svg;
+  }
+  addEventListener('resize', drawWires);
+  addEventListener('load', drawWires);
+  if (document.fonts) document.fonts.ready.then(drawWires);
+  drawWires();
+
+  /* who it's for tabs */
+  const tabsData = [
+    ['Rheumatology clinics', 'A quick, repeatable nailfold scan that measures in micrometers, so changes can be tracked visit to visit without waiting on a specialist instrument.'],
+    ['Primary care', 'Many people with early vascular changes first see a general practitioner. Captrail aims to give that first visit a concrete reason to refer, or to wait.'],
+    ['Community clinics', 'Low-cost hardware that fits on a desk can travel to places where clinical capillaroscopy equipment never will.'],
+    ['Researchers', 'Calibrated measurements and a documented build make Captrail easy to reproduce, test and improve on.']
+  ];
+  const tabs = document.getElementById('tabs'), tabCopy = document.getElementById('tabCopy');
+  tabsData.forEach(([name], i) => { const b = document.createElement('button'); b.textContent = name; b.setAttribute('role', 'tab'); b.onclick = () => showTab(i); tabs.appendChild(b); });
+  function showTab(i) {
+    [...tabs.children].forEach((b, j) => { b.classList.toggle('on', j === i); b.setAttribute('aria-selected', j === i); });
+    tabCopy.style.opacity = 0;
+    setTimeout(() => { tabCopy.textContent = tabsData[i][1]; tabCopy.style.opacity = 1; }, 180);
+  }
+  showTab(0);
+
+  /* results journey: edit this data as results come in.
+     status: 'done' | 'now' | 'next'. Leave a value '' to show it as not yet measured.
+     images: [{ src: 'images/first-scan.jpg', caption: 'Ring finger, 200×' }] */
+  const JOURNEY = [
+    { title: 'Prototype built', status: 'now',
+      text: 'Finger rest printed, Celestron microscope on its stand, calibration slide and supplies in hand.',
+      stats: [['Build cost', ''], ['Calibration', ''], ['Assembly time', '']], images: [] },
+    { title: 'First images', status: 'next',
+      text: 'Calibrated nailfold images from consenting volunteers, with the same settings every time.',
+      stats: [['Volunteers', ''], ['Images captured', ''], ['Usable images', '']], images: [] },
+    { title: 'Train the AI', status: 'next',
+      text: 'Fit the model on a labeled capillaroscopy dataset and report how well it actually does.',
+      stats: [['Training images', ''], ['Dataset', ''], ['Accuracy', '']], images: [] },
+    { title: 'Test with more people', status: 'next',
+      text: 'Check that measurements hold up across many people and repeated scans.',
+      stats: [['People tested', ''], ['Total scans', ''], ['Repeatability', '']], images: [] },
+    { title: 'Work with a clinician', status: 'next',
+      text: 'Compare Captrail’s flags against a specialist’s read of the same images.',
+      stats: [['Clinician partner', ''], ['Scans reviewed', ''], ['Agreement', '']], images: [] },
+    { title: 'Finished', status: 'next', final: true,
+      text: 'A validated, low-cost screening prototype, with every result on this page backed by real scans.',
+      stats: [['Total scans', ''], ['Final accuracy', ''], ['Build cost', '']], images: [] },
+  ];
+  const STATUS = { done: 'Complete', now: 'In progress', next: 'Upcoming' };
+  const jSec = document.querySelector('.journey'), jRail = document.getElementById('jRail'),
+        jCard = document.getElementById('jCard'), jFill = document.getElementById('jFill');
+  const JN = JOURNEY.length;
+  jSec.style.height = `calc(100vh + ${JN - 1} * 60vh)`;
+  JOURNEY.forEach((st, i) => {
+    const li = document.createElement('li');
+    li.className = st.status;
+    li.innerHTML = `<button type="button"><i class="mk"></i><span class="t"><small>${String(i + 1).padStart(2, '0')}</small>${st.title}</span></button>`;
+    li.querySelector('button').onclick = () => {
+      const span = jSec.offsetHeight - innerHeight;
+      scrollTo({ top: jSec.getBoundingClientRect().top + scrollY + span * ((i + .5) / JN), behavior: 'smooth' });
+    };
+    jRail.appendChild(li);
+  });
+  const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let jCur = -1;
+  function showStage(i) {
+    if (i === jCur) return;
+    jCur = i;
+    const st = JOURNEY[i];
+    [...jRail.querySelectorAll('li')].forEach((li, j) => li.classList.toggle('active', j === i));
+    jFill.style.height = JN > 1 ? `calc((100% - 28px) * ${i / (JN - 1)})` : 0;
+    const imgs = st.images.length
+      ? st.images.map(im => `<figure><img src="${esc(im.src)}" alt="${esc(im.caption || st.title)}"><figcaption>${esc(im.caption || '')}</figcaption></figure>`).join('')
+      : '<figure class="empty"><span>Image coming</span></figure><figure class="empty"><span>Image coming</span></figure>';
+    jCard.classList.toggle('final', !!st.final);
+    jCard.classList.remove('show'); void jCard.offsetWidth;
+    jCard.innerHTML = `
+      <div class="j-top"><span>Stage ${String(i + 1).padStart(2, '0')} / ${String(JN).padStart(2, '0')}</span><span class="pill ${st.status}">${STATUS[st.status]}</span></div>
+      <h3>${esc(st.title)}</h3>
+      <p>${esc(st.text)}</p>
+      <dl class="j-stats">${st.stats.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="${v ? '' : 'blank'}">${v ? esc(v) : '—'}</dd></div>`).join('')}</dl>
+      <div class="j-imgs">${imgs}</div>`;
+    jCard.classList.add('show');
+  }
+  function journeyScroll() {
+    const r = jSec.getBoundingClientRect();
+    const p = Math.min(Math.max(-r.top / (jSec.offsetHeight - innerHeight), 0), .9999);
+    showStage(Math.floor(p * JN));
+  }
+
+  const onScroll = () => { stackScroll(); journeyScroll(); };
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', onScroll);
+  onScroll();
+})();
+</script>
+</body>
+</html>

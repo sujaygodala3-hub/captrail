@@ -76,6 +76,9 @@
   .findings{list-style:none;margin:12px 0 0;padding:0;font-size:14.5px}
   .findings li{padding:10px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
   .findings b{font-weight:500}
+  .exp-tag{margin-left:auto;font:600 10.5px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:#8a5a00;background:#FFF1D6;border:1px solid #F0D49A;padding:5px 8px;border-radius:999px;white-space:nowrap}
+  .ai-note{margin:12px 0 0;padding:12px 14px;border-radius:10px;background:var(--bg);font-size:14px;color:#4a403d;line-height:1.5}
+  .ai-note b{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
   .note{font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.5}
   .note code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
   .calib-form{display:none;margin-top:12px;padding:14px;border-radius:12px;background:var(--red-tint)}
@@ -178,12 +181,13 @@
       </div>
 
       <div class="panel">
-        <h3><span class="n">04</span>AI analysis</h3>
-        <p>Sends the selected image and calibration to the Captrail model. Results are for a clinician to review, never a diagnosis.</p>
+        <h3><span class="n">04</span>AI analysis <span class="exp-tag">Experimental, not a diagnosis</span></h3>
+        <p>Sends the selected image and calibration to Claude for analysis. Results are for a clinician to review, never a diagnosis.</p>
         <div class="row"><button class="pb red" id="btnAnalyze" disabled>Analyze this image</button></div>
         <div class="status" id="aiStatus"><i></i><span>Model not connected yet</span></div>
         <ul class="findings" id="findings"></ul>
-        <p class="note">Developers: set <code>ANALYZE_ENDPOINT</code> in scan.html. It receives a POST with <code>image</code> (PNG) and <code>um_per_px</code>, and returns JSON like <code>{"findings":[{"label":"giant loop","confidence":0.82,"box":[x,y,w,h]}],"width_um":21.4,"density_per_mm":7.1}</code>.</p>
+        <p class="ai-note" id="aiNote" hidden></p>
+        <p class="note">Runs on <code>/api/analyze</code> (see <code>api/analyze.js</code>). Boxes and measurements are AI estimates and can be wrong.</p>
       </div>
 
       <div class="privacy">
@@ -199,7 +203,7 @@
 <script>
 (() => {
   /* Where the Captrail model lives. Leave '' until the model is deployed. */
-  const ANALYZE_ENDPOINT = '';
+  const ANALYZE_ENDPOINT = '/api/analyze';
 
   const $ = id => document.getElementById(id);
   const video = $('video'), view = $('view'), overlay = $('overlay'), stage = $('stage'), hint = $('hint');
@@ -209,7 +213,7 @@
     set(k, v) { try { localStorage.setItem('captrail.' + k, JSON.stringify(v)); } catch {} },
   };
 
-  let stream = null, frames = [], sel = null, mode = 'none', pts = [], enhance = false;
+  let stream = null, frames = [], sel = null, mode = 'none', pts = [], enhance = false, analyzing = false;
   let calib = store.get('calib'); // { umPerPx, w, h, at }
 
   /* ---------- status helpers ---------- */
@@ -293,7 +297,7 @@
     $('btnCapture').disabled = $('btnBurst').disabled = !live;
     $('btnLive').disabled = !stream || !sel;
     ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
-    $('btnAnalyze').disabled = !sel;
+    $('btnAnalyze').disabled = !sel || analyzing;
     $('btnEnhance').classList.toggle('on', enhance);
     $('btnMeasure').classList.toggle('on', mode === 'measure');
   }
@@ -475,35 +479,55 @@
   }
 
   /* ---------- AI ---------- */
+  const escHtml = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function renderFindings() {
-    const l = $('findings');
-    if (!ANALYZE_ENDPOINT) setStatus($('aiStatus'), 'warn', 'Model not connected yet. Capture and calibrate now; analysis turns on once the model is deployed.');
-    else if (!sel?.ai) setStatus($('aiStatus'), '', sel ? 'Ready to analyze' : 'Select an image');
-    if (!sel?.ai) { l.innerHTML = ''; return; }
+    const l = $('findings'), note = $('aiNote');
+    if (!ANALYZE_ENDPOINT) setStatus($('aiStatus'), 'warn', 'Model not connected yet.');
+    else if (!sel?.ai && !analyzing) setStatus($('aiStatus'), '', sel ? 'Ready to analyze' : 'Select an image');
+    if (!sel?.ai) { l.innerHTML = ''; note.hidden = true; return; }
     const a = sel.ai, rows = [];
-    if (a.width_um != null) rows.push(['Mean loop width', `${a.width_um} µm`]);
+    if (a.width_um != null) rows.push(['Loop width', `${a.width_um} µm`]);
     if (a.density_per_mm != null) rows.push(['Density', `${a.density_per_mm} per mm`]);
     (a.findings || []).forEach(f => rows.push([f.label, f.confidence != null ? Math.round(f.confidence * 100) + '% confidence' : 'flagged']));
-    if (!rows.length) rows.push(['No patterns flagged', '']);
-    l.innerHTML = rows.map(([k, v]) => `<li><b>${String(k).replace(/</g, '&lt;')}</b><span>${String(v).replace(/</g, '&lt;')}</span></li>`).join('');
-    setStatus($('aiStatus'), 'ok', 'For clinician review only. Not a diagnosis.');
+    if (!(a.findings || []).length) rows.push(['No patterns flagged', '']);
+    l.innerHTML = rows.map(([k, v]) => `<li><b>${escHtml(k)}</b><span>${escHtml(v)}</span></li>`).join('');
+    note.hidden = false;
+    note.innerHTML = `<b>Note</b>${escHtml(a.note || 'No note returned.')}`;
+    setStatus($('aiStatus'), 'ok', 'Experimental AI estimate. For clinician review only, not a diagnosis.');
+  }
+  // Vercel limits uploads to 4.5 MB, and Claude reads images at about 1600 px anyway,
+  // so send a downscaled JPEG. Boxes come back in original-frame pixels via width/height.
+  function uploadBlob(src) {
+    const scale = Math.min(1, 1600 / Math.max(src.width, src.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(src.width * scale); c.height = Math.round(src.height * scale);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    return new Promise(r => c.toBlob(r, 'image/jpeg', .9));
   }
   $('btnAnalyze').onclick = async () => {
-    if (!sel) return;
+    if (!sel || analyzing) return;
     if (!ANALYZE_ENDPOINT) { renderFindings(); return; }
-    const f = sel, b = $('btnAnalyze'); b.disabled = true;
-    setStatus($('aiStatus'), '', 'Analyzing…');
+    const f = sel, b = $('btnAnalyze');
+    analyzing = true; syncButtons(); b.textContent = 'Analyzing…';
+    setStatus($('aiStatus'), '', 'Analyzing… this can take up to a minute.');
     try {
-      const blob = await new Promise(r => f.canvas.toBlob(r, 'image/png'));
-      const fd = new FormData(); fd.append('image', blob, 'scan.png');
+      const fd = new FormData();
+      fd.append('image', await uploadBlob(f.canvas), 'scan.jpg');
+      fd.append('width', f.w); fd.append('height', f.h);
       const k = umPerPx(); if (k) fd.append('um_per_px', k);
-      const res = await fetch(ANALYZE_ENDPOINT, { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      f.ai = await res.json();
+      let res;
+      try { res = await fetch(ANALYZE_ENDPOINT, { method: 'POST', body: fd }); }
+      catch { throw new Error('Couldn’t reach the analysis service. Check your internet connection and try again.'); }
+      let body = null;
+      try { body = await res.json(); } catch {}
+      if (!res.ok) throw new Error(body?.error || (res.status === 404 ? 'The analysis service isn’t deployed yet.' : 'Something went wrong. Please try again.'));
+      f.ai = body;
       if (sel === f) { renderFindings(); drawOverlay(); }
     } catch (e) {
-      setStatus($('aiStatus'), 'err', 'Analysis failed: ' + e.message);
-    } finally { b.disabled = !sel; }
+      if (sel === f) setStatus($('aiStatus'), 'err', e.message);
+    } finally {
+      analyzing = false; b.textContent = 'Analyze this image'; syncButtons();
+    }
   };
 
   renderCalib(); renderFindings(); syncButtons();

@@ -18,7 +18,7 @@ A low-cost nailfold microscope that uses AI to flag early signs of autoimmune an
 ## Editing
 
 - **Results:** fill in the `JOURNEY` list near the bottom of `index.html`.
-- **AI model:** set `ANALYZE_ENDPOINT` in `scan.html` once the model is deployed.
+- **AI analysis:** `api/analyze.js` is a Vercel function that sends the image to Claude (`claude-sonnet-5-5`). It needs `ANTHROPIC_API_KEY` set in Vercel → Project → Settings → Environment Variables.
 
 ## Run locally
 

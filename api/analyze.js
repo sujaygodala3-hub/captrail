@@ -128,6 +128,10 @@ export async function POST(request) {
     }
     if (error instanceof Anthropic.BadRequestError) {
       console.error("Anthropic rejected the request:", error.message);
+      // Billing problems come back as a 400; only the message tells them apart from a bad image.
+      if (/credit balance/i.test(error.error?.error?.message ?? "")) {
+        return json({ error: "The analysis service is out of API credits. Please tell the Captrail team." }, 503);
+      }
       return json({ error: "The image couldn't be analyzed. Try another capture." }, 400);
     }
     if (error instanceof Anthropic.APIError) {

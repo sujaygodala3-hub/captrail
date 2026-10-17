@@ -136,8 +136,8 @@
         <button class="tb" id="btnLive" disabled title="Back to live view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg><span class="lbl">Live</span></button>
         <span class="spacer"></span>
-        <button class="tb" id="btnEnhance" disabled title="Green-channel contrast boost to make capillaries stand out">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl">Enhance</span></button>
+        <button class="tb" id="btnEnhance" disabled title="Cycle color mode: Off, Warm, Grayscale">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl" id="enhanceLbl">Enhance: Off</span></button>
         <button class="tb" id="btnMeasure" disabled title="Click two points to measure">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2"/></svg><span class="lbl">Measure</span></button>
         <button class="tb" id="btnDownload" disabled title="Save this image">
@@ -213,7 +213,7 @@
     set(k, v) { try { localStorage.setItem('captrail.' + k, JSON.stringify(v)); } catch {} },
   };
 
-  let stream = null, frames = [], sel = null, mode = 'none', pts = [], enhance = false, analyzing = false;
+  let stream = null, frames = [], sel = null, mode = 'none', pts = [], look = 'off', analyzing = false;
   let calib = store.get('calib'); // { umPerPx, w, h, at }
 
   /* ---------- status helpers ---------- */
@@ -282,14 +282,14 @@
   }
   function drawFrame() {
     if (!sel) return;
-    vctx.drawImage(enhance ? (sel.enh ||= enhanceCanvas(sel.canvas)) : sel.canvas, 0, 0);
+    vctx.drawImage(lookCanvas(sel, look), 0, 0);
     drawOverlay();
   }
   function renderHud() {
     const h = $('hud'); const bits = [];
     if (!sel && stream) bits.push('<span class="live">Live</span>');
     if (sel) bits.push(`<span>${sel.source === 'scope' ? 'Captured' : 'Uploaded'} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
-    if (enhance && sel) bits.push('<span>Enhanced view</span>');
+    if (look !== 'off' && sel) bits.push(`<span>${LOOKS[look].label} view</span>`);
     h.innerHTML = bits.join('');
   }
   function syncButtons() {
@@ -298,7 +298,8 @@
     $('btnLive').disabled = !stream || !sel;
     ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
     $('btnAnalyze').disabled = !sel || analyzing;
-    $('btnEnhance').classList.toggle('on', enhance);
+    $('btnEnhance').classList.toggle('on', look !== 'off');
+    $('enhanceLbl').textContent = 'Enhance: ' + LOOKS[look].short;
     $('btnMeasure').classList.toggle('on', mode === 'measure');
   }
 
@@ -351,7 +352,7 @@
     return Math.round(sum2 / n - (sum / n) ** 2);
   }
   // Capillaries absorb green light, so the green channel shows them darkest. Stretch its contrast and sharpen.
-  function enhanceCanvas(src) {
+  function grayCanvas(src) {
     const { width: W, height: H } = src;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0);
@@ -375,7 +376,46 @@
     const c = document.createElement('canvas'); c.width = 240; c.height = Math.round(src.height * 240 / src.width);
     c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', .8);
   }
-  $('btnEnhance').onclick = () => { enhance = !enhance; drawFrame(); renderHud(); syncButtons(); };
+  // Warm: make Celestron's cool blue-green frames look like clinical capillaroscopy (warm skin, red vessels).
+  function warmCanvas(src) {
+    const { width: W, height: H } = src;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0);
+    const img = x.getImageData(0, 0, W, H), d = img.data, n = W * H;
+    // a. Gray-world white balance: scale channels so their averages match.
+    let sr = 0, sg = 0, sb = 0;
+    for (let i = 0; i < d.length; i += 4) { sr += d[i]; sg += d[i + 1]; sb += d[i + 2]; }
+    const mean = (sr + sg + sb) / 3;
+    // b. Warm shift on top of the balance.
+    const k = [mean / Math.max(sr, 1) * 1.15, mean / Math.max(sg, 1) * 0.95, mean / Math.max(sb, 1) * 0.80];
+    const v = new Float32Array(n * 3), hist = new Uint32Array(256);
+    for (let i = 0, j = 0; i < d.length; i += 4, j += 3) for (let ch = 0; ch < 3; ch++) {
+      const val = d[i + ch] * k[ch]; v[j + ch] = val; hist[Math.min(255, Math.round(val))]++;
+    }
+    // c. Contrast stretch: 1st percentile -> 0, 99th -> 255. One range shared by all three channels;
+    //    stretching each channel on its own would undo the white balance and the warm shift.
+    let lo = 0, hi = 255, acc = 0;
+    for (; lo < 255; lo++) { acc += hist[lo]; if (acc > n * 3 * .01) break; }
+    acc = 0; for (; hi > 0; hi--) { acc += hist[hi]; if (acc > n * 3 * .01) break; }
+    const scale = 255 / Math.max(1, hi - lo);
+    // d. Clamp to 0-255 (Uint8ClampedArray rounds and clamps on write).
+    for (let i = 0, j = 0; i < d.length; i += 4, j += 3) {
+      d[i] = (v[j] - lo) * scale; d[i + 1] = (v[j + 1] - lo) * scale; d[i + 2] = (v[j + 2] - lo) * scale; d[i + 3] = 255;
+    }
+    x.putImageData(img, 0, 0); return c;
+  }
+  const LOOKS = {
+    off:  { label: 'Original', short: 'Off', next: 'warm' },
+    warm: { label: 'Warm', short: 'Warm', next: 'gray', make: warmCanvas },
+    gray: { label: 'Grayscale', short: 'Gray', next: 'off', make: grayCanvas },
+  };
+  // The raw capture (f.canvas) is never modified; processed versions are cached per frame.
+  function lookCanvas(f, l) {
+    if (l === 'off') return f.canvas;
+    f.looks ||= {};
+    return (f.looks[l] ||= LOOKS[l].make(f.canvas));
+  }
+  $('btnEnhance').onclick = () => { look = LOOKS[look].next; drawFrame(); renderHud(); syncButtons(); };
 
   /* ---------- gallery ---------- */
   function renderGallery() {
@@ -393,15 +433,23 @@
     else if (stream) goLive();
     else { sel = null; video.hidden = view.hidden = overlay.hidden = true; $('empty').hidden = false; stage.style.aspectRatio = '16/9'; renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings(); }
   };
-  $('btnDownload').onclick = () => {
+  // Save always downloads the untouched raw capture (for the AI dataset), plus the processed view
+  // with any measurements and AI boxes drawn on it (_warm / _gray, or _annotated when the mode is off).
+  $('btnDownload').onclick = async () => {
     if (!sel) return;
-    const out = document.createElement('canvas'); out.width = sel.w; out.height = sel.h;
-    const x = out.getContext('2d'); x.drawImage(view, 0, 0); x.drawImage(overlay, 0, 0);
-    out.toBlob(b => {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(b);
-      a.download = `captrail-${sel.at.toISOString().replace(/[:.]/g, '-')}.png`; a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    }, 'image/png');
+    const f = sel;
+    const base = f.name ? f.name.replace(/\.[^.]+$/, '') : `captrail-${f.at.toISOString().replace(/[:.]/g, '-')}`;
+    const save = (canvas, name) => new Promise(done => canvas.toBlob(b => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000); done();
+    }, 'image/png'));
+    await save(f.canvas, `${base}_raw.png`);
+    const annotated = f.measures.length || (f.ai?.findings || []).length;
+    if (look === 'off' && !annotated) return;
+    const out = document.createElement('canvas'); out.width = f.w; out.height = f.h;
+    const x = out.getContext('2d'); x.drawImage(lookCanvas(f, look), 0, 0); x.drawImage(overlay, 0, 0);
+    await new Promise(r => setTimeout(r, 400)); // browsers drop back-to-back downloads
+    await save(out, `${base}_${look === 'off' ? 'annotated' : look}.png`);
   };
 
   /* ---------- clicking on the image: calibrate + measure ---------- */

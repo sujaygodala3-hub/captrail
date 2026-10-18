@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+
+# real captures stay local (privacy): keep only the folder skeleton and README
+data/**/*.png
+data/**/*.jpg
+data/**/*.jpeg
+data/**/*.tif
+data/**/*.tiff
+data/**/*.csv
+# outputs computed from ASSUMED scope values must not be mistaken for results
+results/assumed-*/
+results/scope_params.json

@@ -19,9 +19,14 @@ def bland_altman(a, b):
                 mean_pair=float(((a + b) / 2)[ok].mean()))
 
 
-def inside_limits(value, ba):
-    """True if a simulated bias falls inside real-capture limits of agreement (S5 pass test)."""
-    return bool(ba["lo"] <= value <= ba["hi"])
+def inside_limits(value, ba, extra_se=0.0):
+    """True if a simulated bias is consistent with the REAL MEAN bias (S5 pass test).
+
+    Compares against the 95% uncertainty of the mean bias, 1.96*sqrt(SD^2/n + extra_se^2), not the
+    limits of agreement (which describe individual differences and would pass almost anything).
+    `extra_se` is the standard error of the simulated bias."""
+    se = np.sqrt(ba["sd"] ** 2 / max(ba["n"], 1) + extra_se ** 2)
+    return bool(abs(value - ba["bias"]) <= 1.96 * se)
 
 
 def repeatability(values):
@@ -94,3 +99,29 @@ def roc_auc_ci(scores, labels, n_boot=1000, seed=0):
         if not np.isnan(a):
             vals.append(a)
     return float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5))
+
+
+def wilson(k, n, z=1.96):
+    """Wilson score 95% interval for a proportion k/n (better than +-1.96*sqrt(p(1-p)/n) near 0 and 1)."""
+    if n == 0:
+        return float("nan"), float("nan")
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return float(max(0.0, c - h)), float(min(1.0, c + h))
+
+
+def mean_ci(values, z=None):
+    """Mean with a 95% t-interval, ignoring NaN. Returns (mean, lo, hi, n)."""
+    from scipy import stats as st
+    v = np.asarray(values, float)
+    v = v[~np.isnan(v)]
+    n = len(v)
+    if n == 0:
+        return float("nan"), float("nan"), float("nan"), 0
+    m = v.mean()
+    if n == 1:
+        return float(m), float("nan"), float("nan"), 1
+    h = st.t.ppf(0.975, n - 1) * v.std(ddof=1) / np.sqrt(n)
+    return float(m), float(m - h), float(m + h), n

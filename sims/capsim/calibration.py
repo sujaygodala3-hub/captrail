@@ -26,17 +26,54 @@ from .psf_fit import fit_sigma
 # --------------------------------------------------------------------------- um / px
 def tick_profile(img, angles=np.linspace(-5, 5, 21)):
     """Average an image across tick direction. Tries small rotations and keeps the one
-    with the sharpest ticks (largest profile variance). Ticks are assumed roughly vertical."""
+    with the sharpest ticks (largest profile variance). Ticks are assumed roughly vertical.
+    Warns if the best angle is at the edge of the search (ticks tilted more than that: re-shoot or
+    straighten the ruler, because um/px and sigma would be wrong)."""
+    import warnings
     img = np.asarray(img, float)
-    best, best_v = None, -1
+    best, best_v, best_a = None, -1, 0.0
+    angles = list(angles)
     for a in angles:
-        r = ndi.rotate(img, a, reshape=False, order=1, mode="nearest") if a else img
+        r = ndi.rotate(img, a, reshape=False, order=3, mode="nearest") if a else img
         h, w = r.shape
         p = r[h // 4: 3 * h // 4].mean(0)
         v = p.var()
         if v > best_v:
-            best, best_v = p, v
+            best, best_v, best_a = p, v, a
+    if len(angles) > 2 and best_a in (min(angles), max(angles)):
+        warnings.warn(f"ruler tilt at the edge of the search ({best_a:.1f} deg): calibration may be wrong", RuntimeWarning)
     return best
+
+
+def detrend(p, deg=2, iters=4):
+    """Divide out a slow lighting trend from a ruler profile using an asymmetric polynomial fit
+    that follows the bright background (dark ticks are ignored). Returns profile / trend, mean 1."""
+    p = np.asarray(p, float)
+    x = np.linspace(-1, 1, len(p))
+    keep = np.ones(len(p), bool)
+    for _ in range(iters):
+        c = np.polyfit(x[keep], p[keep], deg)
+        fit = np.polyval(c, x)
+        resid = p - fit
+        sd = resid[keep].std()
+        keep = resid > -0.5 * sd if sd > 0 else keep
+        if keep.sum() < deg + 3:
+            break
+    return p / np.maximum(np.polyval(np.polyfit(x[keep], p[keep], deg), x), 1e-9)
+
+
+def _tick_peaks(p, pixel_scale_smooth=1.0):
+    """Indices of dark ticks in a (detrended) profile, with a noise-aware prominence floor."""
+    d = detrend(p)
+    y = ndi.gaussian_filter1d(d, pixel_scale_smooth)
+    inv = 1.0 - y
+    dip = np.percentile(inv, 99)
+    bg = inv < 0.25 * dip                      # estimate noise on flat background only: ticks inflate diffs
+    use = bg[1:] & bg[:-1]
+    dd = np.diff(d)[use] if use.sum() > 10 else np.diff(d)
+    noise = np.median(np.abs(dd)) / 0.6745 / np.sqrt(2)
+    pk, _ = find_peaks(inv, prominence=max(0.3 * dip, 4 * noise))
+    return pk, inv
 
 
 def _subpixel_peak(y, i):
@@ -54,10 +91,9 @@ def umpx_from_ticks(profile, pitch_um=10.0, dark_ticks=True, min_ticks=4):
     Fits tick position = a + b * index. Returns (um_per_px, sd_of_slope_um_per_px, n_ticks).
     """
     p = np.asarray(profile, float)
-    y = ndi.gaussian_filter1d(p, 1.0)
-    y = (y.max() - y) if dark_ticks else y
-    rng_ = y.max() - y.min()
-    pk, _ = find_peaks(y, prominence=0.25 * rng_)
+    if not dark_ticks:
+        p = p.max() + p.min() - p            # bright ticks: flip so ticks are dips
+    pk, y = _tick_peaks(p)
     if len(pk) < min_ticks:
         raise ValueError(f"found {len(pk)} ticks, need at least {min_ticks}: check focus, crop and orientation")
     # reject a tick pitch outlier (a missed tick would shift indices)
@@ -111,9 +147,7 @@ def sigma_from_ticks(profile, pixel_um, pitch_um, line_um):
     """
     p = np.asarray(profile, float)
     x = (np.arange(len(p)) + 0.5) * pixel_um
-    y = ndi.gaussian_filter1d(p, 1.0)
-    inv = y.max() - y
-    pk, _ = find_peaks(inv, prominence=0.25 * (inv.max() - inv.min()))
+    pk, inv = _tick_peaks(p)
     if len(pk) < 3:
         raise ValueError("need at least 3 ticks")
     n = int(round((pk[-1] - pk[0]) * pixel_um / pitch_um)) + 1
@@ -175,8 +209,17 @@ def photon_transfer(levels, bits=8, sat_frac=0.92, min_levels=3):
     pred = A @ np.array([g, c])
     ss_res, ss_tot = ((vars_ - pred) ** 2).sum(), ((vars_ - vars_.mean()) ** 2).sum()
     r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
-    read_var = max(c - 1.0 / 12.0, 0.0)             # remove 8-bit quantization noise (1/12 DN^2)
-    return dict(g=float(g), read_noise_dn=float(np.sqrt(read_var)), r2=float(r2),
+    q_noise = 1.0 / 12.0 if bits == 8 else (2 ** (8 - bits)) ** 2 / 12.0   # quantization noise in DN^2
+    read_var = max(c - q_noise, 0.0)
+    n = len(means)
+    if n > 2:                                       # OLS standard errors of slope and intercept
+        s2 = ss_res / (n - 2)
+        cov = s2 * np.linalg.inv(A.T @ A)
+        se_g, se_c = float(np.sqrt(cov[0, 0])), float(np.sqrt(cov[1, 1]))
+    else:
+        se_g = se_c = float("nan")
+    se_rn = se_c / (2 * np.sqrt(max(read_var, 1e-9))) if np.isfinite(se_c) else float("nan")
+    return dict(g=float(g), read_noise_dn=float(np.sqrt(read_var)), r2=float(r2), se_g=se_g, se_read_noise_dn=float(se_rn),
                 linear=bool(r2 > 0.98 and g > 0), means=means.tolist(), vars=vars_.tolist())
 
 
@@ -184,6 +227,13 @@ def to_forward(g, read_noise_dn, bits=8):
     """Map photon-transfer results onto optics.forward(photons=, read_noise=)."""
     q = 2 ** bits - 1
     return dict(photons=float(q / g), read_noise=float(read_noise_dn / q))
+
+
+def forward_sd(g, se_g, read_noise_dn, se_rn_dn, bits=8):
+    """1-SD of the forward-model photons and read_noise from the photon-transfer standard errors."""
+    q = 2 ** bits - 1
+    return dict(photons=float(q * se_g / g ** 2) if np.isfinite(se_g) else None,
+                read_noise=float(se_rn_dn / q) if np.isfinite(se_rn_dn) else None)
 
 
 # --------------------------------------------------------------------------- lighting

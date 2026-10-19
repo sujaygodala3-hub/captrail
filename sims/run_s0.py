@@ -40,7 +40,7 @@ def main(data, out, config):
         if vals:
             summ = C.umpx_summary(vals)
             report["um_per_px"] = summ
-            sc.mark(um_per_px=summ["mean"])
+            sc.mark(um_per_px=summ["mean"], _sd=dict(um_per_px=summ["sd"]))
             # 2. sigma from the tick (needs the real tick width)
             if cfg.get("tick_width_um"):
                 sig = []
@@ -52,7 +52,7 @@ def main(data, out, config):
                         pass
                 if sig:
                     report["sigma_tick"] = dict(mean=float(np.mean(sig)), sd=float(np.std(sig, ddof=1)) if len(sig) > 1 else None, n=len(sig))
-                    sc.mark(sigma_um=float(np.mean(sig)))
+                    sc.mark(sigma_um=float(np.mean(sig)), _sd=dict(sigma_um=float(np.std(sig, ddof=1)) if len(sig) > 1 else None))
 
     if (data / "edge").exists() and "sigma_tick" not in report and sc.measured["um_per_px"]:
         sig = []
@@ -69,7 +69,8 @@ def main(data, out, config):
         pt = C.photon_transfer(levels, bits=cfg.get("bits", 8), min_levels=cfg.get("min_levels", 3))
         report["photon_transfer"] = {k: v for k, v in pt.items() if k not in ("means", "vars")}
         if pt["linear"]:
-            sc.mark(**C.to_forward(pt["g"], pt["read_noise_dn"], cfg.get("bits", 8)))
+            sc.mark(_sd=C.forward_sd(pt["g"], pt["se_g"], pt["read_noise_dn"], pt["se_read_noise_dn"], cfg.get("bits", 8)),
+                    **C.to_forward(pt["g"], pt["read_noise_dn"], cfg.get("bits", 8)))
         else:
             report["photon_transfer"]["warning"] = ("not linear (r2 <= 0.98 or gain <= 0): camera likely applies gamma or "
                                                     "auto exposure. Photons and read noise left ASSUMED.")

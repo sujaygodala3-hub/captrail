@@ -37,10 +37,19 @@ def flatten_bg(img, pixel_um, max_width_um=60.0):
     return ndi.gaussian_filter(ndi.grey_closing(sm, size=size), size / 4.0)
 
 
-def _crossing(d, p, level, step):
+def _crossing(d, p, level, step, rise_tol=0.10):
+    """Sub-sample position where d falls to `level` walking from peak p. Returns NaN if the walk runs
+    off the profile OR meets the neighbouring structure (d rises again by more than rise_tol*d[p]
+    before reaching `level`: the valley between two limbs stays above half depth, so the limbs are unresolved)."""
     i = p
+    runmin = d[p]
+    noise = np.median(np.abs(np.diff(d))) / 0.6745 / np.sqrt(2)
+    tol = max(rise_tol * d[p], 3.0 * noise)      # a real neighbouring limb rises by far more than noise
     while 0 <= i + step < len(d) and d[i + step] > level:
         i += step
+        runmin = min(runmin, d[i])
+        if runmin < level + 0.3 * (d[p] - level) and d[i] > runmin + tol:   # plateau noise near the top is ignored
+            return np.nan
     j = i + step
     if not (0 <= j < len(d)):
         return np.nan
@@ -60,11 +69,14 @@ def limb_widths_fwhm(img, pixel_um, roi_rows, frac=0.5, flatfield=True):
     if len(peaks) < 2:
         return np.array([np.nan, np.nan])
     top = peaks[np.argsort(props["prominences"])[-2:]]
+    a, b = sorted(top)
+    if d[a:b + 1].min() > frac * min(d[a], d[b]):      # valley between the limbs stays above the crossing level: unresolved
+        return np.array([np.nan, np.nan])
     out = []
     for p in sorted(top):
         lev = frac * d[p]
         xl, xr = _crossing(d, p, lev, -1), _crossing(d, p, lev, +1)
-        out.append((xr - xl) * pixel_um)
+        out.append((xr - xl) * pixel_um)    # NaN when the limbs are unresolved
     return np.array(out)
 
 
@@ -124,7 +136,7 @@ def apical_width_fwhm(img, pixel_um, cx_um, half_band_um=3.0, flatfield=True):
     cx_um is the loop centre x. The apex is the highest dark structure in that column band.
     """
     f = flatten(img, pixel_um) if flatfield else img
-    i = int(round(cx_um / pixel_um))
+    i = int(np.floor(cx_um / pixel_um))      # column i is centred at (i + 0.5) * pixel_um
     h = max(1, int(round(half_band_um / pixel_um)))
     col = f[:, max(0, i - h): i + h + 1].mean(1)
     d = np.percentile(col, 90) - col
@@ -171,7 +183,8 @@ def count_apices(img, pixel_um, min_prominence_um=10.0, min_sep_um=20.0, min_are
     keep = np.isin(lab, 1 + np.where(good)[0])
     ny = keep.shape[0]
     top = np.where(keep.any(0), keep.argmax(0), ny).astype(float) * pixel_um
-    pk, _ = find_peaks(-top, prominence=min_prominence_um, distance=max(1, int(min_sep_um / pixel_um)))
+    pad = np.full(1, ny * pixel_um)          # background level at both ends so an apex at the image edge can be a peak
+    pk, _ = find_peaks(-np.r_[pad, top, pad], prominence=min_prominence_um, distance=max(1, int(min_sep_um / pixel_um)))
     return int(len(pk))
 
 

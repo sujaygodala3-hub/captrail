@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import math
+
+import numpy as np
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -28,15 +30,22 @@ class ScopeParams:
     bits: int = 8
     measured: dict = field(default_factory=lambda: {k: False for k in FIELDS})
     notes: dict = field(default_factory=dict)
+    uncertainty: dict = field(default_factory=dict)   # absolute 1-SD of each MEASURED value (from S0)
 
     # ---- bookkeeping -------------------------------------------------
-    def mark(self, **values):
-        """Set fields from measurements and flag them as measured."""
+    def mark(self, _sd=None, **values):
+        """Set fields from measurements and flag them as measured. `_sd` optionally gives
+        {field: 1-SD} so sensitivity.monte_carlo can propagate the measurement uncertainty."""
         for k, v in values.items():
             if k not in FIELDS:
                 raise KeyError(k)
             setattr(self, k, v)
             self.measured[k] = True
+        for k, v in (_sd or {}).items():
+            if k not in FIELDS:
+                raise KeyError(k)
+            if v is not None and np.isfinite(v):
+                self.uncertainty[k] = float(v)
         return self
 
     def assumed(self):
@@ -72,4 +81,5 @@ class ScopeParams:
         d = json.loads(Path(path).read_text())
         m = {k: False for k in FIELDS}
         m.update(d.pop("measured", {}))
+        d.setdefault("uncertainty", {})
         return cls(measured=m, **d)

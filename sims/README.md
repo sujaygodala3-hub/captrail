@@ -6,7 +6,7 @@ Anything computed from a scope value that was not measured is stamped ASSUMED on
 
 ```
 pip install -r requirements.txt
-python -m pytest -q                                   # 33 tests, ~5 s
+python -m pytest -q                                   # 61 tests, ~10 s
 python run_s0.py                                      # real calibration -> results/scope_params.json
 python run_sims.py all --scope results/scope_params.json
 python run_sims.py all --quick                        # smoke run on assumed defaults (not a result)
@@ -78,3 +78,9 @@ Figure 0 shows example synthetic images at three blur/noise settings.
 - Results are for the simplified forward model. Do not quote numbers as properties of the Celestron.
 - Its width estimators assume two vertical limbs in a known ROI.
 - The renderer was changed after the first pass (union of discs instead of nearest-point), so rerunning `run_experiments.py` may shift numbers slightly.
+
+## Beyond S1 to S7
+- `python run_sims.py s8` (non-Gaussian PSF misspecification) and `sens` (tornado and Monte Carlo over the S0 measurement uncertainty).
+- `python run_sims.py all` writes `REPORT.md` with the gate table (`capsim/gates.py`, thresholds fixed in `ANALYSIS_PLAN.md` before data arrives). "MODEL NOT VALIDATED" until the S5 gate passes.
+- `python analyze_captures.py <folder> --apex auto` measures real captures with the same estimators.
+- Estimators return NaN (not a wrong number) when limbs are unresolved; S5 compares the simulated bias with the uncertainty of the real mean bias, not the limits of agreement; S7 does not give the tool the true shift; pixel-size sweeps scale photons with pixel area.

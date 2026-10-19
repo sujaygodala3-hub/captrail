@@ -36,6 +36,8 @@ def single_loop_image(scope: ScopeParams, spec_kw, rng, sigma=None, oil=False, *
     res = pixel / math.ceil(pixel / 0.5 - 1e-9)
     kw = scope.forward_kwargs(oil=oil, **over)
     kw["pixel_um"] = pixel
+    if "photons" not in over and scope.photons is not None:      # None = noiseless
+        kw["photons"] = scope.photons * (pixel / scope.um_per_px) ** 2   # photons collected scale with pixel area
     W, H = _fov(pixel)
     spec = G.make_loop(**spec_kw)
     spec.cx, spec.y_base = W / 2, 10.0
@@ -54,8 +56,9 @@ def _summ(vals, true):
     n_ok = int((~np.isnan(v)).sum())
     if n_ok == 0:
         return dict(mean=np.nan, sd=np.nan, bias_pct=np.nan, n_ok=0)
-    m = np.nanmean(v)
-    return dict(mean=m, sd=np.nanstd(v, ddof=1) if n_ok > 1 else np.nan, bias_pct=100 * (m / true - 1), n_ok=n_ok)
+    m, lo, hi, _ = S.mean_ci(v)
+    return dict(mean=m, sd=np.nanstd(v, ddof=1) if n_ok > 1 else np.nan, bias_pct=100 * (m / true - 1), n_ok=n_ok,
+                bias_lo95=100 * (lo / true - 1), bias_hi95=100 * (hi / true - 1))
 
 
 # ----------------------------------------------------------------------------- S1
@@ -153,8 +156,21 @@ def s2_texture(scope, quick=False, seed=22):
 
 def s2_roc_reduced(df, sigma, contrast, field_mm=1.0, thr=7.0):
     """ROC area for 'reduced density' (true < 7/mm) using -estimated density as the score."""
+    return s2_roc_reduced_ci(df, sigma, contrast, field_mm, thr)["auc"]
+
+
+def s2_roc_reduced_ci(df, sigma, contrast, field_mm=1.0, thr=7.0, n_boot=500):
+    """AUC for 'reduced density' using only the two true densities adjacent to the threshold (e.g. 5 vs 7),
+    so a non-monotone estimator at far densities cannot pull the AUC below 0.5, with a bootstrap 95% interval."""
     d = df[np.isclose(df.sigma, sigma) & np.isclose(df.contrast, contrast) & np.isclose(df.field_mm, field_mm)]
-    return S.roc_auc(-d.est_density.values, (d.true_density < thr).astype(int).values)
+    below, above = d.true_density[d.true_density < thr], d.true_density[d.true_density >= thr]
+    if below.empty or above.empty:
+        return dict(auc=float("nan"), lo=float("nan"), hi=float("nan"), pair=None)
+    lo_d, hi_d = below.max(), above.min()
+    d = d[d.true_density.isin([lo_d, hi_d])]
+    s, y = -d.est_density.values, (d.true_density < thr).astype(int).values
+    lo, hi = S.roc_auc_ci(s, y, n_boot=n_boot)
+    return dict(auc=S.roc_auc(s, y), lo=lo, hi=hi, pair=[float(lo_d), float(hi_d)])
 
 
 # ----------------------------------------------------------------------------- S3
@@ -209,7 +225,10 @@ def s4_misclassification(scope, quick=False, seed=4, true_lo=45.0, true_hi=55.0)
             res[tag] = np.array(m)
         p_false_giant = float((res["lo"] >= GIANT_UM).mean())
         p_missed_giant = float((res["hi"] < GIANT_UM).mean())
+        lo1, hi1 = S.wilson(int((res["lo"] >= GIANT_UM).sum()), len(res["lo"]))
+        lo2, hi2 = S.wilson(int((res["hi"] < GIANT_UM).sum()), len(res["hi"]))
         rows.append(dict(sigma=sg, p_45_called_giant=p_false_giant, p_55_called_not_giant=p_missed_giant,
+                         p45_lo95=lo1, p45_hi95=hi1, p55_lo95=lo2, p55_hi95=hi2, n_each=len(res["lo"]),
                          err_rate=0.5 * (p_false_giant + p_missed_giant),
                          mean_45=float(res["lo"].mean()), mean_55=float(res["hi"].mean())))
     return pd.DataFrame(rows)
@@ -228,13 +247,22 @@ def s4_density_call(scope, quick=False, seed=44):
 
 
 def max_sigma_for_error(df, limit=0.05):
-    """Largest sigma whose combined 45 vs 55 error rate is <= limit (None if none)."""
-    ok = df[df.err_rate <= limit]
-    return None if ok.empty else float(ok.sigma.max())
+    """Largest sigma such that it AND every smaller swept sigma keep the combined 45 vs 55 error rate <= limit.
+    Returns dict(max_sigma_um, limit_reached): None if even the smallest fails; limit_reached False means no
+    failure was found up to the top of the sweep, so the true limit is at least this value."""
+    d = df.sort_values("sigma")
+    good = 0.0
+    last = None
+    for sg, e in zip(d.sigma, d.err_rate):
+        if e <= limit:
+            last = float(sg)
+        else:
+            return dict(max_sigma_um=last, limit_reached=True)
+    return dict(max_sigma_um=last, limit_reached=False)
 
 
 # ----------------------------------------------------------------------------- S5
-def slide_profile_sim(scope, pitch_um=10.0, tick_um=2.0, n_ticks=9, seed=5, oil=False):
+def slide_profile_sim(scope, pitch_um=10.0, tick_um=2.0, n_ticks=9, seed=5, oil=False, contrast=0.6):
     """Simulated 1D profile across a ruler with dark ticks, through the scope's forward model."""
     rng = np.random.default_rng(seed)
     px = scope.um_per_px
@@ -246,7 +274,7 @@ def slide_profile_sim(scope, pitch_um=10.0, tick_um=2.0, n_ticks=9, seed=5, oil=
     for i in range(n_ticks):
         c = (i + 1.5) * pitch_um
         mask[:, np.abs(xs - c) <= tick_um / 2] = True
-    kw = scope.forward_kwargs(oil=oil)
+    kw = scope.forward_kwargs(oil=oil, contrast=contrast)     # a printed ruler has its own contrast, not the loop's
     img = O.forward(mask, res, rng=rng, **kw)
     return img, img[img.shape[0] // 4: 3 * img.shape[0] // 4].mean(0)
 
@@ -282,19 +310,33 @@ def s5_agreement(manual_df, tool_col="tool_um", r1="rater1_um", r2="rater2_um"):
 
 
 def s5_sim_bias_vs_real(scope, manual_df, quick=False, seed=55, tool_col="tool_um", r1="rater1_um", r2="rater2_um"):
-    """S5 pass test: does the simulated bias, at the measured widths, fall inside the real
-    tool-vs-raters limits of agreement? Uses the rater-mean apical widths as the true values."""
+    """S5 gate on the model's tool error.
+
+    Uses the rater-mean apical widths as the true values and simulates single measurements with the
+    scope's settings. Checks (a) the simulated mean bias is within 95% uncertainty of the real tool-vs-rater-mean bias and (b) the simulated SD of the tool error is 0.5 to 2 times the real tool SD. The real tool
+    SD is the Bland-Altman SD with the raters' own noise removed: var(tool - mean of raters) =
+    var(tool) + var(rater)/2 and var(rater) = sd(rater1 - rater2)^2 / 2."""
     reps = 5 if quick else 20
     rng = np.random.default_rng(seed)
-    truth = ((manual_df[r1] + manual_df[r2]) / 2).clip(lower=14).values
-    sim_bias = []
+    rater_mean = (manual_df[r1] + manual_df[r2]) / 2
+    truth = rater_mean.clip(lower=14).values
+    errs = []
     for t in truth:
-        m = [M.apical_width_fwhm(*single_loop_image(scope, dict(limb_um=min(12, t), apical_um=t, total_um=40, limb_len=100.0), rng)[:3])
-             for _ in range(reps)]
-        sim_bias.append(_nanmean(m) - t)
-    ba = S.bland_altman(manual_df[tool_col], (manual_df[r1] + manual_df[r2]) / 2)
-    mean_sim = float(np.mean(sim_bias))
-    return dict(sim_mean_bias_um=mean_sim, real=ba, passes=S.inside_limits(mean_sim, ba))
+        for _ in range(reps):
+            img, px, cx, _roi_, _ = single_loop_image(scope, dict(limb_um=min(12, t), apical_um=t, total_um=40, limb_len=100.0), rng)
+            errs.append(M.apical_width_fwhm(img, px, cx) - t)
+    errs = np.array(errs, float)
+    errs = errs[~np.isnan(errs)]
+    ba = S.bland_altman(manual_df[tool_col], rater_mean)
+    rr = S.bland_altman(manual_df[r1], manual_df[r2])
+    real_tool_var = ba["sd"] ** 2 - rr["sd"] ** 2 / 4.0
+    real_tool_sd = float(np.sqrt(real_tool_var)) if real_tool_var > 0 else float("nan")
+    mean_sim = float(errs.mean())
+    sim_sd = float(errs.std(ddof=1))
+    out = dict(sim_mean_bias_um=mean_sim, sim_sd_um=sim_sd, real=ba, real_tool_sd_um=real_tool_sd,
+               passes=S.inside_limits(mean_sim, ba, extra_se=sim_sd / np.sqrt(len(errs))))
+    out["sd_ratio"] = sim_sd / real_tool_sd if np.isfinite(real_tool_sd) and real_tool_sd > 0 else float("nan")
+    return out
 
 
 # ----------------------------------------------------------------------------- S6
@@ -336,6 +378,7 @@ def s7_repeatability(scope, quick=False, seed=7, n_subjects=None, n_repeats=None
     rng = np.random.default_rng(seed)
     true = rng.normal(*HEALTHY["apical"], ns).clip(10, None)
     mat = np.full((ns, nr), np.nan)
+    mat_or = np.full((ns, nr), np.nan)
     for i, t in enumerate(true):
         for j in range(nr):
             sg = scope.sigma_um * float(np.exp(rng.normal(0, focus_drift)))
@@ -343,10 +386,13 @@ def s7_repeatability(scope, quick=False, seed=7, n_subjects=None, n_repeats=None
             ill = max(0.0, scope.illum_strength + rng.normal(0, illum_jitter))
             img, px, cx, _, _ = single_loop_image(scope, dict(limb_um=min(10.8, t), apical_um=max(t, 11), total_um=40, limb_len=100.0),
                                                   rng, sigma=sg, illum_strength=ill, shift_um=(float(dx), float(dy)))
-            mat[i, j] = M.apical_width_fwhm(img, px, cx + dx)
+            mat[i, j] = M.apical_width_fwhm(img, px, cx)            # tool does NOT know the shift
+            mat_or[i, j] = M.apical_width_fwhm(img, px, cx + dx)    # oracle, for comparison only
     ok = ~np.isnan(mat).any(1)
     mat2 = mat[ok]
     ic = S.icc(mat2, "2,1")
     lo, hi = S.icc_ci(mat2, "2,1", n_boot=300 if quick else 1000)
-    return dict(icc=ic, ci=(lo, hi), cv_pct=float(100 * np.nanmean(mat2.std(1, ddof=1) / mat2.mean(1))),
+    ok2 = ~np.isnan(mat_or).any(1)
+    icc_or = S.icc(mat_or[ok2], '2,1') if ok2.sum() > 2 else float('nan')
+    return dict(icc=ic, icc_oracle_position=icc_or, ci=(lo, hi), cv_pct=float(100 * np.nanmean(mat2.std(1, ddof=1) / mat2.mean(1))),
                 n=int(ok.sum()), matrix=mat2)

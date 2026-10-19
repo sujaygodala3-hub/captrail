@@ -3,6 +3,7 @@
     python run_sims.py all --scope results/scope_params.json            # full run
     python run_sims.py all --quick                                       # smoke run on assumed defaults
     python run_sims.py s1 s6 --scope results/scope_params.json
+    python run_sims.py s8 sens           # model-misspecification check and scope-uncertainty sensitivity
 
 S5 and the real-data parts of S3 and S7 read optional CSVs (data/README.md). Outputs go to
 results/<tag>/ where tag is 'measured' only when every scope value came from S0.
@@ -39,7 +40,7 @@ def main(steps, scope_path, quick, data):
         df = W.s2_density(sc, quick); df.to_csv(out / "s2_density.csv", index=False)
         W.s2_texture(sc, quick).to_csv(out / "s2_texture.csv", index=False)
         PS.fig_s2(df, sc, out)
-        summary["s2_auc_reduced_density"] = {f"contrast{c}": W.s2_roc_reduced(df, sc.sigma_um, c) for c in sorted(df.contrast.unique())}
+        summary["s2_auc_reduced_density"] = {f"contrast{c}": W.s2_roc_reduced_ci(df, sc.sigma_um, c) for c in sorted(df.contrast.unique())}
     if want("s3"):
         pairs = data / "s3" / "oil_pairs.csv"
         if pairs.exists():
@@ -63,7 +64,11 @@ def main(steps, scope_path, quick, data):
         s5 = {}
         if prof.exists():
             real = pd.read_csv(prof).iloc[:, 0].values
-            _, sim = W.slide_profile_sim(sc, tick_um=json.loads((ROOT / "configs" / "s0_config.json").read_text()).get("tick_width_um") or 2.0)
+            cfg0 = json.loads((ROOT / "configs" / "s0_config.json").read_text())
+            tick = cfg0.get("tick_width_um") or 2.0
+            from capsim import calibration as C
+            _, fit = C.sigma_from_ticks(real, sc.um_per_px, cfg0.get("pitch_um", 10.0), tick)    # ruler contrast from the real profile
+            _, sim = W.slide_profile_sim(sc, pitch_um=cfg0.get("pitch_um", 10.0), tick_um=tick, contrast=float(fit["amp"] / fit["bg"]))
             s5["slide_profile"] = W.compare_profiles(real, sim)
         man = data / "s5" / "manual_widths.csv"
         if man.exists():
@@ -83,6 +88,25 @@ def main(steps, scope_path, quick, data):
         rep = data / "s7" / "repeat_widths.csv"
         if rep.exists():
             summary["s7_real"] = stats.repeatability(pd.read_csv(rep)["width_um"].values)
+    if want("s8"):
+        from capsim import misspec
+        df = misspec.misspecification(sc, reps=4 if quick else 15)
+        df.to_csv(out / "s8_misspecification.csv", index=False)
+        summary["s8_max_abs_limb_bias_gap_pct"] = float(np.nanmax(np.abs(df.limb_bias_gap))) if df.limb_bias_gap.notna().any() else None
+        summary["s8_unresolvable_ruler_cases"] = int(df.sigma_gauss_fit.isna().sum())
+    if want("sens"):
+        from capsim import sensitivity as SE
+        summary["sens_tornado_limb12"] = SE.tornado(sc, "limb12_bias_pct")
+        summary["sens_tornado_giant_err"] = SE.tornado(sc, "giant_call_error")
+        for k in ("limb12_bias_pct", "giant_call_error"):
+            mc = SE.monte_carlo(sc, k, n=15 if quick else 60)
+            summary[f"sens_mc_{k}"] = {a: b for a, b in mc.items() if a != "values"}
+    from capsim import gates, report
+    summary["scope_sigma_um"] = sc.sigma_um
+    summary["s0_report"] = sc.notes.get("s0_report", {})
+    rows = gates.evaluate(summary)
+    summary["gates"], summary["validated"] = rows, gates.validated(rows)
+    report.write_report(out, summary, sc, rows, report.manifest(sc, quick, ROOT))
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=float))
     print(json.dumps(summary, indent=2, default=float))
     print("->", out)

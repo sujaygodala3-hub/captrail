@@ -50,6 +50,8 @@ def monte_carlo(w_true, w_meas_samples):
     """
     w = np.asarray(w_meas_samples, float)
     w = w[~np.isnan(w)]
+    if len(w) == 0:      # estimator failed on every sample (unresolved limbs): report NaN, not an error
+        return {name: dict(mean=float('nan'), sd=float('nan'), p5=float('nan'), median=float('nan'), p95=float('nan')) for name in EXPONENT}
     out = {}
     for name in EXPONENT:
         e = fractional_error_pct(w, w_true, name)

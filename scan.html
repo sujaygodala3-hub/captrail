@@ -645,54 +645,55 @@
     sample.sort();
     return sample[Math.min(sample.length - 1, Math.floor(p * sample.length))];
   }
-  // Clinical view: styled like standard nailfold capillaroscopy references (light pink skin, deep red vessels).
+  // Clinical view (gentle): styled like standard nailfold capillaroscopy references (light pink skin, red vessels).
   function clinicalCanvas(src) {
     const { width: W, height: H } = src, n = W * H;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0);
     const img = x.getImageData(0, 0, W, H), d = img.data;
-    const R = new Float32Array(n), G = new Float32Array(n), B = new Float32Array(n), lum = new Float32Array(n);
-    for (let p = 0; p < n; p++) { R[p] = d[p * 4]; G[p] = d[p * 4 + 1]; B[p] = d[p * 4 + 2]; lum[p] = (R[p] + G[p] + B[p]) / 3; }
-    // 2. Glare removal: pixels brighter than the 97th percentile are filled with the median of nearby non-glare pixels.
-    const cut = percentile(lum, .97), glare = new Uint8Array(n);
-    for (let p = 0; p < n; p++) glare[p] = lum[p] > cut ? 1 : 0;
-    const nb = [[], [], []];
-    for (let p = 0; p < n; p++) {
-      if (!glare[p]) continue;
-      const px = p % W, py = (p / W) | 0;
-      for (let r = 3; r <= 24; r *= 2) {
-        nb[0].length = nb[1].length = nb[2].length = 0;
-        for (let yy = Math.max(0, py - r); yy <= Math.min(H - 1, py + r); yy += 1 + (r >> 2))
-          for (let xx = Math.max(0, px - r); xx <= Math.min(W - 1, px + r); xx += 1 + (r >> 2)) {
-            const q = yy * W + xx;
-            if (!glare[q]) { nb[0].push(R[q]); nb[1].push(G[q]); nb[2].push(B[q]); }
-          }
-        if (nb[0].length >= 5 || r === 24) break;
+    // 1. Denoise: 3×3 median filter on each color channel.
+    const den = [new Float32Array(n), new Float32Array(n), new Float32Array(n)], win = new Float32Array(9);
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) for (let ch = 0; ch < 3; ch++) {
+      let k = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const yy = Math.min(H - 1, Math.max(0, y + dy)), xs = Math.min(W - 1, Math.max(0, xx + dx));
+        win[k++] = d[(yy * W + xs) * 4 + ch];
       }
-      if (nb[0].length) [R, G, B].forEach((ch, i) => { const v = nb[i].sort((a, b) => a - b); ch[p] = v[v.length >> 1]; });
+      den[ch][y * W + xx] = insertionMedian(win, 9);
     }
-    // 3. Vessel map: redness = R - G, minus a 20px Gaussian background, normalized with the 2nd/98th percentiles.
-    const red = new Float32Array(n);
-    for (let p = 0; p < n; p++) red[p] = R[p] - G[p];
-    const bg = gaussBlur(red, W, H, 20);
-    // Pixels less red than their surroundings are skin, not vessel: floor them at 0 so the dip the blur leaves
-    // beside every vessel doesn't become the 2nd percentile and tint the whole background toward red.
-    for (let p = 0; p < n; p++) red[p] = Math.max(0, red[p] - bg[p]);
-    const lo = percentile(red, .02), hi = percentile(red, .98), span = Math.max(1e-6, hi - lo);
-    // 4. Color map: background (245,215,205) at 0 -> vessel (165,30,40) at 1, along value^0.8.
+    const [R, G, B] = den;
+    // 2. Glare mask: luminance above the 96th percentile, expanded by 4px (square max filter, two 1-D passes).
+    const lum = new Float32Array(n);
+    for (let p = 0; p < n; p++) lum[p] = .299 * R[p] + .587 * G[p] + .114 * B[p];
+    const cut = percentile(lum, .96), m0 = new Uint8Array(n), m1 = new Uint8Array(n), glare = new Uint8Array(n);
+    for (let p = 0; p < n; p++) m0[p] = lum[p] > cut ? 1 : 0;
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      let v = 0; for (let dx = -4; dx <= 4 && !v; dx++) { const xs = xx + dx; if (xs >= 0 && xs < W) v = m0[y * W + xs]; }
+      m1[y * W + xx] = v;
+    }
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      let v = 0; for (let dy = -4; dy <= 4 && !v; dy++) { const ys = y + dy; if (ys >= 0 && ys < H) v = m1[ys * W + xx]; }
+      glare[y * W + xx] = v;
+    }
+    // 3. Vessel signal: vessels absorb green, so signal = blurred background of G (40px) minus G,
+    //    lightly smoothed (1px). Glare pixels are set to 0.
+    const bg = gaussBlur(G, W, H, 40), sig0 = new Float32Array(n);
+    for (let p = 0; p < n; p++) sig0[p] = bg[p] - G[p];
+    const sig = gaussBlur(sig0, W, H, 1);
+    for (let p = 0; p < n; p++) if (glare[p]) sig[p] = 0;
+    // 4. Normalize with the 50th and 99.5th percentiles of non-glare pixels; t = clamp(...)^1.2.
+    let cnt = 0; for (let p = 0; p < n; p++) if (!glare[p]) cnt++;
+    const clean = new Float32Array(cnt);
+    for (let p = 0, j = 0; p < n; p++) if (!glare[p]) clean[j++] = sig[p];
+    const lo = percentile(clean, .5), hi = percentile(clean, .995), span = Math.max(1e-6, hi - lo);
+    // 5. Color: background (242,212,200) blended toward vessel (170,40,45). Glare pixels stay plain background.
     for (let p = 0; p < n; p++) {
-      const t = Math.pow(Math.min(1, Math.max(0, (red[p] - lo) / span)), .8);
-      d[p * 4] = 245 + (165 - 245) * t; d[p * 4 + 1] = 215 + (30 - 215) * t; d[p * 4 + 2] = 205 + (40 - 205) * t; d[p * 4 + 3] = 255;
+      const t = glare[p] ? 0 : Math.pow(Math.min(1, Math.max(0, (sig[p] - lo) / span)), 1.2);
+      d[p * 4] = 242 + (170 - 242) * t; d[p * 4 + 1] = 212 + (40 - 212) * t; d[p * 4 + 2] = 200 + (45 - 200) * t; d[p * 4 + 3] = 255;
     }
     x.putImageData(img, 0, 0);
-    // 5. Unsharp mask (radius 1.5px, amount 1.2), then keep every pixel inside the background-to-vessel palette
-    //    so the sharpening overshoot doesn't leave white rims along the vessels.
-    const sharp = unsharpCanvas(c, { radius: 1.5, amount: 1.2, threshold: 0 });
-    const sx = sharp.getContext('2d', { willReadFrequently: true }), simg = sx.getImageData(0, 0, W, H), sd = simg.data;
-    const lim = [[165, 245], [30, 215], [40, 205]];
-    for (let i = 0; i < sd.length; i += 4) for (let ch = 0; ch < 3; ch++) sd[i + ch] = Math.min(lim[ch][1], Math.max(lim[ch][0], sd[i + ch]));
-    sx.putImageData(simg, 0, 0);
-    return sharp;
+    // 6. Unsharp mask: radius 1.5px, amount 0.8, threshold 2.
+    return unsharpCanvas(c, { radius: 1.5, amount: 0.8, threshold: 2 });
   }
   const LOOKS = {
     off:   { label: 'Original', short: 'Off', next: 'clinical' },

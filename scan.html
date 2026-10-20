@@ -701,26 +701,34 @@
     return out;
   }
   // Auto-zoom: find the capillary loop row, crop half width × half height around it (sliding sideways to
-  // avoid glare), and enlarge 2× with local contrast, a natural orange tone and gentle sharpening.
+  // avoid glare), and render an enhanced 2× view: vessel signal mapped from skin tone to vessel red.
   // Returns { canvas: null, reason } when there is too much glare to zoom safely.
   const ZOOM_MAX_GLARE = .25;
+  // Glare mask: brightness above the given percentile, grown by `grow` px. Brightness is smoothed 1.5px first
+  // and must also be genuinely bright (>= 215), or near-saturated (>= 250). A percentile alone always marks
+  // that share of pixels even with no glare, and on a noisy capture the grown specks would cover everything.
+  function glareMask(lum, W, H, pct, grow) {
+    const n = W * H, sm = gaussBlur(lum, W, H, 1.5), cut = percentile(sm, pct);
+    let m = new Uint8Array(n);
+    for (let p = 0; p < n; p++) m[p] = (sm[p] > cut && sm[p] >= 215) || sm[p] >= 250 ? 1 : 0;
+    if (!grow) return m;
+    const t = new Uint8Array(n), out = new Uint8Array(n);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let v = 0; for (let k = -grow; k <= grow && !v; k++) { const xs = x + k; if (xs >= 0 && xs < W) v = m[y * W + xs]; }
+      t[y * W + x] = v;
+    }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let v = 0; for (let k = -grow; k <= grow && !v; k++) { const ys = y + k; if (ys >= 0 && ys < H) v = t[ys * W + x]; }
+      out[y * W + x] = v;
+    }
+    return out;
+  }
   function zoomOnCapillaries(src) {
     const { width: W, height: H } = src, n = W * H, d = pixelsOf(src);
     const D = new Float32Array(n), lum = new Float32Array(n);
     for (let p = 0; p < n; p++) { D[p] = d[p * 4] - d[p * 4 + 1]; lum[p] = .299 * d[p * 4] + .587 * d[p * 4 + 1] + .114 * d[p * 4 + 2]; }
-    // 1. Glare mask: brightness above the 94th percentile, expanded by 6px (square max filter, two 1-D passes).
-    //    Near-saturated pixels (>= 250) always count too: when glare covers more than 6% of the frame the
-    //    percentile itself is saturated white, and "brighter than" it would leave heavy glare unmasked.
-    const cut = percentile(lum, .94), m0 = new Uint8Array(n), m1 = new Uint8Array(n), glare = new Uint8Array(n);
-    for (let p = 0; p < n; p++) m0[p] = lum[p] > cut || lum[p] >= 250 ? 1 : 0;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      let v = 0; for (let k = -6; k <= 6 && !v; k++) { const xs = x + k; if (xs >= 0 && xs < W) v = m0[y * W + xs]; }
-      m1[y * W + x] = v;
-    }
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      let v = 0; for (let k = -6; k <= 6 && !v; k++) { const ys = y + k; if (ys >= 0 && ys < H) v = m1[ys * W + x]; }
-      glare[y * W + x] = v;
-    }
+    // 1. Glare mask: above the 94th brightness percentile, expanded by 6px.
+    const glare = glareMask(lum, W, H, .94, 6);
     // 2-3. Loop row, in the bottom 65%: vertical vessel edges show up as a horizontal gradient of redness
     //    (R - G); glare is white, so it has little redness. Gradient is 0 inside the glare mask. Row score =
     //    fraction of non-glare pixels × mean gradient, smoothed over 8 rows; the best row wins.
@@ -754,27 +762,44 @@
     // 4. Even the best window is mostly glare: don't zoom.
     const glareFrac = fewest / (cw * ch);
     if (glareFrac > ZOOM_MAX_GLARE) return { canvas: null, reason: 'Too much glare to auto-zoom', crop: { loopY, glareFrac } };
-    // 3. Very slight blur (0.8px), then 2× bicubic enlargement.
-    // 4. Local contrast: blur + 2 × (value - 60px blur).
-    const W2 = cw * 2, H2 = ch * 2, n2 = W2 * H2, chans = [];
-    for (let c = 0; c < 3; c++) {
-      const crop = new Float32Array(cw * ch);
-      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) crop[y * cw + x] = d[((cy + y) * W + cx + x) * 4 + c];
-      const big = bicubic2x(gaussBlur(crop, cw, ch, .8), cw, ch);
-      const bg = gaussBlur(big, W2, H2, 60);
-      for (let p = 0; p < n2; p++) big[p] = bg[p] + 2 * (big[p] - bg[p]);
-      chans.push(big);
+    // Enhanced view of the crop.
+    // 1. Blur the capture 0.8px (done on the crop, with a 20px margin so the crop edges blur cleanly).
+    const m = 20, bx = Math.max(0, cx - m), by = Math.max(0, cy - m), bw = Math.min(W, cx + cw + m) - bx, bh = Math.min(H, cy + ch + m) - by;
+    const R = new Float32Array(cw * ch), G = new Float32Array(cw * ch), B = new Float32Array(cw * ch);
+    [R, G, B].forEach((dst, k) => {
+      const buf = new Float32Array(bw * bh);
+      for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) buf[y * bw + x] = d[((by + y) * W + bx + x) * 4 + k];
+      const bl = gaussBlur(buf, bw, bh, .8);
+      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) dst[y * cw + x] = bl[(cy - by + y) * bw + (cx - bx + x)];
+    });
+    const nc = cw * ch;
+    // 2. Glare mask for the view: above the 97th brightness percentile, expanded 3px.
+    const L = new Float32Array(nc);
+    for (let p = 0; p < nc; p++) L[p] = .299 * R[p] + .587 * G[p] + .114 * B[p];
+    const gm = glareMask(L, cw, ch, .97, 3);
+    // 3. Vessel signal: relative redness above its 15px surroundings (×400) plus green darker than its
+    //    15px surroundings; blurred 0.8px; 0 inside the glare mask.
+    const red = new Float32Array(nc);
+    for (let p = 0; p < nc; p++) red[p] = (R[p] - G[p]) / (R[p] + 1);
+    const redBg = gaussBlur(red, cw, ch, 15), gBg = gaussBlur(G, cw, ch, 15), s0 = new Float32Array(nc);
+    for (let p = 0; p < nc; p++) s0[p] = (red[p] - redBg[p]) * 400 + (gBg[p] - G[p]);
+    const sig = gaussBlur(s0, cw, ch, .8);
+    for (let p = 0; p < nc; p++) if (gm[p]) sig[p] = 0;
+    // 4. Normalize: lo = 55th, hi = 99.3th percentile; t = clamp(...)^0.9.
+    const lo = percentile(sig, .55), hi = percentile(sig, .993), span = Math.max(1e-6, hi - lo);
+    // 5. Color: skin (246,222,196) -> vessel (196,58,48).
+    const skin = [246, 222, 196], vessel = [196, 58, 48], tint = [new Float32Array(nc), new Float32Array(nc), new Float32Array(nc)];
+    for (let p = 0; p < nc; p++) {
+      const t = Math.pow(Math.min(1, Math.max(0, (sig[p] - lo) / span)), .9);
+      for (let k = 0; k < 3; k++) tint[k][p] = skin[k] + (vessel[k] - skin[k]) * t;
     }
-    // 5. Natural orange: red × 1.04, blue × 0.90, then saturation × 1.25 around each pixel's luminance.
+    // 6. Enlarge 2× (bicubic), then unsharp mask (radius 3px, amount 0.7).
+    const W2 = cw * 2, H2 = ch * 2, n2 = W2 * H2, big = tint.map(ch1 => bicubic2x(ch1, cw, ch));
     const out = new ImageData(W2, H2), od = out.data;
-    for (let p = 0; p < n2; p++) {
-      const r = chans[0][p] * 1.04, g = chans[1][p], b = chans[2][p] * .9, L = .299 * r + .587 * g + .114 * b;
-      od[p * 4] = L + 1.25 * (r - L); od[p * 4 + 1] = L + 1.25 * (g - L); od[p * 4 + 2] = L + 1.25 * (b - L); od[p * 4 + 3] = 255;
-    }
+    for (let p = 0; p < n2; p++) { od[p * 4] = big[0][p]; od[p * 4 + 1] = big[1][p]; od[p * 4 + 2] = big[2][p]; od[p * 4 + 3] = 255; }
     const c = document.createElement('canvas'); c.width = W2; c.height = H2;
     c.getContext('2d').putImageData(out, 0, 0);
-    // 6. Unsharp mask: radius 4px, amount 0.8, threshold 2.
-    return { canvas: unsharpCanvas(c, { radius: 4, amount: .8, threshold: 2 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY, glareFrac } };
+    return { canvas: unsharpCanvas(c, { radius: 3, amount: .7, threshold: 0 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY, glareFrac } };
   }
   // Simulated view: draws hairpin loops at the loop positions detected in the real capture, styled like a
   // capillaroscopy photo. It is an illustration only.
@@ -784,7 +809,7 @@
     for (let p = 0; p < n; p++) { D[p] = d[p * 4] - d[p * 4 + 1]; lum[p] = .299 * d[p * 4] + .587 * d[p * 4 + 1] + .114 * d[p * 4 + 2]; }
     // 1. Capillary row: in the lower 65%, highest mean |horizontal gradient of (R - G)|, ignoring glare
     //    (above the 94th brightness percentile, or near-saturated).
-    const cut = percentile(lum, .94), glare = p => lum[p] > cut || lum[p] >= 250;
+    const gmask = glareMask(lum, W, H, .94, 0), glare = p => gmask[p] === 1;
     let row = Math.floor(H * .35), best = -1;
     for (let y = row; y < H; y++) {
       let s = 0, c = 0;
@@ -897,7 +922,7 @@
   };
   // Save always downloads the untouched raw capture (for the AI dataset), plus the processed view
   // with any measurements and AI boxes drawn on it (_warm / _gray / ..., or _annotated when the mode is off).
-  // Best of 8 pairs save both images: _original (8-frame merge) and _zoom2x (auto-cropped zoom).
+  // Best of 8 pairs save both images: _raw (8-frame merge) and _enhanced (2× enhanced view).
   $('btnDownload').onclick = async () => {
     if (!sel) return;
     const f = sel;
@@ -909,9 +934,9 @@
     const gap = () => new Promise(r => setTimeout(r, 400)); // browsers drop back-to-back downloads
     if (f.pair) {
       const zoom = f.calibScale ? f : f.pair, orig = zoom.pair;
-      await save(orig.canvas, `${base}_original.png`);
+      await save(orig.canvas, `${base}_raw.png`);
       await gap();
-      await save(zoom.canvas, `${base}_zoom2x.png`);
+      await save(zoom.canvas, `${base}_enhanced.png`);
       return;
     }
     await save(f.canvas, `${base}_raw.png`);

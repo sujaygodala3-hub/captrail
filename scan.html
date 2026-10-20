@@ -131,6 +131,8 @@
       <div class="bar">
         <button class="tb primary" id="btnCapture" disabled title="Capture one frame (Space)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><span class="lbl">Capture</span></button>
+        <button class="tb" id="btnStack" disabled title="Take 40 frames, align the sharpest 20 and merge them">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 3 8l9 5 9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg><span class="lbl">Stack 40</span></button>
         <button class="tb" id="btnBurst" disabled title="Take 8 frames and keep the sharpest">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="M7 4h12a2 2 0 0 1 2 2v9"/></svg><span class="lbl">Best of 8</span></button>
         <button class="tb" id="btnLive" disabled title="Back to live view">
@@ -213,7 +215,7 @@
     set(k, v) { try { localStorage.setItem('captrail.' + k, JSON.stringify(v)); } catch {} },
   };
 
-  let stream = null, frames = [], sel = null, mode = 'none', pts = [], look = 'off', analyzing = false;
+  let stream = null, frames = [], sel = null, mode = 'none', pts = [], look = 'off', analyzing = false, stacking = false;
   let calib = store.get('calib'); // { umPerPx, w, h, at }
 
   /* ---------- status helpers ---------- */
@@ -288,13 +290,13 @@
   function renderHud() {
     const h = $('hud'); const bits = [];
     if (!sel && stream) bits.push('<span class="live">Live</span>');
-    if (sel) bits.push(`<span>${sel.source === 'scope' ? 'Captured' : 'Uploaded'} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
+    if (sel) bits.push(`<span>${sel.label || (sel.source === 'scope' ? 'Captured' : 'Uploaded')} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
     if (look !== 'off' && sel) bits.push(`<span>${LOOKS[look].label} view</span>`);
     h.innerHTML = bits.join('');
   }
   function syncButtons() {
     const live = !!stream && !sel;
-    $('btnCapture').disabled = $('btnBurst').disabled = !live;
+    $('btnCapture').disabled = $('btnBurst').disabled = $('btnStack').disabled = !live || stacking;
     $('btnLive').disabled = !stream || !sel;
     ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
     $('btnAnalyze').disabled = !sel || analyzing;
@@ -323,6 +325,133 @@
     showFrame(addFrame(scored[0][1], 'scope'));
   };
   $('btnLive').onclick = goLive;
+
+  /* ---------- Stack 40: align the sharpest 20 of 40 frames and take the per-pixel median ---------- */
+  const STACK_GRAB = 40, STACK_KEEP = 20, STACK_MS = 2000;
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  // In-place iterative radix-2 complex FFT (n must be a power of two). inv = true for the inverse (unscaled).
+  function fft(re, im, inv) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+      if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = (inv ? 2 : -2) * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let k = 0; k < len / 2; k++) {
+          const a = i + k, b = a + len / 2;
+          const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+          const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+        }
+      }
+    }
+  }
+  function fft2(re, im, N, inv) {
+    const r = new Float64Array(N), i = new Float64Array(N);
+    for (let y = 0; y < N; y++) { const o = y * N; r.set(re.subarray(o, o + N)); i.set(im.subarray(o, o + N)); fft(r, i, inv); re.set(r, o); im.set(i, o); }
+    for (let x = 0; x < N; x++) {
+      for (let y = 0; y < N; y++) { r[y] = re[y * N + x]; i[y] = im[y * N + x]; }
+      fft(r, i, inv);
+      for (let y = 0; y < N; y++) { re[y * N + x] = r[y]; im[y * N + x] = i[y]; }
+    }
+  }
+  // Spectrum of a centered N×N grayscale patch with a Hann window (reduces edge artifacts).
+  function patchSpectrum(data, W, H, N) {
+    const x0 = (W - N) >> 1, y0 = (H - N) >> 1, re = new Float64Array(N * N), im = new Float64Array(N * N);
+    let mean = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const p = ((y0 + y) * W + x0 + x) * 4;
+      mean += re[y * N + x] = .299 * data[p] + .587 * data[p + 1] + .114 * data[p + 2];
+    }
+    mean /= N * N;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const w = (.5 - .5 * Math.cos(2 * Math.PI * x / (N - 1))) * (.5 - .5 * Math.cos(2 * Math.PI * y / (N - 1)));
+      re[y * N + x] = (re[y * N + x] - mean) * w;
+    }
+    fft2(re, im, N, false);
+    return { re, im };
+  }
+  // Phase correlation: returns the integer shift (dx, dy) of a frame relative to ref, i.e. frame(x + dx, y + dy) ≈ ref(x, y).
+  function phaseShift(ref, cur, N) {
+    const re = new Float64Array(N * N), im = new Float64Array(N * N);
+    for (let i = 0; i < N * N; i++) {
+      const a = ref.re[i] * cur.re[i] + ref.im[i] * cur.im[i], b = ref.im[i] * cur.re[i] - ref.re[i] * cur.im[i];
+      const m = Math.hypot(a, b) || 1; re[i] = a / m; im[i] = b / m;
+    }
+    fft2(re, im, N, true);
+    let best = -Infinity, bi = 0;
+    for (let i = 0; i < N * N; i++) if (re[i] > best) { best = re[i]; bi = i; }
+    let dx = bi % N, dy = Math.floor(bi / N);
+    if (dx > N / 2) dx -= N; if (dy > N / 2) dy -= N;
+    return { dx: -dx, dy: -dy };
+  }
+  function insertionMedian(buf, n) {
+    for (let i = 1; i < n; i++) { const v = buf[i]; let j = i - 1; while (j >= 0 && buf[j] > v) { buf[j + 1] = buf[j]; j--; } buf[j + 1] = v; }
+    return n & 1 ? buf[n >> 1] : (buf[(n >> 1) - 1] + buf[n >> 1]) / 2;
+  }
+  $('btnStack').onclick = async () => {
+    if (!stream || sel || stacking) return;
+    stacking = true; syncButtons();
+    try {
+      // 1-2. Grab 40 frames over ~2 s, keeping only the 20 sharpest as we go (saves memory).
+      let kept = [];
+      const gap = STACK_MS / STACK_GRAB;
+      for (let i = 0; i < STACK_GRAB; i++) {
+        const t0 = performance.now();
+        showHint(`Hold still… ${i + 1}/${STACK_GRAB}`);
+        const c = grab();
+        kept.push({ c, score: sharpness(c) });
+        if (kept.length > STACK_KEEP) { kept.sort((a, b) => b.score - a.score); kept.length = STACK_KEEP; }
+        await new Promise(r => setTimeout(r, Math.max(0, gap - (performance.now() - t0))));
+      }
+      kept.sort((a, b) => b.score - a.score);
+      const W = kept[0].c.width, H = kept[0].c.height;
+      const data = kept.map(k => k.c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data);
+      kept = null;
+      // 3. Align every kept frame to the sharpest one with FFT phase correlation (translation only).
+      showHint('Aligning frames…'); await tick();
+      let N = 1; while (N * 2 <= Math.min(W, H, 512)) N *= 2;
+      const refSpec = patchSpectrum(data[0], W, H, N), shifts = [{ dx: 0, dy: 0 }];
+      for (let k = 1; k < data.length; k++) {
+        shifts.push(phaseShift(refSpec, patchSpectrum(data[k], W, H, N), N));
+        if (k % 4 === 0) { showHint(`Aligning frames… ${k}/${data.length - 1}`); await tick(); }
+      }
+      // 4. Per-pixel median of the aligned frames: moving glare and noise drop out.
+      const out = new ImageData(W, H), od = out.data, buf = new Float32Array(data.length);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const o = (y * W + x) * 4;
+          for (let ch = 0; ch < 3; ch++) {
+            let n = 0;
+            for (let k = 0; k < data.length; k++) {
+              const sx = x + shifts[k].dx, sy = y + shifts[k].dy;
+              if (sx >= 0 && sy >= 0 && sx < W && sy < H) buf[n++] = data[k][(sy * W + sx) * 4 + ch];
+            }
+            od[o + ch] = insertionMedian(buf, n);
+          }
+          od[o + 3] = 255;
+        }
+        if (y % 60 === 0) { showHint(`Merging ${STACK_KEEP} frames… ${Math.round(y / H * 100)}%`); await tick(); }
+      }
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      c.getContext('2d').putImageData(out, 0, 0);
+      // 5-6. Show as a new capture with the Capillary enhance applied; Save writes _raw + _capillary.
+      const f = addFrame(c, 'scope', `captrail-stacked-${new Date().toISOString().replace(/[:.]/g, '-')}.png`);
+      f.label = `Stacked (${data.length} frames)`;
+      f.shifts = shifts;
+      look = 'capillary';
+      showHint('');
+      showFrame(f);
+    } catch (e) {
+      showHint('');
+      setStatus($('connStatus'), 'err', 'Stacking failed: ' + e.message);
+    } finally {
+      stacking = false; syncButtons();
+    }
+  };
   $('fileIn').onchange = async e => {
     let last;
     for (const file of e.target.files) {

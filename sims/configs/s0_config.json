@@ -1,0 +1,7 @@
+{
+  "pitch_um": 10.0,
+  "tick_width_um": null,
+  "_tick_width_note": "REQUIRED for the sigma fit: measure or look up the real dark-tick width of your slide. If unknown leave null; sigma then comes from edge profiles only.",
+  "bits": 8,
+  "min_levels": 3
+}

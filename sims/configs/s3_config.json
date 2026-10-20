@@ -1,0 +1,4 @@
+{
+  "assumed_depth_um": 50,
+  "_note": "S3 cannot identify depth, attenuation and blur growth separately from contrast and sigma alone. Depth is an ASSUMPTION; say so in the write-up."
+}

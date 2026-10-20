@@ -19,6 +19,11 @@
 
   .lab{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;padding-bottom:110px;align-items:start}
   .stage-wrap{background:var(--dark);border-radius:20px;padding:14px;color:#fff;position:sticky;top:76px}
+  .dual{display:grid;gap:10px}
+  .dual.has-sim{grid-template-columns:1fr 1fr;align-items:start}
+  .sim{margin:0}
+  .sim canvas{display:block;width:100%;height:auto;border-radius:12px;background:#f0d9c8}
+  .sim figcaption{font-size:12px;line-height:1.4;color:rgba(255,255,255,.65);margin-top:6px}
   .stage{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;max-height:calc(100vh - 260px);margin:0 auto}
   .stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .stage video{object-fit:contain}
@@ -89,6 +94,7 @@
   .privacy svg{width:18px;height:18px;flex:none;color:var(--red);margin-top:1px}
 
   @media (max-width:1060px){
+    .dual.has-sim{grid-template-columns:1fr}
     .lab{grid-template-columns:1fr}
     .stage-wrap{position:relative;top:0}
     .stage{max-height:none}
@@ -114,6 +120,7 @@
 
   <section class="lab">
     <div class="stage-wrap">
+      <div class="dual" id="dual">
       <div class="stage" id="stage">
         <video id="video" playsinline muted hidden></video>
         <canvas id="view" hidden></canvas>
@@ -127,6 +134,12 @@
         </div>
         <div class="hud" id="hud"></div>
         <div class="hint" id="hint" hidden></div>
+      </div>
+      <!-- Simulated view: a drawn illustration, not a capture. Never saved, measured or sent to AI analysis. -->
+      <figure class="sim" id="simFig" hidden>
+        <canvas id="simCanvas" width="1280" height="960" aria-label="Simulated illustration of capillary loops"></canvas>
+        <figcaption>Simulated illustration from the detected loop positions. Not a real image: never saved, measured or analyzed.</figcaption>
+      </figure>
       </div>
 
       <div class="bar">
@@ -276,14 +289,21 @@
     sel = null; setMode('none');
     $('empty').hidden = true; video.hidden = false; view.hidden = overlay.hidden = true;
     stage.style.aspectRatio = (video.videoWidth || 16) + '/' + (video.videoHeight || 9);
-    renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings();
+    renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings(); renderSim();
   }
   function showFrame(f) {
     sel = f; setMode('none');
     $('empty').hidden = true; video.hidden = true; view.hidden = overlay.hidden = false;
     view.width = overlay.width = f.w; view.height = overlay.height = f.h;
     stage.style.aspectRatio = f.w + '/' + f.h;
-    drawFrame(); renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings();
+    drawFrame(); renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings(); renderSim();
+  }
+  // The simulated view belongs to a Best of 8 capture (and its zoom). It is only ever drawn on its own canvas.
+  function renderSim() {
+    const sim = sel?.sim || sel?.pair?.sim;
+    $('simFig').hidden = !sim;
+    $('dual').classList.toggle('has-sim', !!sim);
+    if (sim) $('simCanvas').getContext('2d').drawImage(sim, 0, 0);
   }
   function drawFrame() {
     if (!sel) return;
@@ -338,6 +358,8 @@
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       const orig = addFrame(canvas, 'scope', `captrail-best8-${stamp}.png`);
       orig.shifts = shifts;
+      showHint('Drawing simulated view…'); await tick();
+      orig.sim = simulateCapillaries(canvas); // illustration only: not a frame, never saved or analyzed
       look = 'off';
       // 5. Only zoom sharp captures; otherwise keep the original and say why.
       if (orig.score <= ZOOM_MIN_SHARPNESS) { orig.note = 'Too blurry to zoom, retake'; showHint(''); showFrame(orig); return; }
@@ -754,6 +776,92 @@
     // 6. Unsharp mask: radius 4px, amount 0.8, threshold 2.
     return { canvas: unsharpCanvas(c, { radius: 4, amount: .8, threshold: 2 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY, glareFrac } };
   }
+  // Simulated view: draws hairpin loops at the loop positions detected in the real capture, styled like a
+  // capillaroscopy photo. It is an illustration only.
+  function simulateCapillaries(src) {
+    const { width: W, height: H } = src, n = W * H, d = pixelsOf(src);
+    const D = new Float32Array(n), lum = new Float32Array(n);
+    for (let p = 0; p < n; p++) { D[p] = d[p * 4] - d[p * 4 + 1]; lum[p] = .299 * d[p * 4] + .587 * d[p * 4 + 1] + .114 * d[p * 4 + 2]; }
+    // 1. Capillary row: in the lower 65%, highest mean |horizontal gradient of (R - G)|, ignoring glare
+    //    (above the 94th brightness percentile, or near-saturated).
+    const cut = percentile(lum, .94), glare = p => lum[p] > cut || lum[p] >= 250;
+    let row = Math.floor(H * .35), best = -1;
+    for (let y = row; y < H; y++) {
+      let s = 0, c = 0;
+      for (let x = 0; x < W - 1; x++) { const p = y * W + x; if (glare(p) || glare(p + 1)) continue; s += Math.abs(D[p + 1] - D[p]); c++; }
+      if (c && s / c > best) { best = s / c; row = y; }
+    }
+    // 2. Loop positions: column profile of (R - G) in a 30px band around the row, smoothed; local peaks
+    //    that stand out (above mean + 0.5 SD), at least 8px apart. Fewer than 5 -> even spacing.
+    const prof = new Float32Array(W);
+    for (let x = 0; x < W; x++) {
+      let s = 0, c = 0;
+      for (let y = Math.max(0, row - 15); y <= Math.min(H - 1, row + 15); y++) { const p = y * W + x; if (!glare(p)) { s += D[p]; c++; } }
+      prof[x] = c ? s / c : 0;
+    }
+    const sm = gaussBlur(gaussBlur(prof, W, 1, 2), W, 1, 2);
+    let mean = 0; for (const v of sm) mean += v; mean /= W;
+    let sd = 0; for (const v of sm) sd += (v - mean) ** 2; sd = Math.sqrt(sd / W);
+    const cand = [];
+    for (let x = 4; x < W - 4; x++) {
+      if (sm[x] <= mean + .5 * sd) continue;
+      let isMax = true; for (let k = -4; k <= 4 && isMax; k++) if (sm[x + k] > sm[x]) isMax = false;
+      if (isMax) cand.push(x);
+    }
+    cand.sort((a, b) => sm[b] - sm[a]);
+    const peaks = [];
+    for (const x of cand) if (peaks.every(p => Math.abs(p - x) >= 8)) peaks.push(x);
+    const CW = 1280, CH = 960, rnd = (a, b) => a + Math.random() * (b - a);
+    // Scale to the canvas; drop positions closer than one loop width (24px) so hairpins don't overlap.
+    let xs = peaks.sort((a, b) => a - b).map(x => x * CW / W);
+    if (peaks.length < 5) { xs = []; for (let x = 20; x < CW - 10; x += 25) xs.push(x); }
+    xs = xs.reduce((kept, x) => (!kept.length || x - kept[kept.length - 1] >= 24 ? kept.concat(x) : kept), []);
+    // 3. Warm background: vertical gradient plus light noise, and a pale cuticle band across the top 15%.
+    const c = document.createElement('canvas'); c.width = CW; c.height = CH;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    const g = x.createLinearGradient(0, 0, 0, CH);
+    g.addColorStop(0, 'rgb(248,225,205)'); g.addColorStop(1, 'rgb(240,190,165)');
+    x.fillStyle = g; x.fillRect(0, 0, CW, CH);
+    const noise = amount => {
+      const im = x.getImageData(0, 0, CW, CH), dd = im.data;
+      for (let i = 0; i < dd.length; i += 4) { const v = (Math.random() - .5) * amount; dd[i] += v; dd[i + 1] += v; dd[i + 2] += v; }
+      x.putImageData(im, 0, 0);
+    };
+    noise(10);
+    const cuticle = x.createLinearGradient(0, 0, 0, CH * .15 + 24);
+    cuticle.addColorStop(0, 'rgba(255,246,236,.9)'); cuticle.addColorStop(.8, 'rgba(255,246,236,.75)'); cuticle.addColorStop(1, 'rgba(255,246,236,0)');
+    x.fillStyle = cuticle; x.fillRect(0, 0, CW, CH * .15 + 24);
+    // 4. Hairpin loops: arterial (left) limb 6px, venous (right) limb 9px, joined by a rounded top,
+    //    each with a soft halo twice as wide, and a slight wiggle.
+    x.lineCap = 'round'; x.lineJoin = 'round';
+    for (const cx of xs) {
+      const len = rnd(140, 220), gap = rnd(12, 18), r = gap / 2, top = CH * .15 + rnd(25, 60), bottom = top + len;
+      const amp = rnd(.8, 2), per = rnd(18, 32), ph = rnd(0, 6.3);
+      const wig = y => amp * Math.sin(y / per + ph);
+      const limb = (lx, from, to) => { for (let y = from; (to > from ? y <= to : y >= to); y += (to > from ? 6 : -6)) x.lineTo(lx + wig(y), y); };
+      const arterial = () => { x.beginPath(); x.moveTo(cx - r + wig(bottom), bottom); limb(cx - r, bottom, top); x.arc(cx + wig(top), top, r, Math.PI, Math.PI * 1.5); };
+      const venous = () => { x.beginPath(); x.arc(cx + wig(top), top, r, Math.PI * 1.5, Math.PI * 2); limb(cx + r, top, bottom); };
+      for (const [path, w] of [[arterial, 6], [venous, 9]]) {
+        path(); x.strokeStyle = 'rgba(210,110,100,.4)'; x.lineWidth = w * 2; x.stroke();
+        path(); x.strokeStyle = 'rgb(185,45,50)'; x.lineWidth = w; x.stroke();
+      }
+    }
+    // 5. Photographic softening: 1.5px blur, then light noise.
+    const im = x.getImageData(0, 0, CW, CH), dd = im.data;
+    for (let ch = 0; ch < 3; ch++) {
+      const v = new Float32Array(CW * CH);
+      for (let p = 0; p < CW * CH; p++) v[p] = dd[p * 4 + ch];
+      const b = gaussBlur(v, CW, CH, 1.5);
+      for (let p = 0; p < CW * CH; p++) dd[p * 4 + ch] = b[p];
+    }
+    x.putImageData(im, 0, 0);
+    noise(8);
+    // 6. "SIMULATED" label, bottom-right, 14px, 60% opacity.
+    x.globalAlpha = .6; x.fillStyle = 'rgb(80,25,25)'; x.font = '600 14px Inter, system-ui, sans-serif';
+    x.textAlign = 'right'; x.textBaseline = 'bottom'; x.fillText('SIMULATED', CW - 14, CH - 12); x.globalAlpha = 1;
+    c.loops = xs.length; c.peaks = peaks.length; c.fromPeaks = peaks.length >= 5; c.row = row;
+    return c;
+  }
   const LOOKS = {
     off:   { label: 'Original', short: 'Off', next: 'warm' },
     warm:  { label: 'Warm', short: 'Warm', next: 'sharp', make: f => warmCanvas(f.canvas) },
@@ -785,7 +893,7 @@
     frames = frames.filter(f => f !== sel);
     if (frames.length) showFrame(frames[frames.length - 1]);
     else if (stream) goLive();
-    else { sel = null; video.hidden = view.hidden = overlay.hidden = true; $('empty').hidden = false; stage.style.aspectRatio = '16/9'; renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings(); }
+    else { sel = null; video.hidden = view.hidden = overlay.hidden = true; $('empty').hidden = false; stage.style.aspectRatio = '16/9'; renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings(); renderSim(); }
   };
   // Save always downloads the untouched raw capture (for the AI dataset), plus the processed view
   // with any measurements and AI boxes drawn on it (_warm / _gray / ..., or _annotated when the mode is off).

@@ -140,8 +140,8 @@
         <span class="spacer"></span>
         <button class="tb" id="btnEnhance" disabled title="Cycle mode: Off, Warm, Sharpen, Capillary, Grayscale">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl" id="enhanceLbl">Enhance: Off</span></button>
-        <button class="tb" id="btnRaw" disabled title="Switch between the raw image and the clinical view">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg><span class="lbl" id="rawLbl">Show raw</span></button>
+        <button class="tb" id="btnRaw" disabled title="Switch between the zoomed image and the original">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg><span class="lbl" id="rawLbl">Show original</span></button>
         <button class="tb" id="btnMeasure" disabled title="Click two points to measure">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2"/></svg><span class="lbl">Measure</span></button>
         <button class="tb" id="btnDownload" disabled title="Save this image">
@@ -293,16 +293,17 @@
     const h = $('hud'); const bits = [];
     if (!sel && stream) bits.push('<span class="live">Live</span>');
     if (sel) bits.push(`<span>${sel.label || (sel.source === 'scope' ? 'Captured' : 'Uploaded')} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
-    if (sel) bits.push(look === 'off' ? '<span>Raw view</span>' : `<span>${look === 'clinical' ? LOOKS.clinical.label : LOOKS[look].label + ' view'}</span>`);
+    if (look !== 'off' && sel) bits.push(`<span>${LOOKS[look].label} view</span>`);
     h.innerHTML = bits.join('');
   }
   function syncButtons() {
     const live = !!stream && !sel;
     $('btnCapture').disabled = $('btnBurst').disabled = $('btnStack').disabled = !live || stacking;
-    $('btnBurst').title = 'Take 8 frames, align and merge them, and open the clinical view';
+    $('btnBurst').title = 'Take 8 frames, merge them, and zoom 2× on the capillary row';
     $('btnLive').disabled = !stream || !sel;
-    ['btnEnhance', 'btnRaw', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
-    $('rawLbl').textContent = look === 'off' ? 'Show clinical' : 'Show raw';
+    ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
+    $('btnRaw').disabled = !sel?.pair || !frames.includes(sel.pair);
+    $('rawLbl').textContent = sel?.calibScale ? 'Show original' : 'Show zoom';
     $('btnAnalyze').disabled = !sel || analyzing;
     $('btnEnhance').classList.toggle('on', look !== 'off');
     $('enhanceLbl').textContent = 'Enhance: ' + LOOKS[look].short;
@@ -320,8 +321,8 @@
     frames.push(f); return f;
   }
   $('btnCapture').onclick = () => { if (stream && !sel) showFrame(addFrame(grab(), 'scope')); };
-  // Best of 8: grab 8 frames, align all of them to the sharpest, merge with a per-pixel median,
-  // and open the result in the clinical view (raw stays one click away).
+  // Best of 8: grab 8 frames, align all of them to the sharpest and merge with a per-pixel median,
+  // then auto-crop a 2× zoom around the capillary row and show that as the main capture.
   $('btnBurst').onclick = async () => {
     if (!stream || sel || stacking) return;
     stacking = true; syncButtons();
@@ -331,15 +332,19 @@
       const scored = shots.map(c => ({ c, score: sharpness(c) })).sort((a, b) => b.score - a.score);
       const W = scored[0].c.width, H = scored[0].c.height;
       const { canvas, shifts } = await mergeAligned(scored.map(k => pixelsOf(k.c)), W, H);
-      showHint('Building clinical view…'); await tick();
-      const f = addFrame(canvas, 'scope', `captrail-best8-${new Date().toISOString().replace(/[:.]/g, '-')}.png`);
-      f.label = 'Best of 8 (median of 8 frames)';
-      f.shifts = shifts;
-      f.defaultLook = 'clinical';
-      look = 'clinical';
-      lookCanvas(f, 'clinical');
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const orig = addFrame(canvas, 'scope', `captrail-best8-${stamp}.png`);
+      orig.shifts = shifts;
+      showHint('Zooming on the capillary row…'); await tick();
+      const { canvas: zc, crop } = zoomOnCapillaries(canvas);
+      const zoom = addFrame(zc, 'scope', `captrail-best8-${stamp}.png`);
+      zoom.calibScale = .5;            // 2× enlargement: each zoomed pixel is half an original pixel
+      zoom.calibW = W; zoom.calibH = H; // calibration is stored for the original resolution
+      zoom.crop = crop;
+      zoom.pair = orig; orig.pair = zoom;
+      look = 'off';
       showHint('');
-      showFrame(f);
+      showFrame(zoom);
     } catch (e) {
       showHint('');
       setStatus($('connStatus'), 'err', 'Capture failed: ' + e.message);
@@ -645,59 +650,83 @@
     sample.sort();
     return sample[Math.min(sample.length - 1, Math.floor(p * sample.length))];
   }
-  // Clinical view (gentle): styled like standard nailfold capillaroscopy references (light pink skin, red vessels).
-  function clinicalCanvas(src) {
-    const { width: W, height: H } = src, n = W * H;
-    const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0);
-    const img = x.getImageData(0, 0, W, H), d = img.data;
-    // 1. Denoise: 3×3 median filter on each color channel.
-    const den = [new Float32Array(n), new Float32Array(n), new Float32Array(n)], win = new Float32Array(9);
-    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) for (let ch = 0; ch < 3; ch++) {
-      let k = 0;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const yy = Math.min(H - 1, Math.max(0, y + dy)), xs = Math.min(W - 1, Math.max(0, xx + dx));
-        win[k++] = d[(yy * W + xs) * 4 + ch];
+  // Bicubic (Keys, a = -0.5) 2× upscale of one channel.
+  function bicubic2x(src, W, H) {
+    const W2 = W * 2, H2 = H * 2, out = new Float32Array(W2 * H2);
+    const k = t => { t = Math.abs(t); return t <= 1 ? 1.5 * t ** 3 - 2.5 * t ** 2 + 1 : t < 2 ? -.5 * t ** 3 + 2.5 * t ** 2 - 4 * t + 2 : 0; };
+    // A 2× scale only ever samples two sub-pixel phases, so precompute their weights.
+    // Even output pixels sit 0.75 past their left source pixel, odd ones 0.25 past it.
+    const phase = [.75, .25].map(fr => [-1, 0, 1, 2].map(i => k(i - fr)));
+    const at = (x, y) => src[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))];
+    for (let oy = 0; oy < H2; oy++) {
+      const sy = (oy + .5) / 2 - .5, y0 = Math.floor(sy), wy = phase[oy & 1];
+      for (let ox = 0; ox < W2; ox++) {
+        const sx = (ox + .5) / 2 - .5, x0 = Math.floor(sx), wx = phase[ox & 1];
+        let v = 0;
+        for (let j = 0; j < 4; j++) {
+          const yy = y0 - 1 + j;
+          v += wy[j] * (wx[0] * at(x0 - 1, yy) + wx[1] * at(x0, yy) + wx[2] * at(x0 + 1, yy) + wx[3] * at(x0 + 2, yy));
+        }
+        out[oy * W2 + ox] = v;
       }
-      den[ch][y * W + xx] = insertionMedian(win, 9);
     }
-    const [R, G, B] = den;
-    // 2. Glare mask: luminance above the 96th percentile, expanded by 4px (square max filter, two 1-D passes).
-    const lum = new Float32Array(n);
-    for (let p = 0; p < n; p++) lum[p] = .299 * R[p] + .587 * G[p] + .114 * B[p];
-    const cut = percentile(lum, .96), m0 = new Uint8Array(n), m1 = new Uint8Array(n), glare = new Uint8Array(n);
-    for (let p = 0; p < n; p++) m0[p] = lum[p] > cut ? 1 : 0;
-    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
-      let v = 0; for (let dx = -4; dx <= 4 && !v; dx++) { const xs = xx + dx; if (xs >= 0 && xs < W) v = m0[y * W + xs]; }
-      m1[y * W + xx] = v;
+    return out;
+  }
+  // Auto-zoom: find the capillary loop row, crop half width × half height around it (sliding sideways to
+  // avoid glare), and enlarge 2× with local contrast, a natural orange tone and gentle sharpening.
+  function zoomOnCapillaries(src) {
+    const { width: W, height: H } = src, n = W * H, d = pixelsOf(src);
+    const G = new Float32Array(n), lum = new Float32Array(n);
+    for (let p = 0; p < n; p++) { G[p] = d[p * 4 + 1]; lum[p] = .299 * d[p * 4] + .587 * d[p * 4 + 1] + .114 * d[p * 4 + 2]; }
+    // 1. Loop row: in the bottom 65%, score each row by mean |horizontal gradient| of (G - 6px blur of G),
+    //    smooth over 8 rows, take the best.
+    const gb = gaussBlur(G, W, H, 6), y0 = Math.floor(H * .35), score = new Float32Array(H);
+    for (let y = y0; y < H; y++) {
+      let s = 0;
+      for (let x = 0; x < W - 1; x++) { const p = y * W + x; s += Math.abs((G[p + 1] - gb[p + 1]) - (G[p] - gb[p])); }
+      score[y] = s / (W - 1);
     }
-    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
-      let v = 0; for (let dy = -4; dy <= 4 && !v; dy++) { const ys = y + dy; if (ys >= 0 && ys < H) v = m1[ys * W + xx]; }
-      glare[y * W + xx] = v;
+    let loopY = y0, best = -1;
+    for (let y = y0; y < H; y++) {
+      let s = 0, c = 0;
+      for (let yy = y - 4; yy < y + 4; yy++) if (yy >= y0 && yy < H) { s += score[yy]; c++; }
+      if (s / c > best) { best = s / c; loopY = y; }
     }
-    // 3. Vessel signal: vessels absorb green, so signal = blurred background of G (40px) minus G,
-    //    lightly smoothed (1px). Glare pixels are set to 0.
-    const bg = gaussBlur(G, W, H, 40), sig0 = new Float32Array(n);
-    for (let p = 0; p < n; p++) sig0[p] = bg[p] - G[p];
-    const sig = gaussBlur(sig0, W, H, 1);
-    for (let p = 0; p < n; p++) if (glare[p]) sig[p] = 0;
-    // 4. Normalize with the 50th and 99.5th percentiles of non-glare pixels; t = clamp(...)^1.2.
-    let cnt = 0; for (let p = 0; p < n; p++) if (!glare[p]) cnt++;
-    const clean = new Float32Array(cnt);
-    for (let p = 0, j = 0; p < n; p++) if (!glare[p]) clean[j++] = sig[p];
-    const lo = percentile(clean, .5), hi = percentile(clean, .995), span = Math.max(1e-6, hi - lo);
-    // 5. Color: background (242,212,200) blended toward vessel (170,40,45). Glare pixels stay plain background.
-    for (let p = 0; p < n; p++) {
-      const t = glare[p] ? 0 : Math.pow(Math.min(1, Math.max(0, (sig[p] - lo) / span)), 1.2);
-      d[p * 4] = 242 + (170 - 242) * t; d[p * 4 + 1] = 212 + (40 - 212) * t; d[p * 4 + 2] = 200 + (45 - 200) * t; d[p * 4 + 3] = 255;
+    // 2. Crop half width × half height centered on the loop row, slid sideways to the position with the
+    //    fewest glare pixels (above the 96th brightness percentile). Ties go to the most central spot.
+    const cw = Math.floor(W / 2), ch = Math.floor(H / 2);
+    const cy = Math.min(H - ch, Math.max(0, Math.round(loopY - ch / 2)));
+    const cut = percentile(lum, .96), col = new Uint32Array(W + 1);
+    for (let x = 0; x < W; x++) { let c = 0; for (let y = cy; y < cy + ch; y++) if (lum[y * W + x] > cut) c++; col[x + 1] = col[x] + c; }
+    let cx = Math.round((W - cw) / 2), fewest = Infinity;
+    for (let x = 0; x <= W - cw; x++) {
+      const g = col[x + cw] - col[x];
+      if (g < fewest || (g === fewest && Math.abs(x - (W - cw) / 2) < Math.abs(cx - (W - cw) / 2))) { fewest = g; cx = x; }
     }
-    x.putImageData(img, 0, 0);
-    // 6. Unsharp mask: radius 1.5px, amount 0.8, threshold 2.
-    return unsharpCanvas(c, { radius: 1.5, amount: 0.8, threshold: 2 });
+    // 3. Very slight blur (0.8px), then 2× bicubic enlargement.
+    // 4. Local contrast: blur + 2 × (value - 60px blur).
+    const W2 = cw * 2, H2 = ch * 2, n2 = W2 * H2, chans = [];
+    for (let c = 0; c < 3; c++) {
+      const crop = new Float32Array(cw * ch);
+      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) crop[y * cw + x] = d[((cy + y) * W + cx + x) * 4 + c];
+      const big = bicubic2x(gaussBlur(crop, cw, ch, .8), cw, ch);
+      const bg = gaussBlur(big, W2, H2, 60);
+      for (let p = 0; p < n2; p++) big[p] = bg[p] + 2 * (big[p] - bg[p]);
+      chans.push(big);
+    }
+    // 5. Natural orange: red × 1.04, blue × 0.90, then saturation × 1.25 around each pixel's luminance.
+    const out = new ImageData(W2, H2), od = out.data;
+    for (let p = 0; p < n2; p++) {
+      const r = chans[0][p] * 1.04, g = chans[1][p], b = chans[2][p] * .9, L = .299 * r + .587 * g + .114 * b;
+      od[p * 4] = L + 1.25 * (r - L); od[p * 4 + 1] = L + 1.25 * (g - L); od[p * 4 + 2] = L + 1.25 * (b - L); od[p * 4 + 3] = 255;
+    }
+    const c = document.createElement('canvas'); c.width = W2; c.height = H2;
+    c.getContext('2d').putImageData(out, 0, 0);
+    // 6. Unsharp mask: radius 4px, amount 0.8, threshold 2.
+    return { canvas: unsharpCanvas(c, { radius: 4, amount: .8, threshold: 2 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY } };
   }
   const LOOKS = {
-    off:   { label: 'Original', short: 'Off', next: 'clinical' },
-    clinical: { label: 'Enhanced (clinical view)', short: 'Clinical', next: 'warm', make: f => clinicalCanvas(f.canvas) },
+    off:   { label: 'Original', short: 'Off', next: 'warm' },
     warm:  { label: 'Warm', short: 'Warm', next: 'sharp', make: f => warmCanvas(f.canvas) },
     // Sharpen runs on the warm-corrected image, reusing its cached copy.
     sharp: { label: 'Warm + sharpen', short: 'Sharpen', next: 'capillary', make: f => unsharpCanvas(lookCanvas(f, 'warm')) },
@@ -711,7 +740,7 @@
     return (f.looks[l] ||= LOOKS[l].make(f));
   }
   $('btnEnhance').onclick = () => { look = LOOKS[look].next; drawFrame(); renderHud(); syncButtons(); };
-  $('btnRaw').onclick = () => { look = look === 'off' ? (sel?.defaultLook || 'clinical') : 'off'; drawFrame(); renderHud(); syncButtons(); };
+  $('btnRaw').onclick = () => { if (sel?.pair && frames.includes(sel.pair)) showFrame(sel.pair); };
 
   /* ---------- gallery ---------- */
   function renderGallery() {
@@ -730,8 +759,8 @@
     else { sel = null; video.hidden = view.hidden = overlay.hidden = true; $('empty').hidden = false; stage.style.aspectRatio = '16/9'; renderHud(); renderGallery(); syncButtons(); renderMeasures(); renderFindings(); }
   };
   // Save always downloads the untouched raw capture (for the AI dataset), plus the processed view
-  // with any measurements and AI boxes drawn on it (_clinical / _warm / ..., or _annotated when the mode is off).
-  // Best of 8 captures always also save _clinical, even while the raw view is on screen.
+  // with any measurements and AI boxes drawn on it (_warm / _gray / ..., or _annotated when the mode is off).
+  // Best of 8 pairs save both images: _original (8-frame merge) and _zoom2x (auto-cropped zoom).
   $('btnDownload').onclick = async () => {
     if (!sel) return;
     const f = sel;
@@ -740,14 +769,21 @@
       const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000); done();
     }, 'image/png'));
+    const gap = () => new Promise(r => setTimeout(r, 400)); // browsers drop back-to-back downloads
+    if (f.pair) {
+      const zoom = f.calibScale ? f : f.pair, orig = zoom.pair;
+      await save(orig.canvas, `${base}_original.png`);
+      await gap();
+      await save(zoom.canvas, `${base}_zoom2x.png`);
+      return;
+    }
     await save(f.canvas, `${base}_raw.png`);
     const annotated = f.measures.length || (f.ai?.findings || []).length;
-    const processed = look !== 'off' ? look : f.defaultLook || 'off';
-    if (processed === 'off' && !annotated) return;
+    if (look === 'off' && !annotated) return;
     const out = document.createElement('canvas'); out.width = f.w; out.height = f.h;
-    const x = out.getContext('2d'); x.drawImage(lookCanvas(f, processed), 0, 0); x.drawImage(overlay, 0, 0);
-    await new Promise(r => setTimeout(r, 400)); // browsers drop back-to-back downloads
-    await save(out, `${base}_${processed === 'off' ? 'annotated' : processed}.png`);
+    const x = out.getContext('2d'); x.drawImage(lookCanvas(f, look), 0, 0); x.drawImage(overlay, 0, 0);
+    await gap();
+    await save(out, `${base}_${look === 'off' ? 'annotated' : look}.png`);
   };
 
   /* ---------- clicking on the image: calibrate + measure ---------- */
@@ -779,16 +815,19 @@
     const um = parseFloat($('calUm').value);
     if (pts.length !== 2 || !(um > 0)) return;
     const px = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
-    calib = { umPerPx: um / px, w: sel.w, h: sel.h, at: Date.now() };
+    const scale = sel.calibScale || 1;
+    calib = { umPerPx: um / px / scale, w: sel.calibW || sel.w, h: sel.calibH || sel.h, at: Date.now() };
     store.set('calib', calib); setMode('none'); renderCalib(); renderMeasures();
   };
   $('calCancel').onclick = () => setMode('none');
   $('btnCalClear').onclick = () => { calib = null; store.set('calib', null); renderCalib(); renderMeasures(); };
-  function umPerPx() { return calib && sel && calib.w === sel.w && calib.h === sel.h ? calib.umPerPx : null; }
+  // A zoomed frame's µm per pixel is the stored calibration × its calibScale (0.5 for the 2× zoom).
+  function umPerPx() { return calib && sel && calib.w === (sel.calibW || sel.w) && calib.h === (sel.calibH || sel.h) ? calib.umPerPx * (sel.calibScale || 1) : null; }
   function renderCalib() {
     $('calVal').innerHTML = calib ? `${calib.umPerPx.toFixed(3)} <small>µm / px</small>` : '— <small>µm / px</small>';
     if (!calib) return setStatus($('calStatus'), '', 'Not calibrated');
-    if (sel && (calib.w !== sel.w || calib.h !== sel.h)) return setStatus($('calStatus'), 'warn', `Calibrated at ${calib.w}×${calib.h}; this image is ${sel.w}×${sel.h}. Recalibrate.`);
+    if (sel && (calib.w !== (sel.calibW || sel.w) || calib.h !== (sel.calibH || sel.h))) return setStatus($('calStatus'), 'warn', `Calibrated at ${calib.w}×${calib.h}; this image is ${sel.calibW || sel.w}×${sel.calibH || sel.h}. Recalibrate.`);
+    if (sel?.calibScale) return setStatus($('calStatus'), 'ok', `Zoomed 2×: measuring at ${umPerPx().toFixed(3)} µm/px (half the original ${calib.umPerPx.toFixed(3)}).`);
     setStatus($('calStatus'), 'ok', `Calibrated ${new Date(calib.at).toLocaleDateString()} at ${calib.w}×${calib.h}. Recalibrate if zoom or height changes.`);
   }
   function renderMeasures() {

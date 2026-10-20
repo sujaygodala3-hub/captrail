@@ -166,12 +166,14 @@
         <span class="spacer"></span>
         <button class="tb" id="btnEnhance" disabled title="Cycle mode: Off, Warm, Sharpen, Capillary, Grayscale">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl" id="enhanceLbl">Enhance: Off</span></button>
-        <button class="tb" id="btnRaw" disabled title="Switch between the zoomed image and the original">
+        <button class="tb" id="btnRaw" disabled title="Switch between the enhanced view and the original">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg><span class="lbl" id="rawLbl">Show original</span></button>
         <button class="tb" id="btnMeasure" disabled title="Click two points to measure">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2"/></svg><span class="lbl">Measure</span></button>
         <button class="tb" id="btnDownload" disabled title="Save this image">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Save</span></button>
+        <button class="tb" id="btnZip" hidden title="Download every image from the last upload batch (raw + enhanced) as a zip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M12 8v7M9 12l3 3 3-3"/></svg><span class="lbl" id="zipLbl">Download all</span></button>
         <button class="tb" id="btnDelete" disabled title="Remove this image">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button>
       </div>
@@ -455,11 +457,11 @@
   function syncButtons() {
     const live = !!stream && !sel;
     $('btnCapture').disabled = $('btnBurst').disabled = $('btnStack').disabled = !live || stacking;
-    $('btnBurst').title = 'Take 8 frames, merge them, and zoom 2× on the capillary row';
+    $('btnBurst').title = 'Take 8 frames, merge them, and auto enhance';
     $('btnLive').disabled = !stream || !sel;
     ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
     $('btnRaw').disabled = !sel?.pair || !frames.includes(sel.pair);
-    $('rawLbl').textContent = sel?.calibScale ? 'Show original' : 'Show zoom';
+    $('rawLbl').textContent = sel?.calibScale ? 'Show original' : 'Show enhanced';
     $('btnAnalyze').disabled = !sel || analyzing;
     $('btnEnhance').classList.toggle('on', look !== 'off');
     $('enhanceLbl').textContent = 'Enhance: ' + LOOKS[look].short;
@@ -478,7 +480,7 @@
   }
   $('btnCapture').onclick = () => { if (stream && !sel) showFrame(addFrame(grab(), 'scope')); };
   // Best of 8: grab 8 frames, align all of them to the sharpest and merge with a per-pixel median,
-  // then auto-crop a 2× zoom around the capillary row and show that as the main capture.
+  // then run Auto enhance and show the result as the main capture.
   const ZOOM_MIN_SHARPNESS = 300;
   $('btnBurst').onclick = async () => {
     if (!stream || sel || stacking) return;
@@ -495,18 +497,12 @@
       showHint('Drawing simulated view…'); await tick();
       orig.sim = simulateCapillaries(canvas); // illustration only: not a frame, never saved or analyzed
       look = 'off';
-      // 5. Only zoom sharp captures; otherwise keep the original and say why.
+      // Only enhance sharp captures; otherwise keep the original and say why.
       if (orig.score <= ZOOM_MIN_SHARPNESS) { orig.note = 'Too blurry to zoom, retake'; showHint(''); showFrame(orig); return; }
-      showHint('Zooming on the capillary row…'); await tick();
-      const { canvas: zc, crop, reason } = zoomOnCapillaries(canvas);
-      if (!zc) { orig.note = reason; orig.crop = crop; showHint(''); showFrame(orig); return; }
-      const zoom = addFrame(zc, 'scope', `captrail-best8-${stamp}.png`);
-      zoom.calibScale = .5;            // 2× enlargement: each zoomed pixel is half an original pixel
-      zoom.calibW = W; zoom.calibH = H; // calibration is stored for the original resolution
-      zoom.crop = crop;
-      zoom.pair = orig; orig.pair = zoom;
+      showHint('Auto enhancing…'); await tick();
+      const enh = addEnhanced(orig, autoEnhance(canvas));
       showHint('');
-      showFrame(zoom);
+      showFrame(enh || orig);
     } catch (e) {
       showHint('');
       setStatus($('connStatus'), 'err', 'Capture failed: ' + e.message);
@@ -647,18 +643,78 @@
       stacking = false; syncButtons();
     }
   };
+  // Uploads: every image is auto enhanced; afterwards "Download all" zips the batch (raw + enhanced).
+  let lastBatch = [];
   $('fileIn').onchange = async e => {
-    let last;
-    for (const file of e.target.files) {
+    const files = [...e.target.files];
+    e.target.value = '';
+    if (!files.length) return;
+    let last, batch = [];
+    for (let i = 0; i < files.length; i++) {
       try {
-        const bmp = await createImageBitmap(file);
+        showHint(`Enhancing ${i + 1}/${files.length}…`); await tick();
+        const bmp = await createImageBitmap(files[i]);
         const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height; c.getContext('2d').drawImage(bmp, 0, 0);
-        last = addFrame(c, 'upload', file.name);
+        const orig = addFrame(c, 'upload', files[i].name);
+        const enh = addEnhanced(orig, autoEnhance(c));
+        batch.push({ orig, enh });
+        last = enh || orig;
       } catch { /* skip unreadable files */ }
     }
-    e.target.value = '';
+    showHint('');
+    lastBatch = batch;
+    $('btnZip').hidden = !batch.length;
+    $('zipLbl').textContent = `Download all (${batch.length})`;
     if (last) showFrame(last);
   };
+  $('btnZip').onclick = async () => {
+    if (!lastBatch.length) return;
+    const b = $('btnZip'); b.disabled = true; showHint('Building zip…'); await tick();
+    const pngBytes = cv => new Promise(r => cv.toBlob(async bl => r(new Uint8Array(await bl.arrayBuffer())), 'image/png'));
+    const used = new Set(), entries = [];
+    for (const { orig, enh } of lastBatch) {
+      let base = (orig.name || 'image').replace(/\.[^.]+$/, ''), k = 2;
+      while (used.has(base)) base = `${(orig.name || 'image').replace(/\.[^.]+$/, '')}-${k++}`;
+      used.add(base);
+      entries.push({ name: `${base}_raw.png`, data: await pngBytes(orig.canvas) });
+      if (enh) entries.push({ name: `${base}_enhanced.png`, data: await pngBytes(enh.canvas) });
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(entries));
+    a.download = `captrail-batch-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    showHint(''); b.disabled = false;
+  };
+  // Minimal ZIP writer (stored, no compression: PNGs are already compressed).
+  function makeZip(files) {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; table[i] = c >>> 0; }
+    const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = table[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+    const enc = new TextEncoder(), now = new Date();
+    const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const parts = [], central = [];
+    let offset = 0;
+    for (const f of files) {
+      const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, time, true); lh.setUint16(12, date, true); lh.setUint32(14, crc, true);
+      lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      parts.push(lh.buffer, name, f.data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+      ch.setUint16(10, 0, true); ch.setUint16(12, time, true); ch.setUint16(14, date, true); ch.setUint32(16, crc, true);
+      ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true);
+      ch.setUint32(42, offset, true);
+      central.push(ch.buffer, name);
+      offset += 30 + name.length + size;
+    }
+    const cdSize = central.reduce((s, x) => s + x.byteLength, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
+  }
 
   /* ---------- image processing ---------- */
   // Sharpness = variance of the Laplacian on a downscaled grayscale copy. Higher is sharper.
@@ -812,41 +868,12 @@
     sample.sort();
     return sample[Math.min(sample.length - 1, Math.floor(p * sample.length))];
   }
-  // Bicubic (Keys, a = -0.5) 2× upscale of one channel.
-  function bicubic2x(src, W, H) {
-    const W2 = W * 2, H2 = H * 2, out = new Float32Array(W2 * H2);
-    const k = t => { t = Math.abs(t); return t <= 1 ? 1.5 * t ** 3 - 2.5 * t ** 2 + 1 : t < 2 ? -.5 * t ** 3 + 2.5 * t ** 2 - 4 * t + 2 : 0; };
-    // A 2× scale only ever samples two sub-pixel phases, so precompute their weights.
-    // Even output pixels sit 0.75 past their left source pixel, odd ones 0.25 past it.
-    const phase = [.75, .25].map(fr => [-1, 0, 1, 2].map(i => k(i - fr)));
-    const at = (x, y) => src[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))];
-    for (let oy = 0; oy < H2; oy++) {
-      const sy = (oy + .5) / 2 - .5, y0 = Math.floor(sy), wy = phase[oy & 1];
-      for (let ox = 0; ox < W2; ox++) {
-        const sx = (ox + .5) / 2 - .5, x0 = Math.floor(sx), wx = phase[ox & 1];
-        let v = 0;
-        for (let j = 0; j < 4; j++) {
-          const yy = y0 - 1 + j;
-          v += wy[j] * (wx[0] * at(x0 - 1, yy) + wx[1] * at(x0, yy) + wx[2] * at(x0 + 1, yy) + wx[3] * at(x0 + 2, yy));
-        }
-        out[oy * W2 + ox] = v;
-      }
-    }
-    return out;
-  }
-  // Auto-zoom: find the capillary loop row, crop half width × half height around it (sliding sideways to
-  // avoid glare), and render a 2× dataset-style view from the real pixels.
-  // Returns { canvas: null, reason } when there is too much glare to zoom safely.
-  const ZOOM_MAX_GLARE = .25;
   // Glare mask: brightness above the given percentile, grown by `grow` px. Brightness is smoothed 1.5px first
   // and must also be genuinely bright (>= 215), or near-saturated (>= 250). A percentile alone always marks
   // that share of pixels even with no glare, and on a noisy capture the grown specks would cover everything.
-  function glareMask(lum, W, H, pct, grow) {
-    const n = W * H, sm = gaussBlur(lum, W, H, 1.5), cut = percentile(sm, pct);
-    let m = new Uint8Array(n);
-    for (let p = 0; p < n; p++) m[p] = (sm[p] > cut && sm[p] >= 215) || sm[p] >= 250 ? 1 : 0;
+  function growMask(m, W, H, grow) {
     if (!grow) return m;
-    const t = new Uint8Array(n), out = new Uint8Array(n);
+    const n = W * H, t = new Uint8Array(n), out = new Uint8Array(n);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       let v = 0; for (let k = -grow; k <= grow && !v; k++) { const xs = x + k; if (xs >= 0 && xs < W) v = m[y * W + xs]; }
       t[y * W + x] = v;
@@ -857,24 +884,108 @@
     }
     return out;
   }
-  function zoomOnCapillaries(src) {
+  function glareMask(lum, W, H, pct, grow) {
+    const n = W * H, sm = gaussBlur(lum, W, H, 1.5), cut = percentile(sm, pct), m = new Uint8Array(n);
+    for (let p = 0; p < n; p++) m[p] = (sm[p] > cut && sm[p] >= 215) || sm[p] >= 250 ? 1 : 0;
+    return growMask(m, W, H, grow);
+  }
+  // Lanczos (a = 3) upscale of one channel by an integer factor, as two 1-D passes.
+  function lanczosUp(src, W, H, f) {
+    const L = t => t === 0 ? 1 : Math.abs(t) >= 3 ? 0 : 3 * Math.sin(Math.PI * t) * Math.sin(Math.PI * t / 3) / (Math.PI * Math.PI * t * t);
+    // Weights for each of the f sub-pixel phases: taps at floor(s)-2 .. floor(s)+3.
+    const phases = [];
+    for (let ph = 0; ph < f; ph++) {
+      const sCoord = (ph + .5) / f - .5, fr = sCoord - Math.floor(sCoord);
+      const w = [-2, -1, 0, 1, 2, 3].map(t => L(t - fr)), sum = w.reduce((a, b) => a + b, 0);
+      phases.push({ base: Math.floor(sCoord), w: w.map(v => v / sum) });
+    }
+    const pass = (inp, len, lines, step, lineStep, outStep, outLineStep) => {
+      const out = new Float32Array(len * f * lines);
+      for (let l = 0; l < lines; l++) for (let o = 0; o < len * f; o++) {
+        const i = Math.floor(o / f), { base, w } = phases[o % f];
+        let v = 0;
+        for (let k = 0; k < 6; k++) { const s2 = Math.min(len - 1, Math.max(0, i + base - 2 + k)); v += w[k] * inp[l * lineStep + s2 * step]; }
+        out[l * outLineStep + o * outStep] = v;
+      }
+      return out;
+    };
+    const Wf = W * f;
+    const h = pass(src, W, H, 1, W, 1, Wf);            // rows: W -> W*f
+    return pass(h, H, Wf, Wf, 1, Wf, 1);                // columns: H -> H*f
+  }
+  // Fill masked pixels from their surroundings: grow inward ring by ring with the average of known
+  // 4-neighbours, then smooth the filled area with ~100 diffusion passes. Only masked pixels change.
+  function inpaint(chans, mask, W, H) {
+    const idx = [];
+    for (let p = 0; p < W * H; p++) if (mask[p]) idx.push(p);
+    if (!idx.length) return;
+    const known = new Uint8Array(W * H);
+    for (let p = 0; p < W * H; p++) known[p] = mask[p] ? 0 : 1;
+    let todo = idx.slice();
+    for (let iter = 0; todo.length && iter < 5000; iter++) {
+      const next = [], upd = [];
+      for (const p of todo) {
+        const x = p % W, nb = [];
+        if (x > 0 && known[p - 1]) nb.push(p - 1);
+        if (x < W - 1 && known[p + 1]) nb.push(p + 1);
+        if (p >= W && known[p - W]) nb.push(p - W);
+        if (p < W * (H - 1) && known[p + W]) nb.push(p + W);
+        if (nb.length) upd.push([p, nb]); else next.push(p);
+      }
+      if (!upd.length) break;
+      for (const [p, nb] of upd) { for (const c of chans) { let s = 0; for (const q of nb) s += c[q]; c[p] = s / nb.length; } }
+      for (const [p] of upd) known[p] = 1;
+      todo = next;
+    }
+    for (let it = 0; it < 100; it++) for (const p of idx) {
+      const x = p % W;
+      const nb = [x > 0 ? p - 1 : p, x < W - 1 ? p + 1 : p, p >= W ? p - W : p, p < W * (H - 1) ? p + W : p];
+      for (const c of chans) c[p] = (c[nb[0]] + c[nb[1]] + c[nb[2]] + c[nb[3]]) / 4;
+    }
+  }
+  function median3x3(src, W, H) {
+    const out = new Float32Array(W * H), win = new Float32Array(9);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let k = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
+        win[k++] = src[Math.min(H - 1, Math.max(0, y + dy)) * W + Math.min(W - 1, Math.max(0, x + dx))];
+      out[y * W + x] = insertionMedian(win, 9);
+    }
+    return out;
+  }
+  // Auto enhance: real pixels only. Glare fill, denoise, find the capillary row, 3× Lanczos zoom on it,
+  // local contrast, vessel color emphasis and light sharpening. Nothing is drawn.
+  const ENHANCE_ZOOM = 3, ENHANCE_MAX_FILL = .25;
+  function autoEnhance(src) {
     const { width: W, height: H } = src, n = W * H, d = pixelsOf(src);
-    const D = new Float32Array(n), lum = new Float32Array(n);
-    for (let p = 0; p < n; p++) { D[p] = d[p * 4] - d[p * 4 + 1]; lum[p] = .299 * d[p * 4] + .587 * d[p * 4 + 1] + .114 * d[p * 4 + 2]; }
-    // 1. Glare: ignore pixels above the 96th brightness percentile (grown 6px so glare edges don't score).
-    const glare = glareMask(lum, W, H, .96, 6);
-    // 2-3. Loop row, in the bottom 65%: vertical vessel edges show up as a horizontal gradient of redness
-    //    (R - G); glare is white, so it has little redness. Gradient is 0 inside the glare mask. Row score =
-    //    fraction of non-glare pixels × mean gradient, smoothed over 8 rows; the best row wins.
-    const y0 = Math.floor(H * .35), score = new Float32Array(H);
+    let R = new Float32Array(n), G = new Float32Array(n), B = new Float32Array(n);
+    const lum = new Float32Array(n), sat = new Float32Array(n);
+    for (let p = 0; p < n; p++) {
+      const r = d[p * 4], g = d[p * 4 + 1], b = d[p * 4 + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      R[p] = r; G[p] = g; B[p] = b; lum[p] = .299 * r + .587 * g + .114 * b; sat[p] = mx ? (mx - mn) / mx : 0;
+    }
+    // 2. Glare: above the 95th brightness percentile (and genuinely bright), or low saturation + high
+    //    brightness; grown 5px. Never fill more than 25% of the image.
+    const sm = gaussBlur(lum, W, H, 1.5), cut = percentile(sm, .95), m0 = new Uint8Array(n);
+    for (let p = 0; p < n; p++) m0[p] = (sm[p] > cut && sm[p] >= 215) || sm[p] >= 250 || (sat[p] < .15 && sm[p] > 200) ? 1 : 0;
+    const mask = growMask(m0, W, H, 5);
+    let filled = 0; for (let p = 0; p < n; p++) filled += mask[p];
+    const fillFrac = filled / n;
+    if (fillFrac > ENHANCE_MAX_FILL) return { canvas: null, reason: 'Too much glare, retake', fillFrac };
+    inpaint([R, G, B], mask, W, H);
+    // 3. Denoise: 3×3 median per channel.
+    R = median3x3(R, W, H); G = median3x3(G, W, H); B = median3x3(B, W, H);
+    // 4. Capillary row: lower 70%, highest mean |horizontal gradient of (R - G)| outside the glare mask,
+    //    weighted by how much of the row is outside the mask and smoothed over 8 rows.
+    const y0 = Math.floor(H * .3), score = new Float32Array(H);
     for (let y = y0; y < H; y++) {
-      let s = 0, clear = 0;
+      let s = 0, c = 0;
       for (let x = 0; x < W - 1; x++) {
         const p = y * W + x;
-        if (glare[p] || glare[p + 1]) continue;
-        clear++; s += Math.abs(D[p + 1] - D[p]);
+        if (mask[p] || mask[p + 1]) continue;
+        s += Math.abs((R[p + 1] - G[p + 1]) - (R[p] - G[p])); c++;
       }
-      score[y] = (clear / (W - 1)) * (s / (W - 1));
+      score[y] = c ? (s / c) * (c / (W - 1)) : 0;
     }
     let loopY = y0, best = -1;
     for (let y = y0; y < H; y++) {
@@ -882,45 +993,55 @@
       for (let yy = y - 4; yy < y + 4; yy++) if (yy >= y0 && yy < H) { s += score[yy]; c++; }
       if (s / c > best) { best = s / c; loopY = y; }
     }
-    // 2. Crop half width × half height centered on the loop row, slid sideways to the position with the
-    //    fewest glare-mask pixels. Ties go to the most central spot.
-    const cw = Math.floor(W / 2), ch = Math.floor(H / 2);
+    // 5. Crop 1/3 × 1/3 centered on the row, slid sideways to the least-filled spot (ties: most central).
+    const f = ENHANCE_ZOOM, cw = Math.floor(W / f), ch = Math.floor(H / f);
     const cy = Math.min(H - ch, Math.max(0, Math.round(loopY - ch / 2)));
-    const col = new Uint32Array(W + 1);
-    for (let x = 0; x < W; x++) { let c = 0; for (let y = cy; y < cy + ch; y++) c += glare[y * W + x]; col[x + 1] = col[x] + c; }
+    const colSum = new Uint32Array(W + 1);
+    for (let x = 0; x < W; x++) { let c = 0; for (let y = cy; y < cy + ch; y++) c += mask[y * W + x]; colSum[x + 1] = colSum[x] + c; }
     let cx = Math.round((W - cw) / 2), fewest = Infinity;
     for (let x = 0; x <= W - cw; x++) {
-      const g = col[x + cw] - col[x];
+      const g = colSum[x + cw] - colSum[x];
       if (g < fewest || (g === fewest && Math.abs(x - (W - cw) / 2) < Math.abs(cx - (W - cw) / 2))) { fewest = g; cx = x; }
     }
-    // 4. Even the best window is mostly glare: don't zoom.
-    const glareFrac = fewest / (cw * ch);
-    if (glareFrac > ZOOM_MAX_GLARE) return { canvas: null, reason: 'Too much glare to auto-zoom', crop: { loopY, glareFrac } };
-    // Dataset view of the crop: real pixels only, natural skin color, no tint and nothing drawn.
-    // 3. Enlarge 2× (bicubic).
-    const W2 = cw * 2, H2 = ch * 2, n2 = W2 * H2;
-    const [R, G, B] = [0, 1, 2].map(k => {
+    //    Enlarge 3× with Lanczos.
+    const W2 = cw * f, H2 = ch * f, n2 = W2 * H2;
+    const [r, g, b] = [R, G, B].map(chn => {
       const crop = new Float32Array(cw * ch);
-      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) crop[y * cw + x] = d[((cy + y) * W + cx + x) * 4 + k];
-      // 4. Local contrast: blur + 1.8 × (value - 40px blur).
-      const big = bicubic2x(crop, cw, ch), bg = gaussBlur(big, W2, H2, 40);
-      for (let p = 0; p < n2; p++) big[p] = bg[p] + 1.8 * (big[p] - bg[p]);
-      return big;
+      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) crop[y * cw + x] = chn[(cy + y) * W + cx + x];
+      return lanczosUp(crop, cw, ch, f);
     });
-    // 5. Vessel emphasis: e = (R - G) minus its 15px blur; R += 0.5e, G and B -= 0.3e; clamped on write.
+    // 6. Local contrast on luminance: L' = blur + 2 × (L - 40px blur); the change is added to every channel
+    //    so hue stays the same.
+    const L = new Float32Array(n2);
+    for (let p = 0; p < n2; p++) L[p] = .299 * r[p] + .587 * g[p] + .114 * b[p];
+    const Lb = gaussBlur(L, W2, H2, 40);
+    for (let p = 0; p < n2; p++) { const dl = L[p] - Lb[p]; r[p] += dl; g[p] += dl; b[p] += dl; }
+    // 7. Vessel color: e = (R - G) minus its 15px blur; R += 0.5e, G and B -= 0.3e; then saturation × 1.2.
     const red = new Float32Array(n2);
-    for (let p = 0; p < n2; p++) red[p] = R[p] - G[p];
+    for (let p = 0; p < n2; p++) red[p] = r[p] - g[p];
     const redBg = gaussBlur(red, W2, H2, 15);
     const out = new ImageData(W2, H2), od = out.data;
     for (let p = 0; p < n2; p++) {
       const e = red[p] - redBg[p];
-      od[p * 4] = R[p] + .5 * e; od[p * 4 + 1] = G[p] - .3 * e; od[p * 4 + 2] = B[p] - .3 * e; od[p * 4 + 3] = 255;
+      const rr = r[p] + .5 * e, gg = g[p] - .3 * e, bb = b[p] - .3 * e, Y = .299 * rr + .587 * gg + .114 * bb;
+      od[p * 4] = Y + 1.2 * (rr - Y); od[p * 4 + 1] = Y + 1.2 * (gg - Y); od[p * 4 + 2] = Y + 1.2 * (bb - Y); od[p * 4 + 3] = 255;
     }
     const c = document.createElement('canvas'); c.width = W2; c.height = H2;
     c.getContext('2d').putImageData(out, 0, 0);
-    // 6. Light unsharp mask (radius 2px, amount 0.6).
-    return { canvas: unsharpCanvas(c, { radius: 2, amount: .6, threshold: 0 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY, glareFrac } };
+    // 8. Unsharp mask: radius 2px, amount 0.8.
+    return { canvas: unsharpCanvas(c, { radius: 2, amount: .8, threshold: 0 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY }, fillFrac, scale: 1 / f, W, H };
   }
+  // Add an enhanced frame paired with its original (or a note on the original if enhancement was refused).
+  function addEnhanced(orig, res) {
+    if (!res.canvas) { orig.note = res.reason; return null; }
+    const enh = addFrame(res.canvas, orig.source, orig.name);
+    enh.calibScale = res.scale;              // 3× zoom: each enhanced pixel is a third of an original pixel
+    enh.calibW = res.W; enh.calibH = res.H;  // calibration is stored for the original resolution
+    enh.crop = res.crop;
+    enh.pair = orig; orig.pair = enh;
+    return enh;
+  }
+
   // Simulated view: draws hairpin loops at the loop positions detected in the real capture, styled like a
   // capillaroscopy photo. It is an illustration only.
   function simulateCapillaries(src) {
@@ -1042,7 +1163,7 @@
   };
   // Save always downloads the untouched raw capture (for the AI dataset), plus the processed view
   // with any measurements and AI boxes drawn on it (_warm / _gray / ..., or _annotated when the mode is off).
-  // Best of 8 pairs save both images: _raw (8-frame merge) and _view (2× dataset view).
+  // Auto-enhanced pairs save both images: _raw (the capture or upload) and _enhanced (3× auto-enhanced view).
   $('btnDownload').onclick = async () => {
     if (!sel) return;
     const f = sel;
@@ -1056,7 +1177,7 @@
       const zoom = f.calibScale ? f : f.pair, orig = zoom.pair;
       await save(orig.canvas, `${base}_raw.png`);
       await gap();
-      await save(zoom.canvas, `${base}_view.png`);
+      await save(zoom.canvas, `${base}_enhanced.png`);
       return;
     }
     await save(f.canvas, `${base}_raw.png`);
@@ -1109,7 +1230,7 @@
     $('calVal').innerHTML = calib ? `${calib.umPerPx.toFixed(3)} <small>µm / px</small>` : '— <small>µm / px</small>';
     if (!calib) return setStatus($('calStatus'), '', 'Not calibrated');
     if (sel && (calib.w !== (sel.calibW || sel.w) || calib.h !== (sel.calibH || sel.h))) return setStatus($('calStatus'), 'warn', `Calibrated at ${calib.w}×${calib.h}; this image is ${sel.calibW || sel.w}×${sel.calibH || sel.h}. Recalibrate.`);
-    if (sel?.calibScale) return setStatus($('calStatus'), 'ok', `Zoomed 2×: measuring at ${umPerPx().toFixed(3)} µm/px (half the original ${calib.umPerPx.toFixed(3)}).`);
+    if (sel?.calibScale) return setStatus($('calStatus'), 'ok', `Zoomed ${Math.round(1 / sel.calibScale)}×: measuring at ${umPerPx().toFixed(3)} µm/px (original ${calib.umPerPx.toFixed(3)} ÷ ${Math.round(1 / sel.calibScale)}).`);
     setStatus($('calStatus'), 'ok', `Calibrated ${new Date(calib.at).toLocaleDateString()} at ${calib.w}×${calib.h}. Recalibrate if zoom or height changes.`);
   }
   function renderMeasures() {

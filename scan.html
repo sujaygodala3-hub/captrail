@@ -64,6 +64,18 @@
   .panel h3 .n{font:600 11px/1 var(--body);letter-spacing:.1em;color:#fff;background:var(--red);border-radius:999px;padding:5px 8px}
   .panel p{font-size:14.5px;color:var(--muted);margin:0 0 14px}
   .panel label{display:block;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+  .cam summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+  .cam summary::-webkit-details-marker{display:none}
+  .cam summary::after{content:"+";font-size:22px;color:var(--muted);line-height:1}
+  .cam[open] summary::after{content:"–"}
+  .cam summary h3{margin:0}
+  .cam[open] summary{margin-bottom:10px}
+  .slider{margin-top:14px}
+  .slider .top{display:flex;justify-content:space-between;font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+  .slider .top output{color:var(--ink);font-variant-numeric:tabular-nums;text-transform:none}
+  .slider input{width:100%;accent-color:var(--red);margin-top:6px}
+  .slider.off{opacity:.45}
+  .slider.off .top output{color:var(--muted)}
   .panel select,.panel input[type=number]{width:100%;font:inherit;font-size:15px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
   .panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .pb{font:500 14px/1 var(--body);padding:11px 16px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
@@ -179,6 +191,14 @@
         <div class="status" id="connStatus"><i></i><span>Not connected</span></div>
       </div>
 
+      <details class="panel cam" id="camPanel">
+        <summary><h3>Camera settings</h3></summary>
+        <p>Locked white balance and exposure keep color and brightness the same from scan to scan. Applied automatically on connect and remembered for this camera.</p>
+        <div id="camSliders"></div>
+        <div class="row"><button class="pb" id="camReset" disabled>Reset to camera defaults</button></div>
+        <div class="status" id="camStatus"><i></i><span>Connect the microscope to adjust its settings.</span></div>
+      </details>
+
       <div class="panel">
         <h3><span class="n">02</span>Calibrate</h3>
         <p>Capture the 0.01 mm slide at the same height and zoom you’ll use for the finger, then click two tick marks a known distance apart.</p>
@@ -274,11 +294,125 @@
       setStatus($('connStatus'), looksLikeScope ? 'ok' : 'warn', looksLikeScope ? `${label} · ${s.width}×${s.height}` : `${label} · ${s.width}×${s.height}. Is this the microscope? Pick it above.`);
       $('btnConnect').textContent = 'Reconnect';
       goLive();
+      setupCameraControls(track, id);
     } catch (e) {
       setStatus($('connStatus'), 'err', e.name === 'NotAllowedError' ? 'Camera permission was blocked. Allow it in the address bar.' : e.name === 'NotFoundError' ? 'No camera found. Is the microscope plugged in?' : 'Could not start: ' + e.message);
     }
   }
   function stopCamera() { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+  /* ---------- camera settings (like Attune's scope_settings.json) ----------
+     Chrome and Edge expose UVC controls through getCapabilities()/applyConstraints(); Safari doesn't.
+     Per camera we store the camera's own defaults (captured on first connect) and the chosen values,
+     so reconnecting re-applies the same values instead of compounding "50% above default". */
+  const CAM_SLIDERS = [
+    { key: 'brightness', label: 'Brightness' },
+    { key: 'exposureTime', label: 'Exposure', mode: 'exposureMode' },
+    { key: 'saturation', label: 'Saturation' },
+    { key: 'contrast', label: 'Contrast' },
+  ];
+  const CAM_KEYS = ['colorTemperature', 'exposureTime', 'saturation', 'contrast', 'brightness', 'sharpness'];
+  let camTrack = null, camId = null, camCaps = {}, camApplyTimer;
+  const camStore = () => store.get('camera') || {};
+  const clampStep = (v, c) => {
+    if (!c || c.min == null) return v;
+    const st = c.step || 1, x = Math.min(c.max, Math.max(c.min, v));
+    return Math.round((x - c.min) / st) * st + c.min;
+  };
+  async function applyCam(constraints) {
+    // One control at a time: a camera that rejects one setting shouldn't block the rest.
+    const failed = [];
+    for (const c of constraints) {
+      try { await camTrack.applyConstraints({ advanced: [c] }); } catch { failed.push(Object.keys(c).join('+')); }
+    }
+    return failed;
+  }
+  function camConstraints(v) {
+    const caps = camCaps, out = [];
+    if (caps.whiteBalanceMode?.includes('manual') && caps.colorTemperature && v.colorTemperature != null)
+      out.push({ whiteBalanceMode: 'manual', colorTemperature: v.colorTemperature });
+    if (caps.exposureMode?.includes('manual') && caps.exposureTime && v.exposureTime != null)
+      out.push({ exposureMode: 'manual', exposureTime: v.exposureTime });
+    for (const k of ['saturation', 'contrast', 'brightness', 'sharpness']) if (caps[k] && v[k] != null) out.push({ [k]: v[k] });
+    return out;
+  }
+  async function setupCameraControls(track, deviceId) {
+    camTrack = track; camId = deviceId || 'default';
+    camCaps = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
+    const supported = CAM_KEYS.filter(k => camCaps[k] && camCaps[k].max > camCaps[k].min);
+    $('camReset').disabled = !supported.length;
+    if (!supported.length) {
+      renderCamSliders({});
+      setStatus($('camStatus'), 'warn', typeof track.getCapabilities === 'function'
+        ? 'This camera doesn’t expose adjustable settings to the browser.'
+        : 'This browser can’t adjust camera settings (Safari doesn’t). Use Chrome or Edge for locked color and exposure.');
+      return;
+    }
+    const all = camStore(), mine = all[camId] || {};
+    const now = track.getSettings();
+    if (!mine.defaults) {
+      // First connect: remember the camera's own settings, then derive the Attune-style starting values.
+      mine.defaults = {};
+      for (const k of CAM_KEYS) if (now[k] != null) mine.defaults[k] = now[k];
+      for (const k of ['whiteBalanceMode', 'exposureMode']) if (now[k]) mine.defaults[k] = now[k];
+    }
+    if (!mine.values) {
+      const c = camCaps, d = mine.defaults, v = {};
+      if (c.colorTemperature) v.colorTemperature = clampStep(6000, c.colorTemperature);
+      if (c.exposureTime) v.exposureTime = clampStep(d.exposureTime ?? (c.exposureTime.min + c.exposureTime.max) / 2, c.exposureTime);
+      if (c.saturation) v.saturation = c.saturation.max;
+      if (c.contrast) v.contrast = clampStep((d.contrast ?? (c.contrast.min + c.contrast.max) / 2) * 1.5, c.contrast);
+      if (c.brightness) v.brightness = clampStep(c.brightness.min + (c.brightness.max - c.brightness.min) * .25, c.brightness);
+      if (c.sharpness) v.sharpness = c.sharpness.max;
+      mine.values = v;
+    }
+    all[camId] = mine; store.set('camera', all);
+    renderCamSliders(mine.values);
+    const failed = await applyCam(camConstraints(mine.values));
+    const unsupported = ['whiteBalanceMode', 'exposureMode'].filter(k => !camCaps[k]?.includes?.('manual')).map(k => k === 'whiteBalanceMode' ? 'manual white balance' : 'manual exposure');
+    const parts = [];
+    if (failed.length) parts.push(`camera rejected: ${failed.join(', ')}`);
+    if (unsupported.length) parts.push(`not supported: ${unsupported.join(', ')}`);
+    setStatus($('camStatus'), parts.length ? 'warn' : 'ok', parts.length ? `Applied what this camera supports (${parts.join('; ')}).` : 'Settings applied: white balance 6000 K, manual exposure.');
+  }
+  function renderCamSliders(values) {
+    $('camSliders').innerHTML = CAM_SLIDERS.map(({ key, label }) => {
+      const c = camCaps[key], ok = c && c.max > c.min;
+      const v = ok ? values[key] ?? c.min : '';
+      return `<div class="slider${ok ? '' : ' off'}"><div class="top"><label for="cam-${key}">${label}</label><output id="camv-${key}">${ok ? v : 'not supported'}</output></div>
+        <input type="range" id="cam-${key}" ${ok ? `min="${c.min}" max="${c.max}" step="${c.step || 1}" value="${v}"` : 'disabled'}></div>`;
+    }).join('');
+    CAM_SLIDERS.forEach(({ key, mode }) => {
+      const el = $('cam-' + key);
+      if (el.disabled) return;
+      el.oninput = () => {
+        $('camv-' + key).textContent = el.value;
+        const all = camStore(), mine = all[camId] || { values: {} };
+        mine.values = { ...mine.values, [key]: Number(el.value) };
+        all[camId] = mine; store.set('camera', all);
+        clearTimeout(camApplyTimer);
+        camApplyTimer = setTimeout(async () => {
+          const c = mode && camCaps[mode]?.includes('manual') ? { [mode]: 'manual', [key]: Number(el.value) } : { [key]: Number(el.value) };
+          const failed = await applyCam([c]);
+          if (failed.length) setStatus($('camStatus'), 'warn', `The camera rejected ${key}.`);
+        }, 120);
+      };
+    });
+  }
+  $('camReset').onclick = async () => {
+    if (!camTrack) return;
+    const all = camStore(), mine = all[camId];
+    const d = mine?.defaults || {}, c = [];
+    if (camCaps.whiteBalanceMode?.includes('continuous')) c.push({ whiteBalanceMode: 'continuous' });
+    if (camCaps.exposureMode?.includes('continuous')) c.push({ exposureMode: 'continuous' });
+    for (const k of ['saturation', 'contrast', 'brightness', 'sharpness', 'colorTemperature']) if (camCaps[k] && d[k] != null) c.push({ [k]: d[k] });
+    await applyCam(c);
+    if (mine) { delete mine.values; all[camId] = mine; store.set('camera', all); }
+    const now = camTrack.getSettings(), v = {};
+    for (const k of CAM_KEYS) if (now[k] != null) v[k] = now[k];
+    renderCamSliders(v);
+    setStatus($('camStatus'), 'ok', 'Back to the camera’s defaults (auto white balance and exposure). Reconnect to re-apply the scan settings.');
+  };
   $('btnConnect').onclick = () => startCamera($('devSel').disabled ? null : $('devSel').value);
   $('devSel').onchange = e => startCamera(e.target.value);
   $('resSel').onchange = () => stream && startCamera($('devSel').value);

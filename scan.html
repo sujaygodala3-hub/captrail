@@ -136,7 +136,7 @@
         <button class="tb" id="btnLive" disabled title="Back to live view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg><span class="lbl">Live</span></button>
         <span class="spacer"></span>
-        <button class="tb" id="btnEnhance" disabled title="Cycle mode: Off, Warm, Sharpen, Grayscale">
+        <button class="tb" id="btnEnhance" disabled title="Cycle mode: Off, Warm, Sharpen, Capillary, Grayscale">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl" id="enhanceLbl">Enhance: Off</span></button>
         <button class="tb" id="btnMeasure" disabled title="Click two points to measure">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2"/></svg><span class="lbl">Measure</span></button>
@@ -434,11 +434,59 @@
     }
     x.putImageData(img, 0, 0); return c;
   }
+  // Fast Gaussian blur of one channel (Float32Array, W×H) using three box blurs, O(pixels) for any sigma.
+  function gaussBlur(src, W, H, sigma) {
+    const n = 3, wIdeal = Math.sqrt(12 * sigma * sigma / n + 1);
+    let wl = Math.floor(wIdeal); if (wl % 2 === 0) wl--;
+    const m = Math.round((12 * sigma * sigma - n * wl * wl - 4 * n * wl - 3 * n) / (-4 * wl - 4));
+    let a = Float32Array.from(src), b = new Float32Array(src.length);
+    for (let pass = 0; pass < n; pass++) {
+      const r = ((pass < m ? wl : wl + 2) - 1) / 2;
+      boxPass(a, b, W, H, r, 1, W);  // horizontal
+      boxPass(b, a, H, W, r, W, 1);  // vertical (same routine, strides swapped)
+    }
+    return a;
+  }
+  // Running-sum box blur along lines of `len` pixels; `step` moves along a line, `lineStep` between lines.
+  function boxPass(src, dst, len, lines, r, step, lineStep) {
+    const inv = 1 / (2 * r + 1);
+    for (let l = 0; l < lines; l++) {
+      const base = l * lineStep, at = i => src[base + Math.min(len - 1, Math.max(0, i)) * step];
+      let acc = 0;
+      for (let i = -r - 1; i < r; i++) acc += at(i);
+      for (let i = 0; i < len; i++) { acc += at(i + r) - at(i - r - 1); dst[base + i * step] = acc * inv; }
+    }
+  }
+  // Capillary: flatten uneven lighting, boost local contrast, then render in a clinical red tint and sharpen.
+  function capillaryCanvas(src) {
+    const { width: W, height: H } = src, n = W * H;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0);
+    const img = x.getImageData(0, 0, W, H), d = img.data;
+    // 1-2. Per channel: background = Gaussian blur (radius 25px); out = (pixel - background) * 3 + 128, clamped.
+    const boosted = [];
+    for (let ch = 0; ch < 3; ch++) {
+      const v = new Float32Array(n);
+      for (let p = 0; p < n; p++) v[p] = d[p * 4 + ch];
+      const bg = gaussBlur(v, W, H, 25);
+      for (let p = 0; p < n; p++) v[p] = Math.min(255, Math.max(0, (v[p] - bg[p]) * 3 + 128));
+      boosted.push(v);
+    }
+    // 3. Grayscale, then map to a reddish tint (clamped on write).
+    for (let p = 0; p < n; p++) {
+      const g = .299 * boosted[0][p] + .587 * boosted[1][p] + .114 * boosted[2][p] - 128;
+      d[p * 4] = 200 + .6 * g; d[p * 4 + 1] = 120 + 1.3 * g; d[p * 4 + 2] = 100 + 1.3 * g; d[p * 4 + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    // 4. Unsharp mask (radius 2px, amount 1.5, threshold 3).
+    return unsharpCanvas(c);
+  }
   const LOOKS = {
     off:   { label: 'Original', short: 'Off', next: 'warm' },
     warm:  { label: 'Warm', short: 'Warm', next: 'sharp', make: f => warmCanvas(f.canvas) },
     // Sharpen runs on the warm-corrected image, reusing its cached copy.
-    sharp: { label: 'Warm + sharpen', short: 'Sharpen', next: 'gray', make: f => unsharpCanvas(lookCanvas(f, 'warm')) },
+    sharp: { label: 'Warm + sharpen', short: 'Sharpen', next: 'capillary', make: f => unsharpCanvas(lookCanvas(f, 'warm')) },
+    capillary: { label: 'Capillary', short: 'Capillary', next: 'gray', make: f => capillaryCanvas(f.canvas) },
     gray:  { label: 'Grayscale', short: 'Gray', next: 'off', make: f => grayCanvas(f.canvas) },
   };
   // The raw capture (f.canvas) is never modified; processed versions are cached per frame.

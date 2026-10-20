@@ -136,7 +136,7 @@
         <button class="tb" id="btnLive" disabled title="Back to live view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg><span class="lbl">Live</span></button>
         <span class="spacer"></span>
-        <button class="tb" id="btnEnhance" disabled title="Cycle color mode: Off, Warm, Grayscale">
+        <button class="tb" id="btnEnhance" disabled title="Cycle mode: Off, Warm, Sharpen, Grayscale">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl" id="enhanceLbl">Enhance: Off</span></button>
         <button class="tb" id="btnMeasure" disabled title="Click two points to measure">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2"/></svg><span class="lbl">Measure</span></button>
@@ -404,16 +404,48 @@
     }
     x.putImageData(img, 0, 0); return c;
   }
+  // Unsharp mask: out = orig + amount * (orig - blur), only where |orig - blur| >= threshold.
+  // Gaussian blur with sigma = radius, run as two 1-D passes (horizontal, then vertical).
+  function unsharpCanvas(src, { radius = 2, amount = 1.5, threshold = 3 } = {}) {
+    const { width: W, height: H } = src;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0);
+    const img = x.getImageData(0, 0, W, H), d = img.data;
+    const r = Math.ceil(radius * 3), k = new Float32Array(2 * r + 1);
+    let ks = 0;
+    for (let i = -r; i <= r; i++) ks += k[i + r] = Math.exp(-(i * i) / (2 * radius * radius));
+    for (let i = 0; i < k.length; i++) k[i] /= ks;
+    const tmp = new Float32Array(W * H), blur = new Float32Array(W * H);
+    for (let ch = 0; ch < 3; ch++) {
+      for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+        let v = 0;
+        for (let i = -r; i <= r; i++) v += d[(y * W + Math.min(W - 1, Math.max(0, xx + i))) * 4 + ch] * k[i + r];
+        tmp[y * W + xx] = v;
+      }
+      for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+        let v = 0;
+        for (let i = -r; i <= r; i++) v += tmp[Math.min(H - 1, Math.max(0, y + i)) * W + xx] * k[i + r];
+        blur[y * W + xx] = v;
+      }
+      for (let p = 0; p < W * H; p++) {
+        const o = d[p * 4 + ch], diff = o - blur[p];
+        if (Math.abs(diff) >= threshold) d[p * 4 + ch] = o + amount * diff; // clamped on write
+      }
+    }
+    x.putImageData(img, 0, 0); return c;
+  }
   const LOOKS = {
-    off:  { label: 'Original', short: 'Off', next: 'warm' },
-    warm: { label: 'Warm', short: 'Warm', next: 'gray', make: warmCanvas },
-    gray: { label: 'Grayscale', short: 'Gray', next: 'off', make: grayCanvas },
+    off:   { label: 'Original', short: 'Off', next: 'warm' },
+    warm:  { label: 'Warm', short: 'Warm', next: 'sharp', make: f => warmCanvas(f.canvas) },
+    // Sharpen runs on the warm-corrected image, reusing its cached copy.
+    sharp: { label: 'Warm + sharpen', short: 'Sharpen', next: 'gray', make: f => unsharpCanvas(lookCanvas(f, 'warm')) },
+    gray:  { label: 'Grayscale', short: 'Gray', next: 'off', make: f => grayCanvas(f.canvas) },
   };
   // The raw capture (f.canvas) is never modified; processed versions are cached per frame.
   function lookCanvas(f, l) {
     if (l === 'off') return f.canvas;
     f.looks ||= {};
-    return (f.looks[l] ||= LOOKS[l].make(f.canvas));
+    return (f.looks[l] ||= LOOKS[l].make(f));
   }
   $('btnEnhance').onclick = () => { look = LOOKS[look].next; drawFrame(); renderHud(); syncButtons(); };
 

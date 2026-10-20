@@ -4,3 +4,5 @@ scikit-image
 matplotlib
 pandas
 pytest
+opencv-python-headless
+scikit-learn

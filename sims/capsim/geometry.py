@@ -21,6 +21,8 @@ class LoopSpec:
     apex_bulge: float = 0.0    # extra width at the apex (enlarged-loop model)
     wobble_amp: float = 0.0    # lateral sinusoid amplitude on the limbs (tortuosity)
     wobble_period: float = 60.0
+    cross_y: float = -1.0      # >= 0: limbs cross once at this height above y_base (dataset class "crossing")
+    cross_len: float = 30.0    # vertical extent of the crossing
 
 
 def centerline(spec: LoopSpec, ds: float = 0.25):
@@ -30,10 +32,17 @@ def centerline(spec: LoopSpec, ds: float = 0.25):
     n_a = max(2, int(np.pi * r / ds))
     y = np.linspace(0.0, spec.limb_len, n_l)
     wob = spec.wobble_amp * np.sin(2 * np.pi * y / spec.wobble_period) * np.sin(np.pi * y / spec.limb_len)
-    art = np.stack([-r + wob, y], 1)
-    th = np.linspace(np.pi, 0.0, n_a)
+    crossed = spec.cross_y >= 0
+    if crossed:      # smooth swap of the two limbs' sides across a window: art -r -> +r, ven +r -> -r
+        u = np.clip((y - (spec.cross_y - spec.cross_len / 2)) / max(spec.cross_len, 1e-6), 0.0, 1.0)
+        phi = np.pi * u * u * (3 - 2 * u)
+        ax, vx = -r * np.cos(phi), r * np.cos(phi)
+    else:
+        ax, vx = np.full_like(y, -r), np.full_like(y, r)
+    art = np.stack([ax + wob, y], 1)
+    th = np.linspace(0.0, np.pi, n_a) if crossed else np.linspace(np.pi, 0.0, n_a)
     apex = np.stack([r * np.cos(th), spec.limb_len + r * np.sin(th)], 1)
-    ven = np.stack([r + wob[::-1], y[::-1]], 1)
+    ven = np.stack([vx[::-1] + wob[::-1], y[::-1]], 1)
     pts = np.concatenate([art, apex[1:], ven[1:]])
     seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
     s = np.concatenate([[0.0], np.cumsum(seg)])

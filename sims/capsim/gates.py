@@ -14,6 +14,7 @@ ICC_RATERS_MIN = 0.85
 SD_RATIO = (0.5, 2.0)
 SLIDE_NRMSE_MAX = 0.20
 MIN_CAPILLARIES = 10
+GAP_AUC_MAX = 0.75          # D1: a classifier should not separate synthetic from held-out real frames much better than this
 
 
 def _row(name, status, detail):
@@ -59,8 +60,8 @@ def evaluate(summary: dict, s0_report: dict | None = None):
         rows.append(_row("S5 enough capillaries", "PASS" if n >= MIN_CAPILLARIES else "FAIL", f"n={n} (need {MIN_CAPILLARIES})"))
     sv = s5.get("sim_vs_real")
     if sv:
-        rows.append(_row("S5 simulated bias inside real limits of agreement", "PASS" if sv["passes"] else "FAIL",
-                         f"sim bias {sv['sim_mean_bias_um']:.2f} um; real limits {sv['real']['lo']:.2f} to {sv['real']['hi']:.2f}"))
+        rows.append(_row("S5 simulated bias consistent with real mean bias", "PASS" if sv["passes"] else "FAIL",
+                         f"sim bias {sv['sim_mean_bias_um']:.2f} um; real bias {sv['real']['bias']:.2f} um (SD {sv['real']['sd']:.2f}, n {sv['real']['n']})"))
         if "sd_ratio" in sv:
             ok = SD_RATIO[0] <= sv["sd_ratio"] <= SD_RATIO[1]
             rows.append(_row("S5 simulated SD within 0.5 to 2x real", "PASS" if ok else "FAIL", f"sim/real SD ratio {sv['sd_ratio']:.2f}"))
@@ -68,6 +69,13 @@ def evaluate(summary: dict, s0_report: dict | None = None):
     if sp:
         rows.append(_row("S5 slide profile match", "PASS" if sp["nrmse"] <= SLIDE_NRMSE_MAX else "FAIL",
                          f"NRMSE {sp['nrmse']:.3f} (limit {SLIDE_NRMSE_MAX})"))
+    s9 = summary.get("s9")
+    if s9:
+        if "auc" in s9:
+            rows.append(_row("D1 synthetic vs real image gap", "PASS" if s9["auc"] <= GAP_AUC_MAX else "FAIL",
+                             f"two-sample AUC {s9['auc']:.2f} (limit {GAP_AUC_MAX}; 0.5 = indistinguishable), n_real {s9['n_real']}"))
+        else:
+            rows.append(_row("D1 synthetic vs real image gap", "NOT RUN", s9.get("note", "no real images")))
     if not s5 or ("agreement" not in s5 and "slide_profile" not in s5):
         rows.append(_row("S5 forward-model validation", "NOT RUN", "no S5 data: S1 to S4 are NOT validated"))
     return rows

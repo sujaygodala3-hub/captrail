@@ -6,7 +6,7 @@ Anything computed from a scope value that was not measured is stamped ASSUMED on
 
 ```
 pip install -r requirements.txt
-python -m pytest -q                                   # 61 tests, ~10 s
+python -m pytest -q                                   # 70 tests, ~1 min
 python run_s0.py                                      # real calibration -> results/scope_params.json
 python run_sims.py all --scope results/scope_params.json
 python run_sims.py all --quick                        # smoke run on assumed defaults (not a result)
@@ -84,3 +84,23 @@ Figure 0 shows example synthetic images at three blur/noise settings.
 - `python run_sims.py all` writes `REPORT.md` with the gate table (`capsim/gates.py`, thresholds fixed in `ANALYSIS_PLAN.md` before data arrives). "MODEL NOT VALIDATED" until the S5 gate passes.
 - `python analyze_captures.py <folder> --apex auto` measures real captures with the same estimators.
 - Estimators return NaN (not a wrong number) when limbs are unresolved; S5 compares the simulated bias with the uncertainty of the real mean bias, not the limits of agreement; S7 does not give the tool the true shift; pixel-size sweeps scale photons with pixel area.
+
+## Training data for the model (dataset-matched, colour, labelled)
+The Capillary Dataset (Nguyen and Jeong, KDD 2025; GitHub `urgonguyen/Capillarydataset` is code only, the 13.5 GB of images are on Hugging Face `HanaNguyen/Capillary-Dataset`) labels four morphologies, class ids `bushy 0, crossing 1, hairpin 2, tortuous 3`, as YOLO boxes. Its published baseline on its own validation split is mAP50 about 0.78 and mAP50-95 about 0.44.
+
+```bash
+# 1. real data (about 205 MB): Morphology_detection only
+huggingface-cli download HanaNguyen/Capillary-Dataset --repo-type dataset --include "Morphology_detection/*" --local-dir data/capillary_dataset
+# 2. profile it: class mix, boxes per image, box size, colour, sharpness, implied um/px
+python profile_dataset.py data/capillary_dataset/Morphology_detection/images data/capillary_dataset/Morphology_detection/labels
+# 3. fit the simulator's look to the real frames (reports held-out two-sample AUC before and after)
+python fit_look.py data/capillary_dataset/Morphology_detection/images --base dataset --out configs/look_fitted.json
+# 4. generate labelled synthetic frames (use --look celestron or --scope results/scope_params.json for your own scope)
+python make_training_set.py --n 3000 --look configs/look_fitted.json --profile results/dataset_profile.json --out data/synth
+# 5. check the gap on held-out REAL frames, then train
+python run_sims.py s9 --quick        # needs data/real_images/ for the D1 gate
+yolo detect train model=yolov8n.pt data=data/synth/data.yaml epochs=50          # pre-train on synthetic
+yolo detect train model=runs/detect/train/weights/best.pt data=<real data.yaml>   # then fine-tune on real
+```
+Rules: validate only on REAL held-out images and report the real-only baseline beside the synthetic-pretrained number. Weights and Biases: `pip install wandb && wandb login && yolo settings wandb=True`. The synthetic shapes are parametric proxies; `domain_gap.py` (two-sample AUC and per-feature gaps) is how we find out how far off they are. Until step 3 has run on the full dataset the look is an educated default (checked only against 14 tiles cropped from the paper's figure, which is not a valid reference for sharpness or noise).
+Quick check of the sim-to-real direction with their weights: `yolo detect val model=improved_yolov8_morphology/runs/detect/train_n/weights/best.pt data=data/synth/data.yaml split=test` (a model trained on real frames should find loops in good synthetic frames; a low score means the synthetic look is off).

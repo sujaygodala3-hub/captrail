@@ -64,7 +64,7 @@ def test_gates_statuses():
     assert not gates.validated(rows)
     good = dict(scope_tag="x", assumed=[], s5=dict(
         agreement=dict(icc_raters=0.9, tool_vs_raters=dict(n=12)),
-        sim_vs_real=dict(passes=True, sim_mean_bias_um=0.1, real=dict(lo=-1, hi=1), sd_ratio=1.1),
+        sim_vs_real=dict(passes=True, sim_mean_bias_um=0.1, real=dict(bias=0.0, sd=2.0, n=12, lo=-4, hi=4), sd_ratio=1.1),
         slide_profile=dict(nrmse=0.05)))
     assert gates.validated(gates.evaluate(good, {}))
     bad = json.loads(json.dumps(good))

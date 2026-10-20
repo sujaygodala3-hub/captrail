@@ -26,12 +26,16 @@ If any check fails, fix the capture, do not change the rule.
 ## S5 gate (all must hold before S1 to S4 are reported as validated)
 
 1. The two raters agree: inter-rater ICC(2,1) at least 0.85 (Dinsdale 2017 reports 0.85 for width).
-2. The simulated mean tool-minus-truth bias lies inside the real tool-versus-raters 95% limits of agreement.
+2. The simulated mean tool-minus-truth bias is consistent with the real mean tool-versus-raters bias: within 1.96 standard errors of it (the real SE is SD/sqrt(n), combined with the simulation's SE). The limits of agreement are NOT used: they describe individual differences and would pass almost any simulation.
 3. The simulated SD of the tool error is between 0.5 and 2 times the real SD.
 4. Real versus simulated slide profile: normalized RMSE at most 0.20 after alignment.
 5. At least 10 capillaries, measured by both raters blind to the tool and to each other.
 
 If any item fails, the report says "model not validated" on every S1 to S4 figure and the write-up says so.
+
+## D1: synthetic training images versus real images (before any model is trained on synthetic data)
+
+Frames from `make_training_set.py` (colour, four morphology classes, YOLO labels) are compared with a held-out half of the real frames (the dataset's Morphology_detection images, and your own Celestron captures) using `domain_gap.py`. Target: classifier two-sample AUC at most 0.75 on held-out real frames, with the worst feature gaps listed. A low AUC does not prove the shapes are right, so the training claim is always made on REAL validation images: train on synthetic plus real, report mAP on real held-out frames, and report the real-only baseline next to it. The dataset's own published baseline is mAP50 about 0.78 and mAP50-95 about 0.44 on its validation split (from its repo's training log); quote ours against that, not against a synthetic test set.
 
 ## S7
 

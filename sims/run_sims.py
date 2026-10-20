@@ -101,6 +101,23 @@ def main(steps, scope_path, quick, data):
         for k in ("limb12_bias_pct", "giant_call_error"):
             mc = SE.monte_carlo(sc, k, n=15 if quick else 60)
             summary[f"sens_mc_{k}"] = {a: b for a, b in mc.items() if a != "values"}
+    if want("s9"):
+        from PIL import Image
+        from capsim import domain_gap as DG, render_rgb as R
+        lf = ROOT / "configs" / "look_fitted.json"
+        look = R.Look.load(lf) if lf.exists() else R.Look.dataset()
+        look = __import__("dataclasses").replace(look, px_um=sc.um_per_px) if sc.measured.get("um_per_px") else look
+        rng = np.random.default_rng(9)
+        frames = [R.render_scene(rng, look)["img"] for _ in range(24 if quick else 60)]
+        Image.fromarray(np.concatenate([np.concatenate(frames[r * 4:(r + 1) * 4], 1) for r in range(4)], 0)).resize((1280, 960)).save(out / "fig9_synthetic_examples.png")
+        s9 = dict(look="configs/look_fitted.json" if lf.exists() else "Look.dataset() defaults (NOT fitted)", n_synth=len(frames))
+        real_dir = data / "real_images"
+        if real_dir.exists() and any(p.suffix.lower() in intake.IMG_EXT for p in real_dir.rglob("*")):
+            gap = DG.compare_dirs(real_dir, frames, max_real=300)
+            s9.update(auc=gap["auc"], auc_sd=gap["auc_sd"], n_real=gap["n_real"], worst_features=sorted(gap["features"], key=lambda r: -abs(r["smd"]))[:5])
+        else:
+            s9["note"] = "no data/real_images: domain gap not measured"
+        summary["s9"] = s9
     from capsim import gates, report
     summary["scope_sigma_um"] = sc.sigma_um
     summary["s0_report"] = sc.notes.get("s0_report", {})
@@ -114,7 +131,7 @@ def main(steps, scope_path, quick, data):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("steps", nargs="+", help="s1 .. s7 or all")
+    ap.add_argument("steps", nargs="+", help="s1 .. s9, sens, or all")
     ap.add_argument("--scope", default="results/scope_params.json")
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--data", default="data")

@@ -30,6 +30,7 @@
   .empty-state b{display:block;color:#fff;font:500 22px/1.2 var(--display);margin-bottom:6px}
   .hud{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
   .hud span{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+  .hud .warn{background:#FFF1D6;color:#7a4b00;font-weight:600}
   .hud .live{color:#fff}.hud .live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#E0535F;margin-right:7px;animation:blink 1.4s infinite}
   .hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font-size:13px;padding:8px 14px;border-radius:999px;background:var(--red);color:#fff;white-space:nowrap;pointer-events:none}
 
@@ -294,6 +295,7 @@
     if (!sel && stream) bits.push('<span class="live">Live</span>');
     if (sel) bits.push(`<span>${sel.label || (sel.source === 'scope' ? 'Captured' : 'Uploaded')} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
     if (look !== 'off' && sel) bits.push(`<span>${LOOKS[look].label} view</span>`);
+    if (sel?.note) bits.push(`<span class="warn">${sel.note}</span>`);
     h.innerHTML = bits.join('');
   }
   function syncButtons() {
@@ -323,6 +325,7 @@
   $('btnCapture').onclick = () => { if (stream && !sel) showFrame(addFrame(grab(), 'scope')); };
   // Best of 8: grab 8 frames, align all of them to the sharpest and merge with a per-pixel median,
   // then auto-crop a 2× zoom around the capillary row and show that as the main capture.
+  const ZOOM_MIN_SHARPNESS = 300;
   $('btnBurst').onclick = async () => {
     if (!stream || sel || stacking) return;
     stacking = true; syncButtons();
@@ -335,14 +338,17 @@
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       const orig = addFrame(canvas, 'scope', `captrail-best8-${stamp}.png`);
       orig.shifts = shifts;
+      look = 'off';
+      // 5. Only zoom sharp captures; otherwise keep the original and say why.
+      if (orig.score <= ZOOM_MIN_SHARPNESS) { orig.note = 'Too blurry to zoom, retake'; showHint(''); showFrame(orig); return; }
       showHint('Zooming on the capillary row…'); await tick();
-      const { canvas: zc, crop } = zoomOnCapillaries(canvas);
+      const { canvas: zc, crop, reason } = zoomOnCapillaries(canvas);
+      if (!zc) { orig.note = reason; orig.crop = crop; showHint(''); showFrame(orig); return; }
       const zoom = addFrame(zc, 'scope', `captrail-best8-${stamp}.png`);
       zoom.calibScale = .5;            // 2× enlargement: each zoomed pixel is half an original pixel
       zoom.calibW = W; zoom.calibH = H; // calibration is stored for the original resolution
       zoom.crop = crop;
       zoom.pair = orig; orig.pair = zoom;
-      look = 'off';
       showHint('');
       showFrame(zoom);
     } catch (e) {
@@ -674,17 +680,37 @@
   }
   // Auto-zoom: find the capillary loop row, crop half width × half height around it (sliding sideways to
   // avoid glare), and enlarge 2× with local contrast, a natural orange tone and gentle sharpening.
+  // Returns { canvas: null, reason } when there is too much glare to zoom safely.
+  const ZOOM_MAX_GLARE = .25;
   function zoomOnCapillaries(src) {
     const { width: W, height: H } = src, n = W * H, d = pixelsOf(src);
-    const G = new Float32Array(n), lum = new Float32Array(n);
-    for (let p = 0; p < n; p++) { G[p] = d[p * 4 + 1]; lum[p] = .299 * d[p * 4] + .587 * d[p * 4 + 1] + .114 * d[p * 4 + 2]; }
-    // 1. Loop row: in the bottom 65%, score each row by mean |horizontal gradient| of (G - 6px blur of G),
-    //    smooth over 8 rows, take the best.
-    const gb = gaussBlur(G, W, H, 6), y0 = Math.floor(H * .35), score = new Float32Array(H);
+    const D = new Float32Array(n), lum = new Float32Array(n);
+    for (let p = 0; p < n; p++) { D[p] = d[p * 4] - d[p * 4 + 1]; lum[p] = .299 * d[p * 4] + .587 * d[p * 4 + 1] + .114 * d[p * 4 + 2]; }
+    // 1. Glare mask: brightness above the 94th percentile, expanded by 6px (square max filter, two 1-D passes).
+    //    Near-saturated pixels (>= 250) always count too: when glare covers more than 6% of the frame the
+    //    percentile itself is saturated white, and "brighter than" it would leave heavy glare unmasked.
+    const cut = percentile(lum, .94), m0 = new Uint8Array(n), m1 = new Uint8Array(n), glare = new Uint8Array(n);
+    for (let p = 0; p < n; p++) m0[p] = lum[p] > cut || lum[p] >= 250 ? 1 : 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let v = 0; for (let k = -6; k <= 6 && !v; k++) { const xs = x + k; if (xs >= 0 && xs < W) v = m0[y * W + xs]; }
+      m1[y * W + x] = v;
+    }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let v = 0; for (let k = -6; k <= 6 && !v; k++) { const ys = y + k; if (ys >= 0 && ys < H) v = m1[ys * W + x]; }
+      glare[y * W + x] = v;
+    }
+    // 2-3. Loop row, in the bottom 65%: vertical vessel edges show up as a horizontal gradient of redness
+    //    (R - G); glare is white, so it has little redness. Gradient is 0 inside the glare mask. Row score =
+    //    fraction of non-glare pixels × mean gradient, smoothed over 8 rows; the best row wins.
+    const y0 = Math.floor(H * .35), score = new Float32Array(H);
     for (let y = y0; y < H; y++) {
-      let s = 0;
-      for (let x = 0; x < W - 1; x++) { const p = y * W + x; s += Math.abs((G[p + 1] - gb[p + 1]) - (G[p] - gb[p])); }
-      score[y] = s / (W - 1);
+      let s = 0, clear = 0;
+      for (let x = 0; x < W - 1; x++) {
+        const p = y * W + x;
+        if (glare[p] || glare[p + 1]) continue;
+        clear++; s += Math.abs(D[p + 1] - D[p]);
+      }
+      score[y] = (clear / (W - 1)) * (s / (W - 1));
     }
     let loopY = y0, best = -1;
     for (let y = y0; y < H; y++) {
@@ -693,16 +719,19 @@
       if (s / c > best) { best = s / c; loopY = y; }
     }
     // 2. Crop half width × half height centered on the loop row, slid sideways to the position with the
-    //    fewest glare pixels (above the 96th brightness percentile). Ties go to the most central spot.
+    //    fewest glare-mask pixels. Ties go to the most central spot.
     const cw = Math.floor(W / 2), ch = Math.floor(H / 2);
     const cy = Math.min(H - ch, Math.max(0, Math.round(loopY - ch / 2)));
-    const cut = percentile(lum, .96), col = new Uint32Array(W + 1);
-    for (let x = 0; x < W; x++) { let c = 0; for (let y = cy; y < cy + ch; y++) if (lum[y * W + x] > cut) c++; col[x + 1] = col[x] + c; }
+    const col = new Uint32Array(W + 1);
+    for (let x = 0; x < W; x++) { let c = 0; for (let y = cy; y < cy + ch; y++) c += glare[y * W + x]; col[x + 1] = col[x] + c; }
     let cx = Math.round((W - cw) / 2), fewest = Infinity;
     for (let x = 0; x <= W - cw; x++) {
       const g = col[x + cw] - col[x];
       if (g < fewest || (g === fewest && Math.abs(x - (W - cw) / 2) < Math.abs(cx - (W - cw) / 2))) { fewest = g; cx = x; }
     }
+    // 4. Even the best window is mostly glare: don't zoom.
+    const glareFrac = fewest / (cw * ch);
+    if (glareFrac > ZOOM_MAX_GLARE) return { canvas: null, reason: 'Too much glare to auto-zoom', crop: { loopY, glareFrac } };
     // 3. Very slight blur (0.8px), then 2× bicubic enlargement.
     // 4. Local contrast: blur + 2 × (value - 60px blur).
     const W2 = cw * 2, H2 = ch * 2, n2 = W2 * H2, chans = [];
@@ -723,7 +752,7 @@
     const c = document.createElement('canvas'); c.width = W2; c.height = H2;
     c.getContext('2d').putImageData(out, 0, 0);
     // 6. Unsharp mask: radius 4px, amount 0.8, threshold 2.
-    return { canvas: unsharpCanvas(c, { radius: 4, amount: .8, threshold: 2 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY } };
+    return { canvas: unsharpCanvas(c, { radius: 4, amount: .8, threshold: 2 }), crop: { x: cx, y: cy, w: cw, h: ch, loopY, glareFrac } };
   }
   const LOOKS = {
     off:   { label: 'Original', short: 'Off', next: 'warm' },

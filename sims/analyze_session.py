@@ -18,7 +18,7 @@ from PIL import Image
 
 from capsim import analyze as A, measure as M, realdata as RD, stats as S
 
-NAME = re.compile(r"(?P<who>[a-z]+)-(?P<finger>[a-z]+)-(?P<cap>\d+)(?P<suffix>[a-z])$")
+NAME = re.compile(r"(?P<who>[a-z0-9]+)-(?P<hand>[LR])?(?P<finger>[a-z]+)-(?P<cap>\d+)-?(?P<suffix>[neg])$")   # sujay-ring-05e, person1-Lindex-1-n
 FINGER_ALIAS = {"pink": "pinky", "index": "pointer"}
 
 
@@ -49,15 +49,23 @@ def main(folder, out, um_per_px=None):
     files = sorted(p for p in Path(folder).glob("*.png"))
     frames, loops_all = [], []
     vis = {}
-    for p in files:
+    named = [p for p in files if NAME.search(p.stem)]
+    whos = {NAME.search(p.stem)["who"] for p in named}
+    hands = any(NAME.search(p.stem)["hand"] for p in named)
+    multi = len(whos) > 1 or hands          # several people or hands: a 'finger' is person-hand-digit
+    if not named:                      # any naming: each file is its own capture of an 'unknown' finger
+        print(f"note: no file matches <who>-<finger>-<NN><n|e|g>; treating {len(files)} files as raw captures of one finger")
+    for i, p in enumerate(files):
         mt = NAME.search(p.stem)
-        if not mt:
+        if not mt and named:
             continue
+        mt = mt or dict(who="x", hand=None, finger="unknown", cap=str(i + 1), suffix="n")
         rgb = np.asarray(Image.open(p).convert("RGB"))
         kind = RD.classify(rgb)
         q, loops, sig, gaps, apices = analyse_frame(rgb)
-        finger = FINGER_ALIAS.get(mt["finger"], mt["finger"])
-        row = dict(file=p.name, finger=finger, capture=int(mt["cap"]), suffix=mt["suffix"], kind=kind,
+        digit = FINGER_ALIAS.get(mt["finger"], mt["finger"])
+        finger = f"{mt['who']}-{mt['hand'] or ''}{digit}" if multi else digit
+        row = dict(file=p.name, who=mt["who"], hand=mt["hand"] or "", digit=digit, finger=finger, capture=int(mt["cap"]), suffix=mt["suffix"], kind=kind,
                    suffix_matches=(mt["suffix"] == "n" and kind == "raw") or (mt["suffix"] == "e" and kind == "enhanced") or (mt["suffix"] == "g" and kind == "grey"),
                    n_apices=len(apices), n_loops=len(loops), n_resolved=int(sum(np.isfinite(l["limb_left"]) for l in loops)),
                    median_gap_px=float(np.median(gaps)) if len(gaps) else np.nan,
@@ -70,7 +78,7 @@ def main(folder, out, um_per_px=None):
             row[f"median_{k}_px"] = float(np.median(v)) if v else np.nan
         frames.append(row)
         for l in loops:
-            loops_all.append(dict(file=p.name, finger=finger, capture=int(mt["cap"]), kind=kind, **l))
+            loops_all.append(dict(file=p.name, who=mt["who"], hand=mt["hand"] or "", digit=digit, finger=finger, capture=int(mt["cap"]), kind=kind, **l))
         vis[p.name] = (rgb, apices, loops)
     F = pd.DataFrame(frames)
     # one PRIMARY (unprocessed) frame per finger and capture: the 'n' file unless its pixels say it is the
@@ -80,6 +88,8 @@ def main(folder, out, um_per_px=None):
         cand = g[(g.suffix == "n") & (g.kind == "raw")]
         if cand.empty:
             cand = g[g.kind == "raw"]
+        if cand.empty:          # no unprocessed frame for this capture (e.g. an enhanced-only zip): measure what exists
+            cand = g[g.suffix == "n"] if (g.suffix == "n").any() else g
         if not cand.empty:
             F.loc[cand.index[0], "primary"] = True
     L = pd.DataFrame(loops_all)

@@ -110,6 +110,88 @@ def umpx_from_ticks(profile, pitch_um=10.0, dark_ticks=True, min_ticks=4):
     return float(pitch_um / b), float(pitch_um * se / b ** 2), len(pos)
 
 
+def _tick_band_rows(img, pmin=8.0, pmax=40.0, frac=0.2):
+    """Rows inside the fine-tick band: the rows whose profile is most periodic at any pitch in [pmin, pmax]."""
+    g = np.asarray(img, float)
+    x = np.arange(g.shape[1])
+    rd = g - g.mean(1, keepdims=True)
+    pw = np.zeros(g.shape[0])
+    for pitch in np.arange(pmin, pmax, 0.1):
+        pw = np.maximum(pw, np.abs(rd @ np.exp(-2j * np.pi * x / pitch)))
+    return pw >= np.percentile(pw, 100 * (1 - frac))
+
+
+def slide_pitch_px(img, angles=np.linspace(-3, 3, 13), pmin=8.0, pmax=40.0):
+    """Fine-tick pitch of a stage micrometer image, in pixels, robust to the crosshair, long ticks, dust and
+    split dips (which break peak-picking). Rows of the tick band only; the best small rotation; then the pitch
+    from the AUTOCORRELATION of the band profile: lag of the k-th peak against k (k = 1..K), a straight line
+    whose slope is the pitch. Returns dict(pitch_px, se_px, angle_deg, rows, n_periods, fft_pitch_px)."""
+    from scipy.signal import find_peaks as _fp
+    g0 = np.asarray(img, float)
+    best = None
+    for a in angles:
+        g = ndi.rotate(g0, a, reshape=False, order=1, mode="nearest") if a else g0
+        h, w = g.shape
+        g = g[h // 10: h - h // 10, w // 10: w - w // 10]       # rotation corners
+        keep = _tick_band_rows(g, pmin, pmax)
+        band = g[keep].mean(0)
+        d = band - ndi.uniform_filter1d(band, int(2 * pmax + 1))
+        if best is None or d.var() > best[0]:
+            best = (d.var(), a, d, int(keep.sum()))
+    _, ang, d, nrows = best
+    d = d[int(pmax):-int(pmax)]
+    N = 1 << 16
+    F = np.abs(np.fft.rfft(d * np.hanning(len(d)), N))
+    fr = np.fft.rfftfreq(N)
+    m = (fr > 1 / pmax) & (fr < 1 / pmin)
+    p_fft = float(1 / fr[m][np.argmax(F[m])])
+    ac = np.correlate(d, d, "full")[len(d) - 1:]
+    ac = ac / ac[0]
+    K = max(2, int(0.5 * len(d) / p_fft))
+    lags, ks = [], []
+    for k in range(1, K + 1):
+        lo, hi = int(round(k * p_fft - 0.4 * p_fft)), int(round(k * p_fft + 0.4 * p_fft))
+        if hi + 1 >= len(ac):
+            break
+        i = lo + int(np.argmax(ac[lo:hi + 1]))
+        lags.append(_subpixel_peak(ac, i))
+        ks.append(k)
+    ks, lags = np.array(ks, float), np.array(lags, float)
+    A = np.c_[np.ones_like(ks), ks]
+    coef, *_ = np.linalg.lstsq(A, lags, rcond=None)
+    r = lags - A @ coef
+    se = float(np.sqrt(r @ r / max(1, len(ks) - 2) / ((ks - ks.mean()) ** 2).sum())) if len(ks) > 2 else float("nan")
+    ac_mean = float(np.mean([ac[int(round(l))] for l in lags[:5]])) if len(lags) else 0.0
+    return dict(pitch_px=float(coef[1]), se_px=se, angle_deg=float(ang), rows=nrows, n_periods=int(len(ks)), fft_pitch_px=p_fft,
+                autocorr=ac_mean)
+
+
+def umpx_from_slide(img, pitch_um=10.0, **kw):
+    """um per pixel from a stage-micrometer IMAGE (preferred over umpx_from_ticks on real photos).
+    Returns (um_per_px, se_um_per_px, info)."""
+    r = slide_pitch_px(img, **kw)
+    return float(pitch_um / r["pitch_px"]), float(pitch_um * r["se_px"] / r["pitch_px"] ** 2), r
+
+
+def long_tick_spacing_px(img, rows_keep=None, min_sep=60):
+    """Spacing of the LONG ticks (rows just outside the fine-tick band, where only long ticks reach).
+    On a standard micrometer it is 10 fine pitches: an independent check of slide_pitch_px."""
+    g = np.asarray(img, float)
+    keep = _tick_band_rows(g) if rows_keep is None else rows_keep
+    rows = np.where(keep)[0]
+    out = np.r_[np.arange(max(0, rows.min() - 60), max(0, rows.min() - 25)), np.arange(rows.max() + 25, min(g.shape[0], rows.max() + 60))]
+    if len(out) < 5:
+        return float("nan")
+    lp = g[out].mean(0)
+    ld = lp - ndi.uniform_filter1d(lp, 81)
+    pk, _ = find_peaks(-ld, prominence=0.4 * np.percentile(-ld, 99), distance=min_sep)
+    if len(pk) < 3:
+        return float("nan")
+    dd = np.diff(pk)
+    dd = dd[np.abs(dd - np.median(dd)) < 0.15 * np.median(dd)]
+    return float(np.mean(dd)) if len(dd) else float("nan")
+
+
 def umpx_summary(values):
     """Mean and SD over repeated slide captures (the plan asks for 10 across two sessions)."""
     v = np.asarray(values, float)
@@ -256,3 +338,118 @@ def illumination_gradient(flat, smooth_um=None, pixel_um=1.0):
     resid = (f / mean - plane)
     return dict(strength=float(strength), angle_deg=float(np.degrees(np.arctan2(gy, gx))),
                 residual_pct=float(100 * (resid.max() - resid.min())))
+
+
+# ---- blank-card noise spectrum (single exposure level) -------------------------------------------
+NOISE_BANDS = ((0.5, 1.5), (1.5, 3.0), (3.0, 6.0), (6.0, 12.0), (12.0, 40.0))   # difference-of-Gaussian bands, px
+
+
+def _mad(x):
+    x = np.asarray(x, float).ravel()
+    return float(1.4826 * np.median(np.abs(x - np.median(x))))
+
+
+def _dog(x, a, b):
+    from scipy import ndimage as ndi
+    return ndi.gaussian_filter(x, a, mode="reflect") - ndi.gaussian_filter(x, b, mode="reflect")
+
+
+def blank_card_noise(frames, bands=NOISE_BANDS):
+    """Temporal noise of repeated blank-card frames (2D green-channel arrays, same exposure, card not moved).
+
+    Uses consecutive-frame differences, so fixed texture and vignetting cancel; robust (MAD) per band,
+    divided by sqrt(2) to give the noise of ONE frame. Returns dict with per-band DN, the single-pixel
+    high-pass noise (same estimator as realdata.quality), mean level, frame-to-frame brightness drift and
+    the flat-field shape (centre/edge ratio, p2-p98 spread of the smoothed card)."""
+    from scipy import ndimage as ndi
+    G = [np.asarray(f, float) for f in frames]
+    if len(G) < 2:
+        raise ValueError("need >= 2 blank-card frames")
+    diffs = [G[i] - G[i + 1] for i in range(len(G) - 1)]
+    band_dn = {f"{a}-{b}": float(np.mean([_mad(_dog(d, a, b)) for d in diffs]) / np.sqrt(2)) for a, b in bands}
+    hp = [_mad(g - ndi.gaussian_filter(g, 1.5)) for g in G]
+    means = [float(g.mean()) for g in G]
+    sm = ndi.gaussian_filter(np.mean(G, 0), 25)
+    H, W = sm.shape
+    c = sm[H // 2 - 40:H // 2 + 40, W // 2 - 40:W // 2 + 40].mean()
+    e = np.mean([sm[:60, :60].mean(), sm[:60, -60:].mean(), sm[-60:, :60].mean(), sm[-60:, -60:].mean()])
+    p2, p98 = np.percentile(sm, [2, 98])
+    return dict(n_frames=len(G), band_dn=band_dn, pixel_hp_noise_dn=float(np.median(hp)), mean_dn=float(np.mean(means)),
+                drift_dn=float(max(means) - min(means)), flat_centre_over_edge=float(c / e),
+                flat_spread_frac=float((p98 - p2) / sm.mean()))
+
+
+def fit_corr_noise(band_dn, white_dn, scales=(1.0, 2.0, 4.0, 8.0), shape=(480, 640), seed=0, bands=NOISE_BANDS):
+    """Correlated-noise components that, ADDED to white noise of `white_dn` per pixel, reproduce the measured
+    per-band noise. Variances add across independent components, so this is NNLS on band variances.
+    Returns dict(components=[[scale_px, std_DN], ...], fitted_band_dn, measured_band_dn, white_band_dn)."""
+    from scipy.optimize import nnls
+    from capsim.optics import corr_field
+    rng = np.random.default_rng(seed)
+    keys = [f"{a}-{b}" for a, b in bands]
+    obs = np.array([band_dn[k] for k in keys]) ** 2
+    w = rng.normal(size=shape)
+    white = np.array([_mad(_dog(w, a, b)) for a, b in bands]) * white_dn
+    R = np.array([[_mad(_dog(corr_field(shape, s, rng), a, b)) for a, b in bands] for s in scales]) ** 2
+    amp2, _ = nnls(R.T, np.clip(obs - white ** 2, 0, None))
+    fit = np.sqrt(white ** 2 + R.T @ amp2)
+    return dict(components=[[float(s), float(np.sqrt(a))] for s, a in zip(scales, amp2) if a > 0],
+                fitted_band_dn=dict(zip(keys, map(float, fit))), measured_band_dn=dict(zip(keys, map(float, np.sqrt(obs)))),
+                white_band_dn=dict(zip(keys, map(float, white))))
+
+
+def white_from_pixel_noise(pixel_hp_dn, mean_dn, bits=8, shape=(480, 640), seed=0):
+    """Photons (forward-model units) whose shot noise gives `pixel_hp_dn` after the realdata.quality high-pass,
+    at a mean level of `mean_dn`. Read noise is folded in (single exposure level: they cannot be separated)."""
+    from scipy import ndimage as ndi
+    q = 2 ** bits - 1
+    w = np.random.default_rng(seed).normal(size=shape)
+    atten = _mad(w - ndi.gaussian_filter(w, 1.5))          # high-pass response of unit white noise
+    sd_dn = pixel_hp_dn / atten
+    level = mean_dn / q
+    return dict(photons=float(level / (sd_dn / q) ** 2), white_dn=float(sd_dn), hp_attenuation=float(atten))
+
+
+def tick_blur_sigma(img, pitch_px=None, bins_per_px=4):
+    """Blur at the RULER's zoom. The band profile is folded on the tick pitch (all ticks averaged onto one
+    period, sub-pixel), then fit as one dark box of unknown width blurred by a Gaussian (the same model as the
+    capillary limbs). Folding uses every tick, so dust and split dips average out.
+    Returns dict(sigma_px, tick_width_px, pitch_px, rows, n_ticks)."""
+    from scipy.optimize import least_squares
+    g = np.asarray(img, float)
+    r0 = slide_pitch_px(g)
+    if pitch_px is None:
+        pitch_px = r0["pitch_px"]
+    if r0["angle_deg"]:
+        g = ndi.rotate(g, r0["angle_deg"], reshape=False, order=1, mode="nearest")
+    h, w = g.shape
+    g = g[h // 10: h - h // 10, w // 10: w - w // 10]
+    keep = _tick_band_rows(g)
+    band = g[keep].mean(0)
+    band = band / ndi.uniform_filter1d(band, int(4 * pitch_px) | 1)
+    x = np.arange(len(band), dtype=float)
+    ph = (x % pitch_px)
+    nb = int(round(pitch_px * bins_per_px))
+    idx = np.minimum((ph / pitch_px * nb).astype(int), nb - 1)
+    cnt = np.bincount(idx, minlength=nb)
+    prof = np.bincount(idx, weights=band, minlength=nb) / np.maximum(cnt, 1)
+    ok = cnt > 0
+    prof[~ok] = np.interp(np.where(~ok)[0], np.where(ok)[0], prof[ok], period=nb)
+    shift = nb // 2 - int(np.argmin(ndi.uniform_filter1d(prof, bins_per_px, mode="wrap")))
+    prof, ok = np.roll(prof, shift), np.roll(ok, shift)
+    xb = (np.arange(nb) + 0.5) / bins_per_px
+    c0 = xb[nb // 2]
+
+    def model(q, xx):
+        bg, A, x0, w, s = q
+        s2 = max(s, 1e-3) * np.sqrt(2)
+        y = np.zeros_like(xx)
+        for m in (-1, 0, 1):      # neighbouring ticks wrap into the period
+            y += 0.5 * (erf((xx - x0 - m * pitch_px + w / 2) / s2) - erf((xx - x0 - m * pitch_px - w / 2) / s2))
+        return bg - A * y
+
+    q0 = [np.percentile(prof, 95), np.ptp(prof), c0, pitch_px / 2, 1.0]
+    r = least_squares(lambda q: (model(q, xb) - prof)[ok], q0,
+                      bounds=([0, 0, c0 - pitch_px / 4, 0.5, 0.05], [np.inf, np.inf, c0 + pitch_px / 4, pitch_px - 0.5, pitch_px / 2]))
+    return dict(sigma_px=float(r.x[4]), tick_width_px=float(r.x[3]), pitch_px=float(pitch_px), rows=int(keep.sum()),
+                n_ticks=int(len(band) / pitch_px), rmse=float(np.sqrt(np.mean(r.fun ** 2))))

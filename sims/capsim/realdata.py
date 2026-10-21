@@ -176,3 +176,34 @@ def icc_oneway_unbalanced(groups):
     msb, msw = ssb / (k - 1), ssw / (N - k)
     n0 = (N - sum(len(g) ** 2 for g in groups) / N) / (k - 1)
     return float((msb - msw) / (msb + (n0 - 1) * msw))
+
+
+def texture_strength(rgb, um_per_px, corr_um=25.0, seed=0, dark_thresh=0.025):
+    """Skin-texture amplitude in the units of optics.forward(texture_amp=...), measured on a real frame.
+
+    Band-pass between corr/2 and 3*corr of the flat-fielded green channel, robust MAD, on background only:
+    glare and anything darker than the local background by more than `dark_thresh` at limb scale (the
+    capillaries) is masked and dilated. The SAME estimator, with the same masking rule, is applied to a
+    synthetic texture field of amplitude 1 built like the forward model's; the ratio is the amplitude."""
+    g = clean_green(rgb, glare_mask(rgb)).astype(float)
+    glare = ndi.binary_dilation(glare_mask(rgb), iterations=8)
+    c = corr_um / um_per_px
+
+    def est(img, extra):
+        rel = img / np.maximum(ndi.gaussian_filter(img, 4 * c), 1e-6) - 1.0
+        fine = ndi.gaussian_filter(rel, 1.0) - ndi.gaussian_filter(rel, 6.0)
+        dark = ndi.binary_dilation(fine < -dark_thresh, iterations=6)
+        b = ndi.gaussian_filter(rel, c / 2) - ndi.gaussian_filter(rel, 3 * c)
+        keep = ~(dark | extra)
+        border = int(3 * c)
+        keep[:border] = keep[-border:] = False
+        keep[:, :border] = keep[:, -border:] = False
+        v = b[keep] if keep.sum() > 500 else b.ravel()
+        return float(1.4826 * np.median(np.abs(v - np.median(v)))), float(keep.mean())
+
+    rng = np.random.default_rng(seed)
+    syn = ndi.gaussian_filter(rng.normal(size=g.shape), c, mode="wrap")
+    syn = (syn - syn.mean()) / syn.std()
+    k, _ = est(1.0 + 0.01 * syn, np.zeros(g.shape, bool))
+    v, frac = est(g, glare)
+    return float(0.01 * v / k)

@@ -30,13 +30,20 @@ def main(data, out, config):
     if (data / "slide").exists():
         vals, profs = [], []
         for p in intake.list_images(data / "slide"):
-            prof = C.tick_profile(intake.load_gray(p))
+            img = intake.load_gray(p)
+            prof = C.tick_profile(img)
             profs.append(prof)
             try:
-                v, se, n = C.umpx_from_ticks(prof, cfg.get("pitch_um", 10.0))
+                # autocorrelation of the tick band: robust to crosshair, long ticks, dust and split dips
+                v, se, info = C.umpx_from_slide(img, cfg.get("pitch_um", 10.0))
                 vals.append(v)
-            except ValueError as e:
-                report.setdefault("slide_skipped", []).append(f"{p.name}: {e}")
+            except Exception as e:
+                try:
+                    v, se, n = C.umpx_from_ticks(prof, cfg.get("pitch_um", 10.0))
+                    vals.append(v)
+                    report.setdefault("slide_fallback_peakpicking", []).append(p.name)
+                except ValueError as e2:
+                    report.setdefault("slide_skipped", []).append(f"{p.name}: {e}; {e2}")
         if vals:
             summ = C.umpx_summary(vals)
             report["um_per_px"] = summ

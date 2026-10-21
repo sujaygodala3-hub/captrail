@@ -1,0 +1,270 @@
+{
+  "scope_tag": "assumed-2",
+  "assumed": [
+    "um_per_px",
+    "illum_angle_deg"
+  ],
+  "quick": false,
+  "s1_min_limb_under_10pct": 10.0,
+  "s2_auc_reduced_density": {
+    "contrast0.05": {
+      "auc": 0.4765625,
+      "lo": 0.21116071428571428,
+      "hi": 0.7304792429792429,
+      "pair": [
+        5.0,
+        7.0
+      ]
+    },
+    "contrast0.1": {
+      "auc": 0.421875,
+      "lo": 0.15873015873015872,
+      "hi": 0.7277083333333332,
+      "pair": [
+        5.0,
+        7.0
+      ]
+    },
+    "contrast0.2": {
+      "auc": 0.96875,
+      "lo": 0.877827380952381,
+      "hi": 1.0,
+      "pair": [
+        5.0,
+        7.0
+      ]
+    }
+  },
+  "s3_fit": "ILLUSTRATIVE ONLY: no data/s3/oil_pairs.csv, mu and k are placeholders",
+  "s4_max_sigma_err_le_5pct": {
+    "max_sigma_um": 8.0,
+    "limit_reached": false
+  },
+  "s4_density_call": {
+    "p_7_called_reduced": 0.975,
+    "p_9_called_reduced": 1.0,
+    "p_5_called_normal": 0.025,
+    "mean_est": {
+      "5": 2.525,
+      "7": 1.95,
+      "9": 1.1
+    }
+  },
+  "s5": {
+    "status": "no S5 data found; S1 to S4 are NOT validated"
+  },
+  "s7": {
+    "icc": 0.8681319741833259,
+    "ci": [
+      0.7565437723153365,
+      0.9278472021701172
+    ],
+    "cv_pct": 3.466022095273983,
+    "n": 30
+  },
+  "s8_max_abs_limb_bias_gap_pct": 1.967867090705644,
+  "s8_unresolvable_ruler_cases": 1,
+  "sens_tornado_limb12": [
+    {
+      "param": "sigma_um",
+      "value": 3.019,
+      "measured": true,
+      "low": 2.116249155464689,
+      "high": 9.360637947422745,
+      "swing": 7.244388791958056,
+      "base": 3.9973093887278432
+    },
+    {
+      "param": "contrast",
+      "value": 0.0948,
+      "measured": true,
+      "low": 5.8760889117472015,
+      "high": 4.4437108582395135,
+      "swing": 1.432378053507688,
+      "base": 3.9973093887278432
+    },
+    {
+      "param": "um_per_px",
+      "value": 1.6,
+      "measured": false,
+      "low": 4.035518298967178,
+      "high": 4.422796737486401,
+      "swing": 0.38727843851922295,
+      "base": 3.9973093887278432
+    },
+    {
+      "param": "photons",
+      "value": 50000.0,
+      "measured": true,
+      "low": 4.425762526257371,
+      "high": 4.123635197261133,
+      "swing": 0.30212732899623784,
+      "base": 3.9973093887278432
+    },
+    {
+      "param": "illum_strength",
+      "value": 0.156,
+      "measured": true,
+      "low": 4.183346649169661,
+      "high": 4.464733991345149,
+      "swing": 0.28138734217548755,
+      "base": 3.9973093887278432
+    },
+    {
+      "param": "read_noise",
+      "value": 0.0026,
+      "measured": true,
+      "low": 3.935624025751383,
+      "high": 4.023427135714175,
+      "swing": 0.08780310996279184,
+      "base": 3.9973093887278432
+    }
+  ],
+  "sens_tornado_giant_err": [
+    {
+      "param": "um_per_px",
+      "value": 1.6,
+      "measured": false,
+      "low": 0.0,
+      "high": 0.0,
+      "swing": 0.0,
+      "base": 0.0
+    },
+    {
+      "param": "sigma_um",
+      "value": 3.019,
+      "measured": true,
+      "low": 0.0,
+      "high": 0.0,
+      "swing": 0.0,
+      "base": 0.0
+    },
+    {
+      "param": "photons",
+      "value": 50000.0,
+      "measured": true,
+      "low": 0.0,
+      "high": 0.0,
+      "swing": 0.0,
+      "base": 0.0
+    },
+    {
+      "param": "read_noise",
+      "value": 0.0026,
+      "measured": true,
+      "low": 0.0,
+      "high": 0.0,
+      "swing": 0.0,
+      "base": 0.0
+    },
+    {
+      "param": "illum_strength",
+      "value": 0.156,
+      "measured": true,
+      "low": 0.0,
+      "high": 0.0,
+      "swing": 0.0,
+      "base": 0.0
+    },
+    {
+      "param": "contrast",
+      "value": 0.0948,
+      "measured": true,
+      "low": 0.0,
+      "high": 0.0,
+      "swing": 0.0,
+      "base": 0.0
+    }
+  ],
+  "sens_mc_limb12_bias_pct": {
+    "n_valid": 60,
+    "mean": 5.681554417761773,
+    "lo95": -0.29794365258506256,
+    "hi95": 11.617779517977079
+  },
+  "sens_mc_giant_call_error": {
+    "n_valid": 60,
+    "mean": 0.0,
+    "lo95": 0.0,
+    "hi95": 0.0
+  },
+  "s9": {
+    "look": "Look.dataset() defaults (NOT fitted)",
+    "n_synth": 60,
+    "auc": 0.9666666666666668,
+    "auc_sd": 0.06666666666666667,
+    "n_real": 30,
+    "worst_features": [
+      {
+        "feature": "saturation",
+        "real_mean": 0.5690242747465769,
+        "synth_mean": 0.1754869242509206,
+        "smd": -5.8185940477707145,
+        "ks": 1.0
+      },
+      {
+        "feature": "red_minus_green",
+        "real_mean": 0.23007861574490865,
+        "synth_mean": 0.05534080804500263,
+        "smd": -3.670981586805528,
+        "ks": 0.9833333333333333
+      },
+      {
+        "feature": "log_sharp",
+        "real_mean": -8.48784011173061,
+        "synth_mean": -5.774845959213788,
+        "smd": 3.5413622916512084,
+        "ks": 0.9666666666666667
+      },
+      {
+        "feature": "noise",
+        "real_mean": 0.003213845837550859,
+        "synth_mean": 0.01193620265306284,
+        "smd": 3.4708465047953734,
+        "ks": 0.9666666666666667
+      },
+      {
+        "feature": "mean_r",
+        "real_mean": 0.7840717514355977,
+        "synth_mean": 0.5795162787040075,
+        "smd": -2.8086684110239934,
+        "ks": 0.8166666666666667
+      }
+    ]
+  },
+  "scope_sigma_um": 3.019,
+  "s0_report": {},
+  "gates": [
+    {
+      "gate": "S0 um/px repeatability",
+      "status": "NOT RUN",
+      "detail": "no slide captures"
+    },
+    {
+      "gate": "S0 photon transfer linear",
+      "status": "NOT RUN",
+      "detail": "no blank-card frames"
+    },
+    {
+      "gate": "All scope values measured",
+      "status": "FAIL",
+      "detail": "still ASSUMED: um_per_px, illum_angle_deg"
+    },
+    {
+      "gate": "S4 giant-call error at scope sigma",
+      "status": "PASS",
+      "detail": "largest sigma with error <= 5% is 8.0 um (no failure found up to the top of the sweep, so the true limit is higher); scope sigma 3.02 um"
+    },
+    {
+      "gate": "D1 synthetic vs real image gap",
+      "status": "FAIL",
+      "detail": "two-sample AUC 0.97 (limit 0.75; 0.5 = indistinguishable), n_real 30"
+    },
+    {
+      "gate": "S5 forward-model validation",
+      "status": "NOT RUN",
+      "detail": "no S5 data: S1 to S4 are NOT validated"
+    }
+  ],
+  "validated": false
+}

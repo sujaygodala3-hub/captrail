@@ -22,9 +22,10 @@ from . import geometry as G, morphology as MO
 ABSORB = np.array([0.45, 1.0, 0.9])
 BACKGROUNDS = {                       # display-space skin colours, RGB 0..1 (read off sample frames: pale grey-green, bluish, pink, salmon, olive)
     "grey_green": (0.62, 0.68, 0.62), "bluish": (0.58, 0.62, 0.72), "pink": (0.80, 0.62, 0.60),
-    "salmon": (0.82, 0.45, 0.40), "olive": (0.62, 0.62, 0.45)}
+    "salmon": (0.82, 0.45, 0.40), "olive": (0.62, 0.62, 0.45),
+    "peach": (0.85, 0.60, 0.38), "orange": (0.86, 0.56, 0.32)}       # Celestron raw frames (Sujay session, 2026-10-21)
 LOWER = {"grey_green": (0.78, 0.62, 0.60), "bluish": (0.74, 0.60, 0.62), "pink": (0.82, 0.58, 0.56),
-         "salmon": (0.84, 0.40, 0.36), "olive": (0.72, 0.58, 0.50)}      # tone of the lower (proximal) skin: pinker
+         "salmon": (0.84, 0.40, 0.36), "olive": (0.72, 0.58, 0.50), "peach": (0.84, 0.54, 0.34), "orange": (0.80, 0.48, 0.26)}      # tone of the lower (proximal) skin: pinker
 DATASET_PX_UM = 0.96      # INFERRED: median hairpin box is ~0.065 of image width; with a ~40 um loop that is ~620 um across 640 px. ASSUMPTION.
 
 
@@ -53,6 +54,9 @@ class Look:
     sat: float = 1.0                                 # background saturation scale (1 = palette as listed)
     tint_amp: tuple = (0.0, 0.12)                    # large-scale per-channel colour drift (greenish, pinkish zones)
     bottom_shift: tuple = (-0.25, 0.05)              # relative brightness change from top to bottom of the frame
+    glare: tuple = (0, 0)                            # large specular LED reflections (count range): flat cream ellipses, clipped
+    limb_len_scale: float = 1.0                      # visible loop length multiplier (Celestron frames show long limbs)
+    striation: tuple = (0.0, 0.0)                    # faint vertical streak texture along the loops (fractional amplitude)
 
     def save(self, path):
         import json
@@ -73,9 +77,14 @@ class Look:
 
     @classmethod
     def celestron(cls):
-        """Looks like the Celestron scan-page frames (salmon cast, strong glare and bubbles from oil, soft focus)."""
-        return cls(sat=1.0, contrast=(0.2, 0.6), sigma_um=(2.0, 8.0), bg_names=("salmon", "pink"), bubbles=(1, 8),
-                   tint_amp=(0.0, 0.08), photons=(200.0, 1500.0))
+        """Looks like the RAW Celestron scan-page frames measured in the 2026-10-21 session: peach/orange cast,
+        large LED glare ellipses, blur sigma about 1.9 px, lumen contrast about 0.1, very low noise after the
+        camera's processing. px_um 1.6 is an anatomical ESTIMATE until the ruler (S0) is measured."""
+        return cls(px_um=1.6, sat=1.0, contrast=(0.06, 0.16), sigma_um=(2.2, 4.2), sigma_ramp=(0.8, 1.25),
+                   bg_names=("peach", "orange"), bubbles=(0, 2), specks=(0, 3), glare=(0, 3), tint_amp=(0.0, 0.0),
+                   photons=(2e4, 1e5), read_noise=(0.001, 0.004), illum=(0.08, 0.28), texture=(0.0, 0.01),
+                   limb_len_scale=1.8, striation=(0.005, 0.02),
+                   jpeg_q=(88, 98), sharpen=(0.0, 0.3), n_objects=(5, 10), bottom_shift=(-0.15, 0.05))
 
 
 def _lu(rng, lo_hi):
@@ -102,6 +111,11 @@ def _place(rng, look, W, H, n, probs):
     for x in xs:
         cls = MO.CLASSES[int(rng.choice(len(MO.CLASSES), p=probs))]
         specs, truth = MO.sample_object(cls, rng)
+        if look.limb_len_scale != 1.0:
+            for sp in specs:
+                sp.limb_len *= look.limb_len_scale
+                if sp.cross_y >= 0:
+                    sp.cross_y *= look.limb_len_scale
         top_frac = np.clip(row + slope * (x / W - 0.5) + rng.normal(0, 0.05), 0.05, 0.8)
         _, _, _, y1 = MO.object_bbox(specs)           # local top of the object (y up, relative to y_base 0)
         base = H * (1 - top_frac) - y1                # place so the apex sits at top_frac
@@ -164,6 +178,12 @@ def render_scene(rng, look: Look | None = None, probs=None, n_objects=None, sigm
         tex = ((tex - tex.mean()) / (tex.std() + 1e-9)).astype(np.float32)
         tint = 1.0 + tex_amp * tex[..., None] * np.array([1.0, 0.8, 0.6])[None, None, :]   # perfusion blotches: more in red
         ideal = ideal * tint
+    st = _u(rng, look.striation)
+    if st > 0:                                                   # streaks along the capillary direction (vertical)
+        ks = max(1, int(round(2.0 / res)))
+        sm = ndi.gaussian_filter(rng.normal(size=(ny // ks + 2, nx // ks + 2)), (30.0 / (res * ks), 1.5 / (res * ks)), mode="wrap")
+        sm = ndi.zoom(sm, ks, order=1)[:ny, :nx]
+        ideal = ideal * (1.0 + st * ((sm - sm.mean()) / (sm.std() + 1e-9)))[..., None].astype(np.float32)
     ill = _u(rng, look.illum)
     if ill > 0:
         a = rng.uniform(0, 2 * math.pi)
@@ -207,6 +227,18 @@ def render_scene(rng, look: Look | None = None, probs=None, n_objects=None, sigm
         alpha[m] = 0.9
     alpha = ndi.gaussian_filter(alpha, 0.8)
     img = img * (1 - alpha[..., None]) + art * alpha[..., None]
+    for _ in range(int(rng.integers(look.glare[0], look.glare[1] + 1))):     # LED reflections: big, smooth, near white
+        cy, cx = rng.uniform(-0.1, 1.1) * hh, rng.uniform(-0.1, 1.1) * ww
+        ry, rx = rng.uniform(25, 70), rng.uniform(35, 120)
+        th = rng.uniform(0, np.pi)
+        Y, X = np.mgrid[:hh, :ww].astype(np.float32)
+        u = (X - cx) * np.cos(th) + (Y - cy) * np.sin(th)
+        v = -(X - cx) * np.sin(th) + (Y - cy) * np.cos(th)
+        d = np.sqrt((u / rx) ** 2 + (v / ry) ** 2)
+        a = np.clip((1.06 - d) * 9.0, 0, 1)                       # flat, clipped core with a narrow soft rim
+        halo = 0.18 * np.clip(1.6 - d, 0, 1)
+        a = np.maximum(a, halo)
+        img = img * (1 - a[..., None]) + np.array([1.08, 1.06, 0.98])[None, None, :] * a[..., None]
 
     photons = _lu(rng, look.photons)
     rn = _lu(rng, look.read_noise)

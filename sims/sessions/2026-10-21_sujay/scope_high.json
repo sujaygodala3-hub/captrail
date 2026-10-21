@@ -1,0 +1,33 @@
+{
+  "um_per_px": 2.0,
+  "sigma_um": 3.774,
+  "photons": 50000.0,
+  "read_noise": 0.0026,
+  "illum_strength": 0.156,
+  "illum_angle_deg": 0.0,
+  "contrast": 0.0948,
+  "contrast_oil": null,
+  "bits": 8,
+  "measured": {
+    "um_per_px": false,
+    "sigma_um": true,
+    "photons": true,
+    "read_noise": true,
+    "illum_strength": true,
+    "illum_angle_deg": false,
+    "contrast": true,
+    "contrast_oil": false
+  },
+  "notes": {
+    "source": "Sujay session 2026-10-21, 16 usable raw frames of 30; sigma, contrast, lighting and noise measured on the capillary frames themselves",
+    "um_per_px": "ANATOMICAL ESTIMATE (high scenario 2.0), not a ruler calibration: healthy teen density 9.3/mm and apical width 16.2 um (Piotto 2016) vs measured gaps and widths in px",
+    "sigma_um": "measured in pixels (shared-sigma limb fit, mean 1.89 px) times the assumed um/px",
+    "noise": "after camera processing (frames look denoised); photons set so noise matches, not a photon-transfer measurement"
+  },
+  "uncertainty": {
+    "sigma_um": 0.736719813738341,
+    "contrast": 0.03,
+    "illum_strength": 0.077,
+    "um_per_px": 0.25
+  }
+}

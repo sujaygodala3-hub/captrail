@@ -84,3 +84,27 @@ def test_tilted_ruler_warns():
     img = ndi.rotate(img, 12, reshape=False, mode="nearest")
     with pytest.warns(RuntimeWarning):
         C.tick_profile(img)
+
+
+def test_total_width_not_stretched_by_lighting_at_low_contrast():
+    """Regression (2026-10-21 session settings): contrast 0.095 with a 0.156 lighting gradient made the old
+    global-threshold total width read 99 um for a 40 um loop."""
+    sc = ScopeParams(um_per_px=1.6, sigma_um=3.0, contrast=0.095, illum_strength=0.156, photons=50000, read_noise=0.0026)
+    rng = np.random.default_rng(0)
+    for tot in (30, 40, 45):
+        img, px, cx, roi, _ = W.single_loop_image(sc, dict(limb_um=12, apical_um=12, total_um=tot, limb_len=100.0), rng)
+        assert M.total_width_fwhm(img, px, roi) == pytest.approx(tot, rel=0.05)
+
+
+def test_shared_sigma_fit_recovers_blur_and_lumen():
+    from capsim import realdata as RD
+    x = np.arange(21, dtype=float)
+    rng = np.random.default_rng(0)
+    profs, cents = [], []
+    for w in (5.0, 6.0, 7.0, 8.0):
+        p = 1.0 - 0.1 * RD._band(x, 10.0, w, 1.9) + rng.normal(0, 0.001, x.size)
+        profs.append(p); cents.append(10.0)
+    r = RD.fit_limbs_shared_sigma(profs, cents)
+    assert r["sigma_px"] == pytest.approx(1.9, rel=0.1)
+    assert np.allclose(r["widths_px"], [5, 6, 7, 8], atol=0.6)
+    assert r["contrast"] == pytest.approx(0.1, rel=0.1)

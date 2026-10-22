@@ -25,7 +25,11 @@
   .part-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
   .part{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:26px;display:flex;flex-direction:column}
   .part .ph{aspect-ratio:16/10;border-radius:10px;background:repeating-linear-gradient(135deg,#efe8e6 0 12px,#f6f1ef 12px 24px);border:1.5px dashed #d8cfcc;display:grid;place-items:center;color:#a39894;font-size:13px;margin-bottom:22px}
-  .part .ph img{width:100%;height:100%;object-fit:cover;border-radius:9px}
+  .part .ph img{width:100%;height:100%;object-fit:contain;border-radius:9px}
+  .part .ph.has-img{background:#fff;border:1px solid var(--line);margin-bottom:8px;padding:10px}
+  .part .ph.trio{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:8px;align-items:center}
+  .part .ph.trio img{min-height:0}
+  .ph-cap{margin:0 0 18px;font-size:12px;color:var(--muted)}
   .part .num{font:500 13px/1 var(--display);color:var(--red)}
   .part h3{font-size:22px;letter-spacing:-.02em;line-height:1.15;margin:10px 0 8px}
   .part .tag{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
@@ -136,10 +140,10 @@
       <h2>Complete parts list</h2>
       <p class="intro">Everything below, plus a computer to view and save images and the microscope’s attached USB cable.</p>
 
-      <!-- PHOTOS: replace each <div class="ph">Photo</div> with <div class="ph"><img src="..." alt="..."></div> -->
       <div class="part-grid">
         <article class="part rv">
-          <div class="ph">Photo</div>
+          <div class="ph has-img"><img src="images/parts/microscope.jpg" alt="Jiusion USB digital microscope on its stand" loading="lazy"></div>
+          <p class="ph-cap">Photo: retailer listing</p>
           <span class="num">01</span>
           <h3>Jiusion 40X–1000X USB digital microscope + included stand</h3>
           <span class="tag req">Required · Buy one</span>
@@ -153,7 +157,8 @@
         </article>
 
         <article class="part rv">
-          <div class="ph">Photo</div>
+          <div class="ph has-img trio"><img src="images/parts/base-board-with-cradle.jpg" alt="Captrail base board with the finger cradle on its pegs" loading="lazy"><img src="images/parts/base-board.jpg" alt="Captrail base board with the engraved logo, round dip and pegs" loading="lazy"><img src="images/parts/finger-cradle.jpg" alt="Captrail finger cradle" loading="lazy"></div>
+          <p class="ph-cap">Rendered from our print files</p>
           <span class="num">02</span>
           <h3>Captrail base board and finger cradle</h3>
           <span class="tag req">Required · 3D printed, about 82 g PLA</span>
@@ -168,9 +173,10 @@
         </article>
 
         <article class="part rv">
-          <div class="ph">Photo</div>
+          <div class="ph has-img"><img src="images/parts/calibration-slide.jpg" alt="Calibration slide with 0.1 mm and 0.01 mm divisions" loading="lazy"></div>
+          <p class="ph-cap">Photo: retailer listing</p>
           <span class="num">03</span>
-          <h3>Calibration card</h3>
+          <h3>Calibration slide (came with the microscope)</h3>
           <span class="tag req">Came with the microscope</span>
           <ul>
             <li>Coordinate cross: 0.1 mm per small tick</li>
@@ -181,7 +187,8 @@
         </article>
 
         <article class="part rv">
-          <div class="ph">Photo</div>
+          <div class="ph has-img"><img src="images/parts/mineral-oil.jpg" alt="Bottle of mineral oil" loading="lazy"></div>
+          <p class="ph-cap">Photo: retailer listing</p>
           <span class="num">04</span>
           <h3>Mineral oil</h3>
           <span class="tag">For imaging · One small bottle</span>
@@ -192,7 +199,8 @@
         </article>
 
         <article class="part rv">
-          <div class="ph">Photo</div>
+          <div class="ph has-img"><img src="images/parts/cotton-swabs.jpg" alt="Box of cotton swabs" loading="lazy"></div>
+          <p class="ph-cap">Photo: retailer listing</p>
           <span class="num">05</span>
           <h3>Cotton swabs</h3>
           <span class="tag">For applying or removing oil · A few</span>

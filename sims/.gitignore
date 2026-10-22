@@ -11,3 +11,9 @@ data/**/*.csv
 # outputs computed from ASSUMED scope values must not be mistaken for results
 results/assumed-*/
 results/scope_params.json
+# raw batch output: large, reproducible with batch_run.py; the curated dataset in datasets/ is what we commit
+results/batch/
+# subject names and original file names never leave the team's computers
+datasets/**/_private/
+# images + labels built from real captures for detector training: local only
+datasets/_local_vision/

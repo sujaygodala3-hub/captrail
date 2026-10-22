@@ -19,3 +19,5 @@ jobs:
           cache-dependency-path: sims/requirements.txt
       - run: pip install -r requirements.txt
       - run: python -m pytest -q
+      - name: Committed datasets match their manifests, schema, splits and privacy rules
+        run: for d in datasets/captrail-v*/; do python export_dataset.py --check "$d"; done

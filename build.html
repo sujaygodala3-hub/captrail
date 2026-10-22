@@ -97,9 +97,9 @@
     <div class="wrap">
       <p class="eyebrow">Build guide</p>
       <h1>Build a Captrail</h1>
-      <p class="sub">One 3D-printed part, the Celestron microscope with its included stand, and a few inexpensive supplies. That’s the whole first version.</p>
+      <p class="sub">Two 3D-printed parts, a USB microscope with its included stand, and a few inexpensive supplies. That’s the whole first version.</p>
       <div class="hero-meta">
-        <div><b>1</b><span>3D-printed part</span></div>
+        <div><b>2</b><span>3D-printed parts (cradle + base board)</span></div>
         <div><b>5</b><span>essential items</span></div>
         <div><b>8</b><span>assembly steps</span></div>
         <div><b>$—</b><span>total cost (to be added)</span></div>
@@ -113,52 +113,49 @@
       <p class="eyebrow">01 · Parts</p>
       <h2>Complete parts list</h2>
       <p class="intro">Everything below, plus a computer to view and save images and the microscope’s attached USB cable.</p>
-      <div class="not-needed" aria-label="Not needed"><span>Cardboard</span><span>Motors</span><span>XY stage</span><span>Custom microscope mount</span><span>Second focusing mechanism</span></div>
 
       <!-- PHOTOS: replace each <div class="ph">Photo</div> with <div class="ph"><img src="..." alt="..."></div> -->
       <div class="part-grid">
         <article class="part rv">
           <div class="ph">Photo</div>
           <span class="num">01</span>
-          <h3>Celestron Labs Digital 2MP Handheld Microscope + included stand</h3>
+          <h3>Jiusion 40X–1000X USB digital microscope + included stand</h3>
           <span class="tag req">Required · Buy one</span>
           <ul>
-            <li>Microscope: 33 × 33 × 112.8 mm</li>
-            <li>Stand: 175 × 140 × 110 mm (overall)</li>
-            <li>Image resolution: 1920 × 1080</li>
-            <li>Magnification: advertised 20–200×</li>
+            <li>Image resolution: 640 × 480</li>
+            <li>Magnification: advertised 40–1000×</li>
+            <li>Built-in adjustable LED</li>
           </ul>
-          <p class="why">Captures the images, provides lighting and lets you adjust height and focus. The stand comes with it.</p>
-          <div class="price">$ TBD</div>
-          <div class="links"><a href="https://www.celestron.com/products/celestron-labs-digital-2mp-handheld-microscope" target="_blank" rel="noopener">Celestron product page ↗</a></div>
+          <p class="why">Captures the images and lights the nailfold; the included stand sets the height. We started with a Celestron Labs 2MP microscope but switched because it couldn’t resolve the fine marks we needed for calibration.</p>
+          <div class="price">$ —</div>
         </article>
 
         <article class="part rv">
           <div class="ph">Photo</div>
           <span class="num">02</span>
-          <h3>Attune 3D-printed finger rest</h3>
-          <span class="tag req">Required · Print one</span>
+          <h3>Captrail finger cradle and base board</h3>
+          <span class="tag req">Required · 3D printed in PLA</span>
           <ul>
-            <li>Exact STL dimensions: not yet verified</li>
-            <li>Check size in your slicer before printing</li>
+            <li>Cradle: our shortened version of the Attune finger rest</li>
+            <li>Base board: pegs that lock the cradle in place and a dip that holds the microscope stand</li>
+            <li>Clip-in Captrail logo</li>
           </ul>
-          <p class="why">Stabilizes the finger during imaging without pressing on the nailfold.</p>
-          <div class="price">$ TBD</div>
-          <div class="links"><a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Get finger_rest.stl ↗</a></div>
+          <p class="why">Holds the finger and the microscope in the same position every time, without pressing on the nailfold.</p>
+          <div class="price">$ —</div>
+          <div class="links"><a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Original Attune finger rest (dlx-designlab) ↗</a></div>
         </article>
 
         <article class="part rv">
           <div class="ph">Photo</div>
           <span class="num">03</span>
-          <h3>MUHWA calibration slide</h3>
-          <span class="tag req">Required for accurate measurements</span>
+          <h3>Calibration card</h3>
+          <span class="tag req">Came with the microscope</span>
           <ul>
-            <li>Standard slide, about 75 × 25 mm</li>
-            <li>Scale division: 0.01 mm = 10 µm (confirm on your slide)</li>
+            <li>Coordinate cross: 0.1 mm per small tick</li>
+            <li>1 mm per long line</li>
           </ul>
           <p class="why">Lets the software convert image pixels into real micrometers.</p>
-          <div class="price">$ TBD</div>
-          <div class="links"><a href="https://www.amazon.com/dp/B084V75CZH" target="_blank" rel="noopener">Calibration slide ↗</a></div>
+          <div class="price">Included</div>
         </article>
 
         <article class="part rv">
@@ -168,7 +165,7 @@
           <span class="tag">For imaging · One small bottle</span>
           <ul><li>One tiny drop on the nailfold</li></ul>
           <p class="why">Reduces surface scattering and reflections so the capillaries are easier to see.</p>
-          <div class="price">$ TBD</div>
+          <div class="price">$ —</div>
           <div class="links"><a href="https://www.target.com/p/-/A-11454532" target="_blank" rel="noopener">Mineral oil ↗</a></div>
         </article>
 
@@ -178,7 +175,7 @@
           <h3>Microfiber cloth and cotton swabs</h3>
           <span class="tag">For cleaning · Small quantities</span>
           <p class="why">The cloth cleans the microscope and stand; swabs apply or remove the oil.</p>
-          <div class="price">$ TBD</div>
+          <div class="price">$ —</div>
           <div class="links"><a href="https://www.target.com/p/-/A-78294066" target="_blank" rel="noopener">Microfiber cloth ↗</a><a href="https://www.target.com/p/-/A-11031085" target="_blank" rel="noopener">Cotton swabs ↗</a></div>
         </article>
 
@@ -189,11 +186,11 @@
           <span class="tag">Optional · One sheet</span>
           <ul><li>8.5 × 11 in sheet, cut as needed</li></ul>
           <p class="why">Blocks reflections and stray light. It isn’t a structural base.</p>
-          <div class="price">$ TBD</div>
+          <div class="price">$ —</div>
           <div class="links"><a href="https://www.walmart.com/ip/749779752" target="_blank" rel="noopener">Black cardstock ↗</a></div>
         </article>
       </div>
-      <p class="also">Optional: thin double-sided tape if the rest slides on your desk, and a ruler or digital calipers for checking dimensions. The Celestron kit also lists an included calibration ruler, but the separate 0.01 mm stage micrometer is better for checking accuracy.</p>
+      <p class="also">Optional: a ruler or digital calipers for checking dimensions.</p>
     </div>
   </section>
 
@@ -202,16 +199,16 @@
     <div class="wrap">
       <p class="eyebrow">02 · Check first</p>
       <h2>Measurements to check</h2>
-      <p class="intro">The stand’s listed dimensions are overall size, not necessarily the footprint or working clearance under the lens.</p>
+      <p class="intro">Check these before you start: the stand’s overall size isn’t the same as the working clearance under the lens.</p>
       <table class="mtable rv">
         <thead><tr><th>Measurement</th><th>What to do</th></tr></thead>
         <tbody>
-          <tr><td>Finger rest length, width, height</td><td>Read the imported STL dimensions in the slicer</td></tr>
+          <tr><td>Cradle and base board size</td><td>Read the imported STL dimensions in the slicer</td></tr>
           <tr><td>Finger channel width and depth</td><td>Check that the printed groove comfortably fits your finger</td></tr>
           <tr><td>Lens-to-finger clearance</td><td>Find experimentally while focusing</td></tr>
           <tr><td>Height of nailfold above tabletop</td><td>Measure with the finger resting naturally</td></tr>
-          <tr><td>Working space beside the stand post</td><td>Make sure the finger rest fits beneath the lens</td></tr>
-          <tr><td>Calibration slide thickness</td><td>Use the spec or measure it; it matters for matching imaging height</td></tr>
+          <tr><td>Working space beside the stand post</td><td>Make sure the cradle fits beneath the lens</td></tr>
+          <tr><td>Calibration card height</td><td>Image the card at about the same height as the nailfold</td></tr>
         </tbody>
       </table>
     </div>
@@ -224,7 +221,7 @@
       <h2>What it looks like</h2>
       <p class="intro">Simplified side view. Not to scale and not an exact CAD assembly.</p>
       <div class="diagram rv">
-        <svg viewBox="0 0 520 340" role="img" aria-label="Side view: microscope on its stand pointing down at a finger resting in the printed rest">
+        <svg viewBox="0 0 520 340" role="img" aria-label="Side view: microscope on its stand pointing down at a finger resting in the printed cradle">
           <line x1="20" y1="300" x2="500" y2="300" stroke="#cfc5c2" stroke-width="2"/>
           <!-- stand base + post -->
           <rect x="60" y="284" width="210" height="16" rx="3" fill="#2c2422"/>
@@ -241,18 +238,18 @@
           <circle cx="226" cy="252" r="4" fill="#E0535F"/>
           <!-- labels -->
           <g class="lab">
-            <line x1="240" y1="110" x2="330" y2="90" stroke="#a39894"/><text x="336" y="94">Celestron microscope</text>
+            <line x1="240" y1="110" x2="330" y2="90" stroke="#a39894"/><text x="336" y="94">USB microscope</text>
             <line x1="100" y1="80" x2="30" y2="40" stroke="#a39894"/><text x="20" y="34">Included stand</text>
             <line x1="228" y1="252" x2="350" y2="200" stroke="#a39894"/><text x="356" y="204">Nailfold + drop of oil</text>
-            <line x1="300" y1="288" x2="360" y2="250" stroke="#a39894"/><text x="366" y="254">Attune finger rest</text>
+            <line x1="300" y1="288" x2="360" y2="250" stroke="#a39894"/><text x="366" y="254">Cradle on base board</text>
           </g>
           <text class="dim" x="246" y="240">focus</text>
         </svg>
         <ol>
-          <li>Microscope clamped in the Celestron stand, lens pointing down.</li>
-          <li>Finger rest on the desk directly under the lens.</li>
+          <li>Microscope clamped in its stand, lens pointing down; the stand sits in the base board’s dip.</li>
+          <li>Cradle clicked onto the base board’s pegs, directly under the lens.</li>
           <li>Nailfold, the skin just behind the base of the nail, centered in view.</li>
-          <li>Height from the stand, fine focus from the wheel on the microscope.</li>
+          <li>Height from the stand, focus from the wheel on the microscope.</li>
         </ol>
       </div>
     </div>
@@ -264,30 +261,33 @@
       <p class="eyebrow">04 · Assembly</p>
       <h2>Step by step</h2>
       <ol class="steps-list">
-        <li class="rv"><div class="n">01</div><div><h3>Prepare the 3D print</h3>
-          <p>Download the <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune finger-rest STL</a> and open it in your slicer.</p>
-          <p>Set scale to 100%, read its real dimensions, check the print orientation and print one rest. Smooth any edges that touch skin.</p></div></li>
-        <li class="rv"><div class="n">02</div><div><h3>Assemble the Celestron stand</h3>
-          <p>Attach the vertical support to its base and fit the microscope into the holder following Celestron’s instructions. Tighten the controls so the microscope doesn’t drift down.</p></div></li>
-        <li class="rv"><div class="n">03</div><div><h3>Position the finger rest</h3>
-          <p>Put the setup directly on your desk and slide the finger rest under the lens. Place the nailfold under the lens.</p>
+        <li class="rv"><div class="n">01</div><div><h3>Print the cradle and base board</h3>
+          <p>Print both parts in PLA, lying flat on the bed. Printing them standing up made them curve.</p>
+          <p>The pegs are 4.6 mm and press into the cradle’s 6 mm holes; add a dot of glue if they’re loose.</p>
+          <p>Print times on our Elegoo Neptune 4 Pro: base board about 2 h 40 min, cradle about 35 min, logo letters about 15 min. The cradle is based on the <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune finger rest</a>.</p></div></li>
+        <li class="rv"><div class="n">02</div><div><h3>Set up the microscope stand</h3>
+          <p>Put the microscope in its included stand, lens pointing down. Tighten the stand so the microscope doesn’t drift down.</p></div></li>
+        <li class="rv"><div class="n">03</div><div><h3>Position the cradle</h3>
+          <p>Click the cradle onto the pegs on the base board and sit the stand in the board’s dip, so the position is the same every time.</p>
           <p>Keep the hand and wrist supported and make sure nothing squeezes the finger.</p></div></li>
         <li class="rv"><div class="n">04</div><div><h3>Connect and test the microscope</h3>
-          <p>Plug the USB cable into your computer and open the Celestron software, a camera app, or our <a href="scan.html">Microscope page</a>. Check that the live image appears.</p></div></li>
+          <p>Plug the USB cable into your computer and open a camera app or our <a href="scan.html">Microscope page</a>. Check that the live image appears.</p></div></li>
         <li class="rv"><div class="n">05</div><div><h3>Adjust focus and lighting</h3>
-          <p>Raise or lower the microscope on the stand, then fine-tune with the focus wheel.</p>
-          <p>Start at moderate LED brightness. If your version has a polarizing filter, turn it to cut glare.</p></div></li>
+          <p>Turn the LED down low; bright light causes glare.</p>
+          <p>Focus with the focus wheel only, and don’t touch it again after calibrating.</p></div></li>
         <li class="rv"><div class="n">06</div><div><h3>Test stability</h3>
-          <p>Lift and reposition your finger a few times. If the rest moves, add thin double-sided tape under it. Don’t attach anything permanently until you’ve found a comfortable position.</p></div></li>
+          <p>Lift and reposition your finger a few times. Because the cradle locks onto the pegs, it should land in the same place each time.</p></div></li>
         <li class="rv"><div class="n">07</div><div><h3>Calibrate measurements</h3>
-          <p>Move your finger aside and put the calibration slide under the lens on a clean, flat support, at about the same height as the nailfold. Capture a sharp image of the markings and work out the scale:</p>
+          <p>Put the calibration card under the lens and focus on its coordinate cross (0.1 mm per small tick, 1 mm per long line).</p>
+          <p>On the <a href="scan.html">Microscope page</a>, click the outer edges of two long lines that are 2 mm apart and enter 2000 µm:</p>
           <div class="formula">µm per pixel = <span class="frac"><span>known distance in µm</span><span>distance in pixels</span></span></div>
-          <p>Example: if a 100 µm interval spans 200 pixels, the scale is 0.5 µm per pixel. The <a href="scan.html">Microscope page</a> can do this for you.</p>
-          <p class="callout">Keep settings and geometry the same. Recalibrate if magnification, resolution or working distance changes.</p></div></li>
+          <p>Our result: 6.094 µm per pixel at 640 × 480.</p>
+          <p class="callout">Recalibrate if zoom or focus changes.</p></div></li>
         <li class="rv"><div class="n">08</div><div><h3>Capture your first nailfold image</h3>
-          <p>Remove the slide and put your finger back in the rest. Add a small drop of mineral oil to the nailfold, avoiding irritated or broken skin.</p>
-          <p>Recheck focus and lighting, then save several sharp images with the same settings.</p>
-          <p class="callout">If you can’t see the capillary loops, adjust finger angle, focus and lighting before buying more hardware.</p></div></li>
+          <p>Put your finger back in the cradle. Use a drop of mineral oil on the nailfold only, no plastic wrap, and avoid irritated or broken skin.</p>
+          <p>Keep any glare on the nail, not the skin.</p>
+          <p>Use Best of 8 and keep only sharp frames.</p>
+          <p class="callout">Save images with Enhance off for the dataset.</p></div></li>
       </ol>
     </div>
   </section>
@@ -298,8 +298,8 @@
       <p class="eyebrow">05 · Done</p>
       <h2>What you’ll have</h2>
       <div class="have rv">
-        <div><h3>Essential hardware</h3><ul><li>Celestron microscope</li><li>Its included stand</li><li>One Attune finger rest</li><li>Calibration slide</li><li>A computer</li></ul></div>
-        <div><h3>Imaging and cleanup</h3><ul><li>Mineral oil</li><li>Cotton swabs</li><li>Microfiber cloth</li><li>Optional: black cardstock and mounting tape</li></ul></div>
+        <div><h3>Essential hardware</h3><ul><li>Jiusion USB digital microscope</li><li>Its included stand</li><li>Captrail cradle and base board</li><li>Calibration card</li><li>A computer</li></ul></div>
+        <div><h3>Imaging and cleanup</h3><ul><li>Mineral oil</li><li>Cotton swabs</li><li>Microfiber cloth</li><li>Optional: black cardstock</li></ul></div>
       </div>
       <div class="bottom-line rv">
         <b>Bottom line</b>

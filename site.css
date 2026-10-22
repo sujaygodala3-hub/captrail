@@ -183,6 +183,7 @@ h1,h2,h3{font-family:var(--display);font-weight:500;letter-spacing:-0.035em;line
 .photo-note{position:absolute;right:var(--gutter);top:120px;z-index:1;color:rgba(255,255,255,.75)}
 .forsec .wrap{position:relative;z-index:1;width:100%;padding-top:180px}
 .forsec h2{font-size:clamp(42px,6.4vw,92px);max-width:900px}
+.forsec .for-sub{max-width:640px;margin:22px 0 0;font-size:clamp(17px,1.6vw,21px);color:rgba(255,255,255,.85)}
 .forsec .tab-copy{min-height:110px;max-width:640px;margin-top:28px;font-size:clamp(17px,1.6vw,21px);color:rgba(255,255,255,.85);transition:opacity .35s}
 .tabs{display:flex;gap:clamp(10px,3vw,60px);margin:70px 0 60px;overflow-x:auto;scrollbar-width:none;padding:2px}
 .tabs::-webkit-scrollbar{display:none}

@@ -5,9 +5,9 @@
     { href: 'build.html', label: 'Build guide' },
     { href: 'scan.html', label: 'Microscope' },
   ];
-  const CONTACT = 'mailto:your-email@example.com';
-
   const here = location.pathname.split('/').pop() || 'index.html';
+  // Contact scrolls to the Get in touch section on the home page.
+  const CONTACT = here === 'index.html' ? '#contact' : 'index.html#contact';
   const links = PAGES.map(p => `<a href="${p.href}"${p.href === here ? ' aria-current="page"' : ''}>${p.label}</a>`).join('');
   const logo = '<a class="logo" href="index.html"><svg><use href="#mark"/></svg>Captrail</a>';
 

@@ -13,7 +13,7 @@
 <body>
 
 <div class="announce" id="announce">
-  <span class="dot"></span>Research prototype in development: testing begins once our microscope arrives
+  <span class="dot"></span>Research prototype in development: now capturing and calibrating our first real images.
   <button aria-label="Dismiss" onclick="this.parentElement.remove()">×</button>
 </div>
 
@@ -73,7 +73,7 @@
   <section class="statement" data-header="dark">
     <p class="eyebrow rv">The Captrail scan</p>
     <h2 class="rv">A specialist’s first look, built from parts that fit on a desk</h2>
-    <p class="rv">Captrail turns a USB microscope, a 3D-printed finger cradle and a calibration slide into a repeatable scan: every image measured in micrometers, every flag explained, and every decision left to a clinician.</p>
+    <p class="rv">Captrail turns a USB microscope, a 3D-printed finger cradle and a calibration card into a repeatable scan: every image measured in micrometers, every flag explained, and every decision left to a clinician.</p>
     <div class="scroll-hint">SCROLL<i></i></div>
   </section>
 
@@ -109,7 +109,7 @@
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>AI pattern detection</span>
         </button>
         <button class="layer" style="z-index:4;--f:#EFD3D5;--s:#C3A2A5;--t:#EFD3D5;--c:#17110F"
-          data-title="Calibrated measurement" data-text="A 0.01 mm calibration slide converts pixels into micrometers, so each scan reports real numbers, like loop width in µm and capillaries per millimeter, instead of just a picture.">
+          data-title="Calibrated measurement" data-text="The coordinate cross on the calibration card that came with the microscope (0.1 mm per small tick, 1 mm per long line) converts pixels into micrometers, so each scan reports real numbers, like loop width in µm and capillaries per millimeter, instead of just a picture.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2M15.5 4.5 17 6"/></svg>Calibrated measurement</span>
         </button>
@@ -119,12 +119,12 @@
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H8l1.5-2h5L16 6h2.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.5"/></svg>Image capture</span>
         </button>
         <button class="layer" style="z-index:2;--f:#A8333F;--s:#7E1F29;--t:#A8333F;--c:#FFFFFF"
-          data-title="USB microscope" data-text="A Celestron Labs 2MP digital microscope on a stand images the nailfold, the skin at the base of the fingernail where capillaries run close to the surface. A drop of mineral oil makes the skin clear enough to see them.">
+          data-title="USB microscope" data-text="A Jiusion USB digital microscope on its stand images the nailfold, the skin at the base of the fingernail where capillaries run close to the surface. A drop of mineral oil makes the skin clear enough to see them.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h4l-1 7H10z"/><path d="M11 10v3"/><circle cx="11" cy="15" r="2"/><path d="M15 11a6 6 0 0 1 0 9M4 21h16"/></svg>USB microscope</span>
         </button>
         <button class="layer" style="z-index:1;--f:#7A1520;--s:#4E0B12;--t:#7A1520;--c:#FFFFFF"
-          data-title="Finger cradle" data-text="A 3D-printed rest, adapted from Attune’s open design, holds the finger at the same angle and distance under the lens. A repeatable position means comparable images.">
+          data-title="Finger cradle" data-text="Our 3D-printed cradle, a shortened version of Attune’s open finger rest, clicks onto pegs on a printed base board that also holds the microscope stand, so the finger sits at the same angle and distance every time. A repeatable position means comparable images.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16h18v3H3z"/><path d="M6 16c0-3 2-5 6-5s6 2 6 5"/><path d="M10 11V5.5a2 2 0 0 1 4 0V11"/></svg>Finger cradle</span>
         </button>
@@ -148,9 +148,9 @@
 
         <div class="col hw" id="hwCol">
           <div class="col-label">Hardware</div>
-          <div class="node" id="n-cradle"><i class="pin"></i><div><b>Source 01</b><span>3D-printed finger cradle</span></div></div>
-          <div class="node" id="n-scope"><i class="pin"></i><div><b>Source 02</b><span>Celestron Labs 2MP USB microscope</span></div></div>
-          <div class="node" id="n-slide"><i class="pin"></i><div><b>Source 03</b><span>0.01 mm calibration slide</span></div></div>
+          <div class="node" id="n-cradle"><i class="pin"></i><div><b>Source 01</b><span>3D-printed finger cradle and base board</span></div></div>
+          <div class="node" id="n-scope"><i class="pin"></i><div><b>Source 02</b><span>Jiusion USB digital microscope</span></div></div>
+          <div class="node" id="n-slide"><i class="pin"></i><div><b>Source 03</b><span>calibration card</span></div></div>
           <div class="node soft" id="n-oil"><i class="pin"></i><div><b>Support</b><span>Mineral oil for clear skin</span></div></div>
         </div>
 
@@ -162,7 +162,7 @@
             <li><b>02</b><div>Calibrate <span>· pixels to micrometers</span></div></li>
             <li><b>03</b><div>Detect <span>· AI marks abnormal patterns</span></div></li>
           </ol>
-          <div class="foot">Every measurement traces back to the calibration slide.</div>
+          <div class="foot">Every measurement traces back to the calibration card.</div>
         </div>
 
         <div class="col out" id="outCol">
@@ -185,6 +185,7 @@
     <div class="wrap">
       <p class="eyebrow">Who it's for</p>
       <h2>Earlier referrals, wherever patients are.</h2>
+      <p class="for-sub">School nurses, rural clinics and anyone without access to a specialist capillaroscope.</p>
       <p class="tab-copy" id="tabCopy"></p>
       <div class="tabs" id="tabs" role="tablist"></div>
     </div>
@@ -197,28 +198,27 @@
         <div>
           <p class="eyebrow rv">The build</p>
           <h2 class="rv">Everything it takes, on one list</h2>
-          <p class="lead rv">One 3D-printed part, a USB microscope with its own stand, and a few inexpensive supplies. No motors, no custom mount, no second focusing mechanism.</p>
+          <p class="lead rv">Two 3D-printed parts, a USB microscope with its own stand, and a few inexpensive supplies. No motors, no custom mount, no second focusing mechanism.</p>
           <div class="cost rv">
             <div class="label">Total build cost</div>
             <div class="big">$—</div>
-            <div class="note">Add the real total once every part is tallied.</div>
           </div>
         </div>
         <div class="rv">
           <table class="parts">
-            <tr><td class="n">01</td><td class="what"><b>Celestron Labs Digital 2MP Handheld Microscope + included stand</b><span>1920 × 1080 images, 20–200× advertised magnification, built-in LED lighting</span></td><td class="price">$ TBD</td></tr>
-            <tr><td class="n">02</td><td class="what"><b>Attune 3D-printed finger rest</b><span>Steadies the finger without pressing on the nailfold</span></td><td class="price">$ TBD</td></tr>
-            <tr><td class="n">03</td><td class="what"><b>MUHWA 0.01 mm calibration slide</b><span>10 µm divisions to convert pixels into micrometers</span></td><td class="price">$ TBD</td></tr>
-            <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$ TBD</td></tr>
-            <tr><td class="n">05</td><td class="what"><b>Microfiber cloth and cotton swabs</b><span>Cleaning the lens and applying or removing oil</span></td><td class="price">$ TBD</td></tr>
-            <tr><td class="n">06</td><td class="what"><b>Black cardstock (optional)</b><span>Blocks reflections and stray light</span></td><td class="price">$ TBD</td></tr>
+            <tr><td class="n">01</td><td class="what"><b>Jiusion 40X–1000X USB digital microscope + included stand</b><span>640 × 480 images, advertised 40–1000× magnification, built-in adjustable LED. We started with a Celestron Labs 2MP microscope but switched because it couldn’t resolve the fine marks we needed for calibration.</span></td><td class="price">$ —</td></tr>
+            <tr><td class="n">02</td><td class="what"><b>Captrail finger cradle and base board (3D printed in PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place, a dip that holds the microscope stand, and a clip-in Captrail logo</span></td><td class="price">$ —</td></tr>
+            <tr><td class="n">03</td><td class="what"><b>Calibration card (came with the microscope)</b><span>Its coordinate cross: 0.1 mm per small tick, 1 mm per long line</span></td><td class="price">Included</td></tr>
+            <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$ —</td></tr>
+            <tr><td class="n">05</td><td class="what"><b>Microfiber cloth and cotton swabs</b><span>Cleaning the lens and applying or removing oil</span></td><td class="price">$ —</td></tr>
+            <tr><td class="n">06</td><td class="what"><b>Black cardstock (optional)</b><span>Blocks reflections and stray light</span></td><td class="price">$ —</td></tr>
           </table>
-          <p class="credit">Finger rest design credit: <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune (dlx-designlab)</a>. Plus a computer and the microscope’s USB cable.</p>
+          <p class="credit">Cradle based on the finger rest from <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune (dlx-designlab)</a>. Plus a computer and the microscope’s USB cable.</p>
           <a class="link-arrow" href="build.html" style="margin-top:26px">Read the full build guide <span>→</span></a>
         </div>
       </div>
       <div class="shots">
-        <div class="shot rv"><span class="ph-tag">Photo</span><b>The printed finger rest</b></div>
+        <div class="shot rv"><span class="ph-tag">Photo</span><b>The cradle and base board</b></div>
         <div class="shot rv"><span class="ph-tag">Photo</span><b>The microscope on its stand</b></div>
         <div class="shot rv"><span class="ph-tag">Photo</span><b>The full setup</b></div>
       </div>
@@ -245,7 +245,7 @@
       <blockquote class="rv">Captrail is a research prototype for screening and referral, not a diagnostic tool. It does not replace a doctor.</blockquote>
       <div class="safety-grid">
         <div class="rv"><b>Consent first</b><p>We get consent before imaging anyone, every time.</p></div>
-        <div class="rv"><b>How images are handled</b><p>Whether scans are stored, how they are anonymized and who can see them.</p><span class="ph-tag">Fill in your policy</span></div>
+        <div class="rv"><b>How images are handled</b><p>Images stay on the device unless you choose to run AI analysis. We don’t store names with images, and we only image people who give consent.</p></div>
         <div class="rv"><b>A doctor decides</b><p>Flags are a reason to look closer. Only a clinician interprets them.</p></div>
       </div>
     </div>
@@ -261,12 +261,13 @@
         </div>
         <p class="rv">Four students building a cheaper, faster way to spot disease in the smallest blood vessels.</p>
       </div>
-      <!-- PHOTOS: add <img src="name.jpg" alt="Full name"> inside each .pic to replace the initials -->
+      <!-- PHOTOS: add <img src="images/name.jpg" alt="Full name"> inside each .pic to replace the initials,
+           and a <p class="why">one line</p> after the role -->
       <div class="people">
-        <article class="person rv"><div class="pic"><span class="ini">SG</span><span class="ph-tag">Add photo</span></div><h3>Sujay Godala</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
-        <article class="person rv"><div class="pic"><span class="ini">SR</span><span class="ph-tag">Add photo</span></div><h3>Smyan Reddy</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
-        <article class="person rv"><div class="pic"><span class="ini">AS</span><span class="ph-tag">Add photo</span></div><h3>Aryan Senthilkumar</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
-        <article class="person rv"><div class="pic"><span class="ini">AM</span><span class="ph-tag">Add photo</span></div><h3>Ansh Mishra</h3><div class="r">Co-founder</div><p class="why">Why I’m building this…</p></article>
+        <article class="person rv"><div class="pic"><span class="ini">SG</span></div><h3>Sujay Godala</h3><div class="r">Co-founder</div></article>
+        <article class="person rv"><div class="pic"><span class="ini">SR</span></div><h3>Smyan Reddy</h3><div class="r">Co-founder</div></article>
+        <article class="person rv"><div class="pic"><span class="ini">AS</span></div><h3>Aryan Senthilkumar</h3><div class="r">Co-founder</div></article>
+        <article class="person rv"><div class="pic"><span class="ini">AM</span></div><h3>Ansh Mishra</h3><div class="r">Co-founder</div></article>
       </div>
     </div>
   </section>
@@ -278,7 +279,7 @@
       <h2 class="rv">Help us take<br>a closer look.</h2>
       <p class="rv">Clinicians, researchers and anyone curious about nailfold capillaroscopy: we’d love to hear from you.</p>
       <div class="cta-actions rv">
-        <a class="btn btn-red" href="mailto:your-email@example.com">Email the team</a>
+        <a class="btn btn-red" href="mailto:sujaygodala3@gmail.com">Email the team</a>
         <a class="link-arrow" id="githubLink" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener">View on GitHub <span>→</span></a>
       </div>
     </div>
@@ -398,10 +399,11 @@
      status: 'done' | 'now' | 'next'. Leave a value '' to show it as not yet measured.
      images: [{ src: 'images/first-scan.jpg', caption: 'Ring finger, 200×' }] */
   const JOURNEY = [
-    { title: 'Prototype built', status: 'now',
-      text: 'Finger rest printed, Celestron microscope on its stand, calibration slide and supplies in hand.',
-      stats: [['Build cost', ''], ['Calibration', ''], ['Assembly time', '']], images: [] },
-    { title: 'First images', status: 'next',
+    { title: 'Prototype built', status: 'done',
+      text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated with the coordinate cross on its calibration card.',
+      stats: [['Build cost', ''], ['Calibration', '6.094 µm/px'], ['Assembly time', '']], images: [] },
+    // First images: only real captures from images/real/ go here, never the synthetic image set.
+    { title: 'First images', status: 'now',
       text: 'Calibrated nailfold images from consenting volunteers, with the same settings every time.',
       stats: [['Volunteers', ''], ['Images captured', ''], ['Usable images', '']], images: [] },
     { title: 'Train the AI', status: 'next',

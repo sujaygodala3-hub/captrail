@@ -47,12 +47,29 @@
   .mtable tr:last-child td{border-bottom:0}
   .fine{font-size:14px;color:var(--muted);margin-top:16px}
 
-  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:30px;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:center}
-  .diagram svg{width:100%;height:auto}
-  .diagram .lab{font:500 12px var(--body);fill:var(--ink)}
-  .diagram .dim{font:400 11px var(--body);fill:var(--muted)}
-  .diagram ol{margin:0;padding-left:20px;color:#4a403d}
-  .diagram ol li{margin:8px 0}
+  /* Setup drawing: every color is a token, so the drawing follows the theme. */
+  .diagram{--dg-board:#EBD3D5;--dg-engrave:#DDB8BC;--dg-engrave-text:#9B5960;--dg-dip:#D9AEB3;--dg-stand:#2c2422;
+    --dg-scope:var(--red);--dg-scope-dark:var(--red-deep);--dg-lens:#F4E4E5;--dg-rest:#F8EEEC;--dg-rest-line:#C99DA1;
+    --dg-finger:#F1D9C9;--dg-finger-line:#c9a28a;--dg-nail:#FBF1EA;--dg-oil:#F2D78A;--dg-dot:#E0535F;--dg-label:var(--ink);--dg-leader:#a39894;
+    background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:30px;display:grid;gap:26px}
+  .views{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end}
+  .views figure{margin:0}
+  .views .top{flex:1.7 1 340px;max-width:620px}
+  .views .side{flex:1 1 260px;max-width:420px}
+  .views svg{display:block;width:100%;height:auto}
+  .views figcaption{margin-top:10px;font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .dg .bd{fill:var(--dg-board)} .dg .engr{fill:var(--dg-engrave)} .dg .engr-t{fill:var(--dg-engrave-text);font:700 19px var(--display);letter-spacing:-.02em}
+  .dg .dip{fill:var(--dg-dip)} .dg .stand{fill:var(--dg-stand)} .dg .stand-base{fill:var(--dg-stand);opacity:.82}
+  .dg .scope{fill:var(--dg-scope)} .dg .scope-dark{fill:var(--dg-scope-dark)} .dg .lens{fill:none;stroke:var(--dg-lens);stroke-width:2}
+  .dg .rest{fill:var(--dg-rest);stroke:var(--dg-rest-line);stroke-width:1.5} .dg .channel{fill:none;stroke:var(--dg-rest-line);stroke-width:1;stroke-dasharray:4 3}
+  .dg .peg{fill:none;stroke:var(--dg-scope);stroke-width:1.5;stroke-dasharray:3 2}
+  .dg .finger{fill:var(--dg-finger);stroke:var(--dg-finger-line);stroke-width:1.5} .dg .nail{fill:var(--dg-nail);stroke:var(--dg-finger-line);stroke-width:1.2}
+  .dg .oil{fill:var(--dg-oil);opacity:.85} .dg .dot{fill:var(--dg-dot)} .dg .cone{fill:none;stroke:var(--dg-dot);stroke-width:1.5;stroke-dasharray:3 4}
+  .dg .lab{font:500 16px var(--body);fill:var(--dg-label)} .dg .lead{stroke:var(--dg-leader);stroke-width:1.2;fill:none}
+  .dg .nb{display:none} .dg .nb circle{fill:var(--dg-label)} .dg .nb text{font:700 13px var(--body);fill:var(--paper)}
+  .dg-key{display:none}
+  .diagram > ol{margin:0;padding-left:20px;color:#4a403d;columns:2 300px;column-gap:40px}
+  .diagram > ol li{margin:0 0 10px;break-inside:avoid}
 
   .steps-list{list-style:none;margin:0;padding:0;counter-reset:s}
   .steps-list > li{display:grid;grid-template-columns:120px 1fr;gap:30px;padding:36px 0;border-top:1px solid var(--line)}
@@ -80,10 +97,13 @@
 
   @media (max-width:980px){
     .part-grid{grid-template-columns:1fr 1fr}
-    .diagram,.have{grid-template-columns:1fr}
+    .have{grid-template-columns:1fr}
+    .diagram{padding:20px 16px}
     .steps-list > li{grid-template-columns:1fr;gap:10px}
   }
   @media (max-width:620px){
+    .dg .lab{display:none} .dg .nb{display:inline}
+    .dg-key{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin:12px 0 0;padding-left:22px;font-size:14px;color:#4a403d}
     .part-grid{grid-template-columns:1fr}
     .mtable th:first-child{width:auto}
     .mtable td,.mtable th{padding:14px}
@@ -210,46 +230,85 @@
     <div class="wrap">
       <p class="eyebrow">03 · The setup</p>
       <h2>What it looks like</h2>
-      <p class="intro">Simplified side view. Not to scale and not an exact CAD assembly.</p>
+      <p class="intro">Simplified drawing, not to scale.</p>
       <div class="diagram rv">
-        <svg viewBox="0 0 520 340" role="img" aria-label="Side view: Jiusion USB microscope pointing down from its stand, which sits in a dip on the Captrail base board; the finger cradle clicks onto pegs on the board and holds the finger so the nailfold, with a drop of mineral oil, is under the lens">
-          <line x1="12" y1="300" x2="508" y2="300" stroke="#cfc5c2" stroke-width="2"/>
-          <!-- Captrail base board, with the dip the stand sits in -->
-          <path d="M36 300 V282 H54 V289 H166 V282 H372 V300 Z" fill="#D9B3B6"/>
-          <!-- stand: base in the dip, post, arm -->
-          <rect x="58" y="279" width="104" height="10" rx="2" fill="#2c2422"/>
-          <rect x="96" y="66" width="14" height="214" fill="#2c2422"/>
-          <rect x="108" y="98" width="118" height="12" rx="3" fill="#2c2422"/>
-          <!-- Jiusion USB microscope, lens down, with focus wheel -->
-          <rect x="222" y="58" width="36" height="134" rx="12" fill="#8E1B24"/>
-          <rect x="229" y="190" width="22" height="14" rx="3" fill="#5E0E16"/>
-          <circle cx="262" cy="128" r="9" fill="#5E0E16"/>
-          <path d="M240 206 L228 232 M240 206 L252 232" stroke="#E0535F" stroke-width="1.5" stroke-dasharray="3 4"/>
-          <!-- finger cradle on the pegs -->
-          <path d="M226 282 V262 Q226 254 234 254 H346 Q354 254 354 262 V282 Z" fill="#E9C8CB"/>
-          <rect x="250" y="268" width="7" height="14" fill="none" stroke="#8E1B24" stroke-width="1.2" stroke-dasharray="2 2"/>
-          <rect x="324" y="268" width="7" height="14" fill="none" stroke="#8E1B24" stroke-width="1.2" stroke-dasharray="2 2"/>
-          <!-- finger, nail toward the left, nailfold under the lens -->
-          <path d="M196 248 Q196 234 212 234 H334 Q356 234 356 248 Q356 262 334 262 H212 Q196 262 196 248 Z" fill="#F1D9C9" stroke="#c9a28a"/>
-          <path d="M200 236 Q214 231 232 234" fill="none" stroke="#e3bfa7" stroke-width="4" stroke-linecap="round"/>
-          <ellipse cx="240" cy="233" rx="7" ry="3" fill="#F2D78A" opacity=".9"/>
-          <circle cx="240" cy="234" r="3" fill="#E0535F"/>
-          <!-- labels -->
-          <g class="lab">
-            <line x1="258" y1="86" x2="330" y2="70" stroke="#a39894"/><text x="336" y="74">Jiusion USB microscope</text>
-            <line x1="271" y1="128" x2="330" y2="118" stroke="#a39894"/><text x="336" y="122">Focus wheel</text>
-            <line x1="103" y1="82" x2="40" y2="40" stroke="#a39894"/><text x="20" y="34">Included stand</text>
-            <line x1="246" y1="231" x2="340" y2="176" stroke="#a39894"/><text x="346" y="174">Nailfold + a drop</text><text x="346" y="189">of mineral oil</text>
-            <line x1="352" y1="262" x2="392" y2="236" stroke="#a39894"/><text x="398" y="234">Finger cradle,</text><text x="398" y="249">clicked onto pegs</text>
-            <line x1="330" y1="294" x2="388" y2="318" stroke="#a39894"/><text x="394" y="322">Captrail base board</text>
-            <line x1="110" y1="290" x2="90" y2="318" stroke="#a39894"/><text x="20" y="330">Stand sits in the board’s dip</text>
-          </g>
-        </svg>
+        <div class="views">
+          <figure class="top">
+            <svg class="dg" id="dgTop" viewBox="0 0 560 450" role="img" aria-labelledby="dgTopT dgTopD">
+              <title id="dgTopT">Top view of the Captrail setup</title>
+              <desc id="dgTopD">Looking down at the 110 by 190 millimeter base board. The Captrail logo is engraved near the top edge. In the middle, the microscope stand's base sits in a round 70 millimeter dip, and its arm holds the Jiusion USB microscope over the lower edge of the dip. At the bottom, the Attune finger rest sits on two pegs 30 millimeters apart, touching the stand. A finger lies in the rest with the nail pointing toward the microscope, so the nailfold, with a drop of mineral oil, is right under the lens.</desc>
+              <!-- base board: 110 x 190 mm at 2 px/mm -->
+              <rect class="bd" x="50" y="24" width="220" height="380" rx="10"/>
+              <!-- Captrail logo, engraved -->
+              <rect class="engr" x="90" y="40" width="140" height="36" rx="7"/>
+              <text class="engr-t" x="160" y="65" text-anchor="middle">Captrail</text>
+              <!-- round dip (70 mm) with the stand base in it -->
+              <circle class="dip" cx="160" cy="180" r="70"/>
+              <circle class="stand-base" cx="160" cy="180" r="60"/>
+              <!-- finger rest (shortened Attune) on two pegs 30 mm apart, touching the dip -->
+              <rect class="rest" x="105" y="250" width="110" height="146" rx="18"/>
+              <rect class="channel" x="134" y="256" width="52" height="136" rx="22"/>
+              <circle class="peg" cx="130" cy="352" r="7"/>
+              <circle class="peg" cx="190" cy="352" r="7"/>
+              <!-- finger: nail toward the microscope, hand off the bottom edge -->
+              <rect class="finger" x="138" y="224" width="44" height="222" rx="22"/>
+              <rect class="nail" x="145" y="228" width="30" height="24" rx="11"/>
+              <!-- stand post and arm, then the microscope seen from above -->
+              <rect class="stand" x="150" y="126" width="20" height="20" rx="3"/>
+              <rect class="stand" x="154" y="136" width="12" height="102" rx="2"/>
+              <circle class="scope" cx="160" cy="257" r="22" opacity=".92"/>
+              <rect class="scope-dark" x="182" y="246" width="9" height="22" rx="3"/>
+              <circle class="lens" cx="160" cy="257" r="11"/>
+              <ellipse class="oil" cx="160" cy="257" rx="8" ry="5"/>
+              <circle class="dot" cx="160" cy="257" r="3.5"/>
+              <!-- labels -->
+              <path class="lead" d="M230 58 L300 46"/><text class="lab" x="306" y="51">Captrail logo (engraved)</text>
+              <path class="lead" d="M222 152 L300 138"/><text class="lab" x="306" y="143">Microscope stand in the dip</text>
+              <path class="lead" d="M176 240 L300 206"/><text class="lab" x="306" y="211">Jiusion USB microscope</text>
+              <path class="lead" d="M191 252 L300 246"/><text class="lab" x="306" y="251">Focus wheel</text>
+              <path class="lead" d="M166 262 L300 288"/><text class="lab" x="306" y="293">Nailfold + mineral oil</text>
+              <path class="lead" d="M214 330 L300 334"/><text class="lab" x="306" y="339">Attune finger rest on pegs</text>
+              <path class="lead" d="M270 396 L300 394"/><text class="lab" x="306" y="399">Base board (110 × 190 mm)</text>
+              <!-- numbered markers replace the text labels on narrow screens -->
+              <g class="nb"><circle cx="300" cy="46" r="10"/><text x="300" y="50.5" text-anchor="middle">1</text></g><g class="nb"><circle cx="300" cy="138" r="10"/><text x="300" y="142.5" text-anchor="middle">2</text></g><g class="nb"><circle cx="300" cy="206" r="10"/><text x="300" y="210.5" text-anchor="middle">3</text></g><g class="nb"><circle cx="300" cy="246" r="10"/><text x="300" y="250.5" text-anchor="middle">4</text></g><g class="nb"><circle cx="300" cy="288" r="10"/><text x="300" y="292.5" text-anchor="middle">5</text></g><g class="nb"><circle cx="300" cy="334" r="10"/><text x="300" y="338.5" text-anchor="middle">6</text></g><g class="nb"><circle cx="300" cy="394" r="10"/><text x="300" y="398.5" text-anchor="middle">7</text></g>
+            </svg>
+            <ol class="dg-key"><li>Captrail logo (engraved)</li><li>Microscope stand in the dip</li><li>Jiusion USB microscope</li><li>Focus wheel</li><li>Nailfold + mineral oil</li><li>Attune finger rest on pegs</li><li>Base board (110 × 190 mm)</li></ol>
+            <figcaption>Top view</figcaption>
+          </figure>
+          <figure class="side">
+            <svg class="dg" viewBox="0 0 340 230" role="img" aria-labelledby="dgSideT dgSideD">
+              <title id="dgSideT">Side view of the Captrail setup</title>
+              <desc id="dgSideD">The same setup from the side: the stand's base sits in the dip in the base board, the stand's arm holds the microscope with its lens pointing down, and the finger rest on its pegs touches the stand, with the nailfold under the lens.</desc>
+              <!-- base board (thickness exaggerated) with the dip and the logo engraving -->
+              <path class="bd" d="M14 196 V184 H82 V190 H192 V184 H326 V196 Z"/>
+              <rect class="engr" x="24" y="184" width="42" height="3"/>
+              <!-- stand: base in the dip, post at the back, arm to the microscope -->
+              <rect class="stand" x="86" y="181" width="104" height="9" rx="2"/>
+              <rect class="stand" x="94" y="38" width="10" height="146"/>
+              <rect class="stand" x="94" y="54" width="126" height="9" rx="2"/>
+              <!-- microscope, lens pointing down, focus wheel on the side -->
+              <rect class="scope" x="214" y="44" width="28" height="100" rx="9"/>
+              <rect class="scope-dark" x="220" y="142" width="16" height="11" rx="2"/>
+              <circle class="scope-dark" cx="246" cy="90" r="6"/>
+              <!-- finger rest on pegs, touching the stand -->
+              <path class="rest" d="M192 184 V164 Q192 156 200 156 H300 Q308 156 308 164 V184 Z"/>
+              <rect class="peg" x="226" y="170" width="7" height="14"/>
+              <rect class="peg" x="274" y="170" width="7" height="14"/>
+              <!-- finger with the nail toward the microscope -->
+              <rect class="finger" x="200" y="140" width="136" height="24" rx="12"/>
+              <path class="nail" d="M202 146 Q204 140 214 140 H226 V143 H212 Q206 143 202 146 Z"/>
+              <path class="cone" d="M228 154 L228 143"/>
+              <ellipse class="oil" cx="228" cy="140" rx="7" ry="2.6"/>
+              <circle class="dot" cx="228" cy="140" r="3"/>
+            </svg>
+            <figcaption>Side view</figcaption>
+          </figure>
+        </div>
         <ol>
-          <li>Jiusion USB microscope in its stand, lens pointing down.</li>
-          <li>The stand sits in the dip on the Captrail base board.</li>
-          <li>The finger cradle clicks onto the pegs on the base board, right under the lens.</li>
-          <li>Nailfold with a drop of mineral oil under the lens; focus with the focus wheel.</li>
+          <li>The microscope’s stand sits in the round dip on the base board, so it’s in the same spot every time.</li>
+          <li>The finger rest clicks onto the two pegs right next to the stand.</li>
+          <li>Rest your finger with the nailfold (the skin just behind the base of the nail) under the lens.</li>
+          <li>Set the height on the stand, then fine focus with the microscope’s focus wheel.</li>
         </ol>
       </div>
     </div>
@@ -317,5 +376,13 @@
 
 <div id="site-footer"></div>
 <script src="site.js"></script>
+<script>
+  // On narrow screens, crop the top view to the board and its numbered markers so it renders larger.
+  (() => {
+    const svg = document.getElementById('dgTop'), mq = matchMedia('(max-width:620px)');
+    const fit = () => svg.setAttribute('viewBox', mq.matches ? '40 16 276 432' : '0 0 560 450');
+    (mq.addEventListener ? mq.addEventListener('change', fit) : mq.addListener(fit)); fit();
+  })();
+</script>
 </body>
 </html>

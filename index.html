@@ -201,17 +201,18 @@
           <p class="lead rv">Two 3D-printed parts, a USB microscope with its own stand, and a few inexpensive supplies. No motors, no custom mount, no second focusing mechanism.</p>
           <div class="cost rv">
             <div class="label">Total build cost</div>
-            <div class="big">$—</div>
+            <div class="big">$36</div>
+            <div class="note">Not counting the 3D printer and computer.</div>
           </div>
         </div>
         <div class="rv">
           <table class="parts">
-            <tr><td class="n">01</td><td class="what"><b>Jiusion 40X–1000X USB digital microscope + included stand</b><span>640 × 480 images, advertised 40–1000× magnification, built-in adjustable LED. We started with a Celestron Labs 2MP microscope but switched because it couldn’t resolve the fine marks we needed for calibration.</span></td><td class="price">$ —</td></tr>
-            <tr><td class="n">02</td><td class="what"><b>Captrail finger cradle and base board (3D printed in PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place, a dip that holds the microscope stand, and a clip-in Captrail logo</span></td><td class="price">$ —</td></tr>
+            <tr><td class="n">01</td><td class="what"><b>Jiusion 40X–1000X USB digital microscope + included stand</b><span>640 × 480 images, advertised 40–1000× magnification, built-in adjustable LED</span></td><td class="price">$25</td></tr>
+            <tr><td class="n">02</td><td class="what"><b>Captrail finger cradle, base board and logo (3D printed, about 86 g PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place, a dip that holds the microscope stand, and a clip-in Captrail logo</span></td><td class="price">$2</td></tr>
             <tr><td class="n">03</td><td class="what"><b>Calibration card (came with the microscope)</b><span>Its coordinate cross: 0.1 mm per small tick, 1 mm per long line</span></td><td class="price">Included</td></tr>
-            <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$ —</td></tr>
-            <tr><td class="n">05</td><td class="what"><b>Microfiber cloth and cotton swabs</b><span>Cleaning the lens and applying or removing oil</span></td><td class="price">$ —</td></tr>
-            <tr><td class="n">06</td><td class="what"><b>Black cardstock (optional)</b><span>Blocks reflections and stray light</span></td><td class="price">$ —</td></tr>
+            <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$3</td></tr>
+            <tr><td class="n">05</td><td class="what"><b>Microfiber cloth and cotton swabs</b><span>Cleaning the lens and applying or removing oil</span></td><td class="price">$5</td></tr>
+            <tr><td class="n">06</td><td class="what"><b>Black cardstock (optional)</b><span>Blocks reflections and stray light</span></td><td class="price">$1</td></tr>
           </table>
           <p class="credit">Cradle based on the finger rest from <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune (dlx-designlab)</a>. Plus a computer and the microscope’s USB cable.</p>
           <a class="link-arrow" href="build.html" style="margin-top:26px">Read the full build guide <span>→</span></a>
@@ -401,10 +402,10 @@
   const JOURNEY = [
     { title: 'Prototype built', status: 'done',
       text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated with the coordinate cross on its calibration card.',
-      stats: [['Build cost', ''], ['Calibration', '6.094 µm/px'], ['Assembly time', '']], images: [] },
+      stats: [['Build cost', '$36'], ['Calibration', '6.094 µm/px'], ['Assembly time', 'about 3 h 45 min (mostly printing)']], images: [] },
     // First images: only real captures from images/real/ go here, never the synthetic image set.
     { title: 'First images', status: 'now',
-      text: 'Calibrated nailfold images from consenting volunteers, with the same settings every time.',
+      text: 'Microscope calibrated at 6.094 µm/px. Capturing our first real nailfold images now.',
       stats: [['Volunteers', ''], ['Images captured', ''], ['Usable images', '']], images: [] },
     { title: 'Train the AI', status: 'next',
       text: 'Fit the model on a labeled capillaroscopy dataset and report how well it actually does.',
@@ -444,7 +445,7 @@
     jFill.style.height = JN > 1 ? `calc((100% - 28px) * ${i / (JN - 1)})` : 0;
     const imgs = st.images.length
       ? st.images.map(im => `<figure><img src="${esc(im.src)}" alt="${esc(im.caption || st.title)}"><figcaption>${esc(im.caption || '')}</figcaption></figure>`).join('')
-      : '<figure class="empty"><span>Image coming</span></figure><figure class="empty"><span>Image coming</span></figure>';
+      : '<figure class="empty"><span>Photo coming soon</span></figure><figure class="empty"><span>Photo coming soon</span></figure>';
     jCard.classList.toggle('final', !!st.final);
     jCard.classList.remove('show'); void jCard.offsetWidth;
     jCard.innerHTML = `

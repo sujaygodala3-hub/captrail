@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Microscope | Captrail</title>
-<meta name="description" content="Connect the Celestron USB microscope, capture nailfold images, calibrate to micrometers and send scans to the Captrail model.">
+<meta name="description" content="Connect the USB microscope, capture nailfold images, calibrate to micrometers and send scans to the Captrail model.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -125,8 +125,8 @@
 <main class="wrap">
   <section class="page-hero">
     <p class="eyebrow">Microscope</p>
-    <h1>Connect the Celestron</h1>
-    <p class="sub">The Celestron Labs microscope shows up as a USB camera, so this page can read it directly: live view, capture, calibration to micrometers, and sending scans to the Captrail model. Already saving images in Celestron’s own app? Upload them here instead.</p>
+    <h1>Connect the microscope</h1>
+    <p class="sub">The USB microscope shows up as a camera, so this page can read it directly: live view, capture, calibration to micrometers, and sending scans to the Captrail model. Already saving images in the microscope’s own app? Upload them here instead.</p>
     <div class="how3"><span><b>1</b>Plug in over USB</span><span><b>2</b>Calibrate with the slide</span><span><b>3</b>Capture, measure, analyze</span></div>
   </section>
 
@@ -141,7 +141,7 @@
           <div>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h4l-1 7H10z"/><path d="M11 10v3"/><circle cx="11" cy="15" r="2"/><path d="M15 11a6 6 0 0 1 0 9M4 21h16"/></svg>
             <b>No microscope connected</b>
-            Plug in the Celestron, then press Connect.<br>Or upload images saved from the Celestron app.
+            Plug in the microscope, then press Connect.<br>Or upload images saved from the microscope’s app.
           </div>
         </div>
         <div class="hud" id="hud"></div>
@@ -189,7 +189,7 @@
         <label for="devSel">Camera</label>
         <select id="devSel" disabled><option>Connect first</option></select>
         <label for="resSel">Resolution</label>
-        <select id="resSel"><option value="1920x1080" selected>1920 × 1080 (Celestron max)</option><option value="1280x720">1280 × 720</option><option value="640x480">640 × 480</option></select>
+        <select id="resSel"><option value="640x480" selected>640 × 480</option><option value="1280x720">1280 × 720</option></select>
         <div class="status" id="connStatus"><i></i><span>Not connected</span></div>
       </div>
 
@@ -261,7 +261,7 @@
   function showHint(t) { hint.hidden = !t; hint.textContent = t || ''; }
 
   /* ---------- camera ---------- */
-  const scopeRx = /celestron|microscope|scope|digital|usb|uvc/i, builtInRx = /facetime|integrated|built-in|front|back|virtual|obs/i;
+  const scopeRx = /microscope|scope|digital|usb|uvc/i, builtInRx = /facetime|integrated|built-in|front|back|virtual|obs/i;
   async function listDevices(preferId) {
     const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
     const ds = $('devSel');
@@ -756,7 +756,7 @@
     const c = document.createElement('canvas'); c.width = 240; c.height = Math.round(src.height * 240 / src.width);
     c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', .8);
   }
-  // Warm: make Celestron's cool blue-green frames look like clinical capillaroscopy (warm skin, red vessels).
+  // Warm: make the microscope's cool blue-green frames look like clinical capillaroscopy (warm skin, red vessels).
   function warmCanvas(src) {
     const { width: W, height: H } = src;
     const c = document.createElement('canvas'); c.width = W; c.height = H;

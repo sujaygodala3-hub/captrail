@@ -12,7 +12,7 @@ A low-cost nailfold microscope that uses AI to flag early signs of autoimmune an
 | --- | --- |
 | `index.html` | Home page: purpose, how it works, hardware → software, results, team |
 | `build.html` | Parts list and step-by-step assembly guide |
-| `scan.html` | Connect the Celestron USB microscope: live view, capture, µm calibration, measurement, AI analysis |
+| `scan.html` | Connect the USB microscope: live view, capture, µm calibration, measurement, AI analysis |
 | `site.css` / `site.js` | Shared styles, header and footer (add header pages in the `PAGES` list in `site.js`) |
 
 ## Editing

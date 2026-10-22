@@ -400,27 +400,26 @@
   /* results journey: edit this data as results come in.
      status: 'done' | 'now' | 'next' (up next) | 'planned'. Leave a value '' to show it as not yet measured.
      goals: true labels every stat as a "Goal" so it can't be read as a result.
-     images: [{ src: 'images/real/first-scan.jpg', caption: 'Ring finger' }]  (real captures only) */
+     live: true adds a link to the Microscope page. */
   const JOURNEY = [
-    { title: 'Prototype built', status: 'done',
+    { title: 'Prototype built', status: 'done', live: true,
       text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated with the coordinate cross on its calibration card.',
-      stats: [['Build cost', '$32'], ['Calibration', '6.094 µm/px'], ['Assembly time', 'about 3 h 30 min (mostly printing)']], images: [] },
-    // First images: only real captures from images/real/ go here, never the synthetic image set.
-    { title: 'First images', status: 'now',
+      stats: [['Build cost', '$32'], ['Calibration', '6.094 µm/px'], ['Assembly time', 'about 3 h 30 min (mostly printing)']] },
+    { title: 'First images', status: 'now', live: true,
       text: 'Microscope calibrated. Capturing our first real nailfold images now.',
-      stats: [['Resolution', '640 × 480'], ['Scale', '6.094 µm/px'], ['Field of view', 'about 3.9 × 2.9 mm']], images: [] },
+      stats: [['Resolution', '640 × 480'], ['Scale', '6.094 µm/px'], ['Field of view', 'about 3.9 × 2.9 mm']] },
     { title: 'Train the AI', status: 'next', goals: true,
       text: 'Our team is training a model to find and measure capillary loops in our images.',
-      stats: [['Goal', 'Loops detected automatically'], ['Goal', 'Loop width measured in µm'], ['Goal', 'Results in under 10 seconds']], images: [] },
+      stats: [['Goal', 'Loops detected automatically'], ['Goal', 'Loop width measured in µm'], ['Goal', 'Results in under 10 seconds']] },
     { title: 'Test with more people', status: 'planned', goals: true,
       text: 'Scan volunteers who give consent, using the same setup every time.',
-      stats: [['Goal', '10 volunteers'], ['Goal', '3 images per finger'], ['Goal', 'Same settings for every scan']], images: [] },
+      stats: [['Goal', '10 volunteers'], ['Goal', '3 images per finger'], ['Goal', 'Same settings for every scan']] },
     { title: 'Work with a clinician', status: 'planned', goals: true,
       text: 'Have a doctor review our images and flags to see what we get right and wrong.',
-      stats: [['Goal', '1 clinician review'], ['Goal', 'Compare our flags to the doctor’s'], ['Goal', 'Fix what we miss']], images: [] },
+      stats: [['Goal', '1 clinician review'], ['Goal', 'Compare our flags to the doctor’s'], ['Goal', 'Fix what we miss']] },
     { title: 'Finished', status: 'planned', final: true, goals: true,
       text: 'A full screening setup anyone can build for under $40.',
-      stats: [['Goal', 'Under $40'], ['Goal', 'Under 5 minutes per scan'], ['Goal', 'Free and open source']], images: [] },
+      stats: [['Goal', 'Under $40'], ['Goal', 'Under 5 minutes per scan'], ['Goal', 'Free and open source']] },
   ];
   const STATUS = { done: 'Complete', now: 'In progress', next: 'Up next', planned: 'Planned' };
   const jSec = document.querySelector('.journey'), jRail = document.getElementById('jRail'),
@@ -445,9 +444,6 @@
     const st = JOURNEY[i];
     [...jRail.querySelectorAll('li')].forEach((li, j) => li.classList.toggle('active', j === i));
     jFill.style.height = JN > 1 ? `calc((100% - 28px) * ${i / (JN - 1)})` : 0;
-    const imgs = st.images.length
-      ? st.images.map(im => `<figure><img src="${esc(im.src)}" alt="${esc(im.caption || st.title)}"><figcaption>${esc(im.caption || '')}</figcaption></figure>`).join('')
-      : '<figure class="empty"><span>Photo coming soon</span></figure><figure class="empty"><span>Photo coming soon</span></figure>';
     jCard.classList.toggle('final', !!st.final);
     jCard.classList.remove('show'); void jCard.offsetWidth;
     jCard.innerHTML = `
@@ -457,7 +453,7 @@
       <dl class="j-stats${st.goals ? ' goals' : ''}">${st.stats.map(([k, v]) => st.goals
         ? `<div><dt><span class="goal-tag">Goal</span></dt><dd>${esc(v)}</dd></div>`
         : `<div><dt>${esc(k)}</dt><dd class="${v ? '' : 'blank'}">${v ? esc(v) : '—'}</dd></div>`).join('')}</dl>
-      <div class="j-imgs">${imgs}</div>`;
+      ${st.live ? '<a class="j-live" href="scan.html">See it live on the Microscope page <span>→</span></a>' : ''}`;
     jCard.classList.add('show');
   }
   function journeyScroll() {

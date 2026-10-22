@@ -201,20 +201,21 @@
           <p class="lead rv">Two 3D-printed parts, a USB microscope with its own stand, and a few inexpensive supplies. No motors, no custom mount, no second focusing mechanism.</p>
           <div class="cost rv">
             <div class="label">Total build cost</div>
-            <div class="big">$36</div>
+            <div class="big">$32</div>
             <div class="note">Not counting the 3D printer and computer.</div>
           </div>
         </div>
         <div class="rv">
           <table class="parts">
             <tr><td class="n">01</td><td class="what"><b>Jiusion 40X–1000X USB digital microscope + included stand</b><span>640 × 480 images, advertised 40–1000× magnification, built-in adjustable LED</span></td><td class="price">$25</td></tr>
-            <tr><td class="n">02</td><td class="what"><b>Captrail finger cradle, base board and logo (3D printed, about 86 g PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place, a dip that holds the microscope stand, and a clip-in Captrail logo</span></td><td class="price">$2</td></tr>
+            <tr><td class="n">02</td><td class="what"><b>Captrail base board and finger cradle (3D printed, about 82 g PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place and a dip that holds the microscope stand</span></td><td class="price">$2</td></tr>
             <tr><td class="n">03</td><td class="what"><b>Calibration card (came with the microscope)</b><span>Its coordinate cross: 0.1 mm per small tick, 1 mm per long line</span></td><td class="price">Included</td></tr>
             <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$3</td></tr>
-            <tr><td class="n">05</td><td class="what"><b>Microfiber cloth and cotton swabs</b><span>Cleaning the lens and applying or removing oil</span></td><td class="price">$5</td></tr>
-            <tr><td class="n">06</td><td class="what"><b>Black cardstock (optional)</b><span>Blocks reflections and stray light</span></td><td class="price">$1</td></tr>
+            <tr><td class="n">05</td><td class="what"><b>Cotton swabs</b><span>Applying and removing the drop of oil</span></td><td class="price">$2</td></tr>
           </table>
           <p class="credit">Cradle based on the finger rest from <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune (dlx-designlab)</a>. Plus a computer and the microscope’s USB cable.</p>
+          <p class="credit dl-links">Print files: <a href="captrail_print_files/captrail_base_board.stl" download>Base board .stl ↓</a> <a href="captrail_print_files/captrail_base_board.gcode" download>Base board .gcode ↓</a> <a href="captrail_print_files/captrail_finger_cradle.stl" download>Finger cradle .stl ↓</a> <a href="captrail_print_files/captrail_finger_cradle.gcode" download>Finger cradle .gcode ↓</a> </p>
+          <p class="credit">The .gcode files are sliced for an Elegoo Neptune 4 Pro with PLA. For other printers, slice the .stl yourself.</p>
           <a class="link-arrow" href="build.html" style="margin-top:26px">Read the full build guide <span>→</span></a>
         </div>
       </div>
@@ -397,30 +398,31 @@
   showTab(0);
 
   /* results journey: edit this data as results come in.
-     status: 'done' | 'now' | 'next'. Leave a value '' to show it as not yet measured.
-     images: [{ src: 'images/first-scan.jpg', caption: 'Ring finger, 200×' }] */
+     status: 'done' | 'now' | 'next' (up next) | 'planned'. Leave a value '' to show it as not yet measured.
+     goals: true labels every stat as a "Goal" so it can't be read as a result.
+     images: [{ src: 'images/real/first-scan.jpg', caption: 'Ring finger' }]  (real captures only) */
   const JOURNEY = [
     { title: 'Prototype built', status: 'done',
       text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated with the coordinate cross on its calibration card.',
-      stats: [['Build cost', '$36'], ['Calibration', '6.094 µm/px'], ['Assembly time', 'about 3 h 45 min (mostly printing)']], images: [] },
+      stats: [['Build cost', '$32'], ['Calibration', '6.094 µm/px'], ['Assembly time', 'about 3 h 30 min (mostly printing)']], images: [] },
     // First images: only real captures from images/real/ go here, never the synthetic image set.
     { title: 'First images', status: 'now',
-      text: 'Microscope calibrated at 6.094 µm/px. Capturing our first real nailfold images now.',
-      stats: [['Volunteers', ''], ['Images captured', ''], ['Usable images', '']], images: [] },
-    { title: 'Train the AI', status: 'next',
-      text: 'Fit the model on a labeled capillaroscopy dataset and report how well it actually does.',
-      stats: [['Training images', ''], ['Dataset', ''], ['Accuracy', '']], images: [] },
-    { title: 'Test with more people', status: 'next',
-      text: 'Check that measurements hold up across many people and repeated scans.',
-      stats: [['People tested', ''], ['Total scans', ''], ['Repeatability', '']], images: [] },
-    { title: 'Work with a clinician', status: 'next',
-      text: 'Compare Captrail’s flags against a specialist’s read of the same images.',
-      stats: [['Clinician partner', ''], ['Scans reviewed', ''], ['Agreement', '']], images: [] },
-    { title: 'Finished', status: 'next', final: true,
-      text: 'A validated, low-cost screening prototype, with every result on this page backed by real scans.',
-      stats: [['Total scans', ''], ['Final accuracy', ''], ['Build cost', '']], images: [] },
+      text: 'Microscope calibrated. Capturing our first real nailfold images now.',
+      stats: [['Resolution', '640 × 480'], ['Scale', '6.094 µm/px'], ['Field of view', 'about 3.9 × 2.9 mm']], images: [] },
+    { title: 'Train the AI', status: 'next', goals: true,
+      text: 'Our team is training a model to find and measure capillary loops in our images.',
+      stats: [['Goal', 'Loops detected automatically'], ['Goal', 'Loop width measured in µm'], ['Goal', 'Results in under 10 seconds']], images: [] },
+    { title: 'Test with more people', status: 'planned', goals: true,
+      text: 'Scan volunteers who give consent, using the same setup every time.',
+      stats: [['Goal', '10 volunteers'], ['Goal', '3 images per finger'], ['Goal', 'Same settings for every scan']], images: [] },
+    { title: 'Work with a clinician', status: 'planned', goals: true,
+      text: 'Have a doctor review our images and flags to see what we get right and wrong.',
+      stats: [['Goal', '1 clinician review'], ['Goal', 'Compare our flags to the doctor’s'], ['Goal', 'Fix what we miss']], images: [] },
+    { title: 'Finished', status: 'planned', final: true, goals: true,
+      text: 'A full screening setup anyone can build for under $40.',
+      stats: [['Goal', 'Under $40'], ['Goal', 'Under 5 minutes per scan'], ['Goal', 'Free and open source']], images: [] },
   ];
-  const STATUS = { done: 'Complete', now: 'In progress', next: 'Upcoming' };
+  const STATUS = { done: 'Complete', now: 'In progress', next: 'Up next', planned: 'Planned' };
   const jSec = document.querySelector('.journey'), jRail = document.getElementById('jRail'),
         jCard = document.getElementById('jCard'), jFill = document.getElementById('jFill');
   const JN = JOURNEY.length;
@@ -452,7 +454,9 @@
       <div class="j-top"><span>Stage ${String(i + 1).padStart(2, '0')} / ${String(JN).padStart(2, '0')}</span><span class="pill ${st.status}">${STATUS[st.status]}</span></div>
       <h3>${esc(st.title)}</h3>
       <p>${esc(st.text)}</p>
-      <dl class="j-stats">${st.stats.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="${v ? '' : 'blank'}">${v ? esc(v) : '—'}</dd></div>`).join('')}</dl>
+      <dl class="j-stats${st.goals ? ' goals' : ''}">${st.stats.map(([k, v]) => st.goals
+        ? `<div><dt><span class="goal-tag">Goal</span></dt><dd>${esc(v)}</dd></div>`
+        : `<div><dt>${esc(k)}</dt><dd class="${v ? '' : 'blank'}">${v ? esc(v) : '—'}</dd></div>`).join('')}</dl>
       <div class="j-imgs">${imgs}</div>`;
     jCard.classList.add('show');
   }

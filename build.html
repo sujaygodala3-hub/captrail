@@ -64,6 +64,8 @@
   .formula{display:inline-flex;align-items:center;gap:14px;margin:10px 0 14px;padding:16px 22px;border-radius:12px;background:var(--red-tint);font:500 18px/1.2 var(--display);color:var(--red-deep)}
   .formula .frac{display:inline-flex;flex-direction:column;text-align:center}
   .formula .frac span:first-child{border-bottom:1.5px solid currentColor;padding-bottom:4px;margin-bottom:4px}
+  .dl-links a{color:var(--red);text-decoration:none;font-weight:500;margin-right:14px;white-space:nowrap}
+  .dl-links a:hover{text-decoration:underline}
   .callout{border-left:3px solid var(--red);padding:4px 0 4px 18px;color:#4a403d;font-size:15.5px;margin-top:12px;max-width:760px}
 
   .have{display:grid;grid-template-columns:1fr 1fr;gap:18px}
@@ -102,7 +104,7 @@
         <div><b>2</b><span>3D-printed parts (cradle + base board)</span></div>
         <div><b>5</b><span>essential items</span></div>
         <div><b>8</b><span>assembly steps</span></div>
-        <div><b>$36</b><span>total cost<br>Not counting the 3D printer and computer.</span></div>
+        <div><b>$32</b><span>total cost<br>Not counting the 3D printer and computer.</span></div>
       </div>
     </div>
   </section>
@@ -133,16 +135,16 @@
         <article class="part rv">
           <div class="ph">Photo</div>
           <span class="num">02</span>
-          <h3>Captrail finger cradle, base board and logo</h3>
-          <span class="tag req">Required · 3D printed, about 86 g PLA</span>
+          <h3>Captrail base board and finger cradle</h3>
+          <span class="tag req">Required · 3D printed, about 82 g PLA</span>
           <ul>
-            <li>Cradle: our shortened version of the Attune finger rest</li>
+            <li>Finger cradle: our shortened version of the Attune finger rest</li>
             <li>Base board: pegs that lock the cradle in place and a dip that holds the microscope stand</li>
-            <li>Clip-in Captrail logo</li>
           </ul>
           <p class="why">Holds the finger and the microscope in the same position every time, without pressing on the nailfold.</p>
           <div class="price">$2</div>
-          <div class="links"><a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Original Attune finger rest (dlx-designlab) ↗</a></div>
+          <div class="links"><a href="captrail_print_files/captrail_base_board.stl" download>Base board .stl ↓</a><a href="captrail_print_files/captrail_base_board.gcode" download>Base board .gcode ↓</a><a href="captrail_print_files/captrail_finger_cradle.stl" download>Finger cradle .stl ↓</a><a href="captrail_print_files/captrail_finger_cradle.gcode" download>Finger cradle .gcode ↓</a><a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Original Attune finger rest (dlx-designlab) ↗</a></div>
+          <p class="why">The .gcode files are sliced for an Elegoo Neptune 4 Pro with PLA. For other printers, slice the .stl yourself. The cradle is based on the Attune finger rest by dlx-designlab.</p>
         </article>
 
         <article class="part rv">
@@ -172,22 +174,11 @@
         <article class="part rv">
           <div class="ph">Photo</div>
           <span class="num">05</span>
-          <h3>Microfiber cloth and cotton swabs</h3>
-          <span class="tag">For cleaning · Small quantities</span>
-          <p class="why">The cloth cleans the microscope and stand; swabs apply or remove the oil.</p>
-          <div class="price">$5</div>
-          <div class="links"><a href="https://www.target.com/p/-/A-78294066" target="_blank" rel="noopener">Microfiber cloth ↗</a><a href="https://www.target.com/p/-/A-11031085" target="_blank" rel="noopener">Cotton swabs ↗</a></div>
-        </article>
-
-        <article class="part rv">
-          <div class="ph">Photo</div>
-          <span class="num">06</span>
-          <h3>Black cardstock</h3>
-          <span class="tag">Optional · One sheet</span>
-          <ul><li>8.5 × 11 in sheet, cut as needed</li></ul>
-          <p class="why">Blocks reflections and stray light. It isn’t a structural base.</p>
-          <div class="price">$1</div>
-          <div class="links"><a href="https://www.walmart.com/ip/749779752" target="_blank" rel="noopener">Black cardstock ↗</a></div>
+          <h3>Cotton swabs</h3>
+          <span class="tag">For applying or removing oil · A few</span>
+          <p class="why">Apply the drop of mineral oil and wipe it off afterwards.</p>
+          <div class="price">$2</div>
+          <div class="links"><a href="https://www.target.com/p/-/A-11031085" target="_blank" rel="noopener">Cotton swabs ↗</a></div>
         </article>
       </div>
       <p class="also">Optional: a ruler or digital calipers for checking dimensions.</p>
@@ -221,35 +212,44 @@
       <h2>What it looks like</h2>
       <p class="intro">Simplified side view. Not to scale and not an exact CAD assembly.</p>
       <div class="diagram rv">
-        <svg viewBox="0 0 520 340" role="img" aria-label="Side view: microscope on its stand pointing down at a finger resting in the printed cradle">
-          <line x1="20" y1="300" x2="500" y2="300" stroke="#cfc5c2" stroke-width="2"/>
-          <!-- stand base + post -->
-          <rect x="60" y="284" width="210" height="16" rx="3" fill="#2c2422"/>
-          <rect x="84" y="60" width="16" height="226" fill="#2c2422"/>
-          <rect x="96" y="96" width="112" height="14" rx="3" fill="#2c2422"/>
-          <!-- microscope -->
-          <rect x="200" y="58" width="40" height="140" rx="12" fill="#8E1B24"/>
-          <rect x="207" y="196" width="26" height="16" rx="3" fill="#5E0E16"/>
-          <path d="M220 214 L204 262 M220 214 L236 262" stroke="#E0535F" stroke-width="1.5" stroke-dasharray="3 4"/>
-          <!-- finger rest + finger -->
-          <path d="M150 300 V276 Q150 266 160 266 H300 Q310 266 310 276 V300 Z" fill="#E9C8CB"/>
-          <path d="M140 262 Q140 248 156 248 H290 Q312 248 312 262 Q312 276 290 276 H156 Q140 276 140 262 Z" fill="#F1D9C9" stroke="#c9a28a"/>
-          <path d="M248 249 H300 Q312 250 312 262" fill="none" stroke="#c9a28a" stroke-width="3"/>
-          <circle cx="226" cy="252" r="4" fill="#E0535F"/>
+        <svg viewBox="0 0 520 340" role="img" aria-label="Side view: Jiusion USB microscope pointing down from its stand, which sits in a dip on the Captrail base board; the finger cradle clicks onto pegs on the board and holds the finger so the nailfold, with a drop of mineral oil, is under the lens">
+          <line x1="12" y1="300" x2="508" y2="300" stroke="#cfc5c2" stroke-width="2"/>
+          <!-- Captrail base board, with the dip the stand sits in -->
+          <path d="M36 300 V282 H54 V289 H166 V282 H372 V300 Z" fill="#D9B3B6"/>
+          <!-- stand: base in the dip, post, arm -->
+          <rect x="58" y="279" width="104" height="10" rx="2" fill="#2c2422"/>
+          <rect x="96" y="66" width="14" height="214" fill="#2c2422"/>
+          <rect x="108" y="98" width="118" height="12" rx="3" fill="#2c2422"/>
+          <!-- Jiusion USB microscope, lens down, with focus wheel -->
+          <rect x="222" y="58" width="36" height="134" rx="12" fill="#8E1B24"/>
+          <rect x="229" y="190" width="22" height="14" rx="3" fill="#5E0E16"/>
+          <circle cx="262" cy="128" r="9" fill="#5E0E16"/>
+          <path d="M240 206 L228 232 M240 206 L252 232" stroke="#E0535F" stroke-width="1.5" stroke-dasharray="3 4"/>
+          <!-- finger cradle on the pegs -->
+          <path d="M226 282 V262 Q226 254 234 254 H346 Q354 254 354 262 V282 Z" fill="#E9C8CB"/>
+          <rect x="250" y="268" width="7" height="14" fill="none" stroke="#8E1B24" stroke-width="1.2" stroke-dasharray="2 2"/>
+          <rect x="324" y="268" width="7" height="14" fill="none" stroke="#8E1B24" stroke-width="1.2" stroke-dasharray="2 2"/>
+          <!-- finger, nail toward the left, nailfold under the lens -->
+          <path d="M196 248 Q196 234 212 234 H334 Q356 234 356 248 Q356 262 334 262 H212 Q196 262 196 248 Z" fill="#F1D9C9" stroke="#c9a28a"/>
+          <path d="M200 236 Q214 231 232 234" fill="none" stroke="#e3bfa7" stroke-width="4" stroke-linecap="round"/>
+          <ellipse cx="240" cy="233" rx="7" ry="3" fill="#F2D78A" opacity=".9"/>
+          <circle cx="240" cy="234" r="3" fill="#E0535F"/>
           <!-- labels -->
           <g class="lab">
-            <line x1="240" y1="110" x2="330" y2="90" stroke="#a39894"/><text x="336" y="94">USB microscope</text>
-            <line x1="100" y1="80" x2="30" y2="40" stroke="#a39894"/><text x="20" y="34">Included stand</text>
-            <line x1="228" y1="252" x2="350" y2="200" stroke="#a39894"/><text x="356" y="204">Nailfold + drop of oil</text>
-            <line x1="300" y1="288" x2="360" y2="250" stroke="#a39894"/><text x="366" y="254">Cradle on base board</text>
+            <line x1="258" y1="86" x2="330" y2="70" stroke="#a39894"/><text x="336" y="74">Jiusion USB microscope</text>
+            <line x1="271" y1="128" x2="330" y2="118" stroke="#a39894"/><text x="336" y="122">Focus wheel</text>
+            <line x1="103" y1="82" x2="40" y2="40" stroke="#a39894"/><text x="20" y="34">Included stand</text>
+            <line x1="246" y1="231" x2="340" y2="176" stroke="#a39894"/><text x="346" y="174">Nailfold + a drop</text><text x="346" y="189">of mineral oil</text>
+            <line x1="352" y1="262" x2="392" y2="236" stroke="#a39894"/><text x="398" y="234">Finger cradle,</text><text x="398" y="249">clicked onto pegs</text>
+            <line x1="330" y1="294" x2="388" y2="318" stroke="#a39894"/><text x="394" y="322">Captrail base board</text>
+            <line x1="110" y1="290" x2="90" y2="318" stroke="#a39894"/><text x="20" y="330">Stand sits in the board’s dip</text>
           </g>
-          <text class="dim" x="246" y="240">focus</text>
         </svg>
         <ol>
-          <li>Microscope clamped in its stand, lens pointing down; the stand sits in the base board’s dip.</li>
-          <li>Cradle clicked onto the base board’s pegs, directly under the lens.</li>
-          <li>Nailfold, the skin just behind the base of the nail, centered in view.</li>
-          <li>Height from the stand, focus from the wheel on the microscope.</li>
+          <li>Jiusion USB microscope in its stand, lens pointing down.</li>
+          <li>The stand sits in the dip on the Captrail base board.</li>
+          <li>The finger cradle clicks onto the pegs on the base board, right under the lens.</li>
+          <li>Nailfold with a drop of mineral oil under the lens; focus with the focus wheel.</li>
         </ol>
       </div>
     </div>
@@ -264,7 +264,9 @@
         <li class="rv"><div class="n">01</div><div><h3>Print the cradle and base board</h3>
           <p>Print both parts in PLA, lying flat on the bed. Printing them standing up made them curve.</p>
           <p>The pegs are 4.6 mm and press into the cradle’s 6 mm holes; add a dot of glue if they’re loose.</p>
-          <p>Print times on our Elegoo Neptune 4 Pro: base board about 2 h 40 min, cradle about 35 min, logo letters about 15 min. The cradle is based on the <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune finger rest</a>.</p></div></li>
+          <p>Print times on our Elegoo Neptune 4 Pro: base board about 2 h 40 min, cradle about 35 min, logo letters about 15 min. The cradle is based on the <a href="https://github.com/dlx-designlab/Attune/blob/master/Hardware/cad_files/finger_rest.stl" target="_blank" rel="noopener">Attune finger rest</a> by dlx-designlab.</p>
+          <p class="dl-links">Download: <a href="captrail_print_files/captrail_base_board.stl" download>Base board .stl ↓</a> <a href="captrail_print_files/captrail_base_board.gcode" download>Base board .gcode ↓</a> <a href="captrail_print_files/captrail_finger_cradle.stl" download>Finger cradle .stl ↓</a> <a href="captrail_print_files/captrail_finger_cradle.gcode" download>Finger cradle .gcode ↓</a> </p>
+          <p class="callout">The .gcode files are sliced for an Elegoo Neptune 4 Pro with PLA. For other printers, slice the .stl yourself.</p></div></li>
         <li class="rv"><div class="n">02</div><div><h3>Set up the microscope stand</h3>
           <p>Put the microscope in its included stand, lens pointing down. Tighten the stand so the microscope doesn’t drift down.</p></div></li>
         <li class="rv"><div class="n">03</div><div><h3>Position the cradle</h3>
@@ -298,8 +300,8 @@
       <p class="eyebrow">05 · Done</p>
       <h2>What you’ll have</h2>
       <div class="have rv">
-        <div><h3>Essential hardware</h3><ul><li>Jiusion USB digital microscope</li><li>Its included stand</li><li>Captrail cradle and base board</li><li>Calibration card</li><li>A computer</li></ul></div>
-        <div><h3>Imaging and cleanup</h3><ul><li>Mineral oil</li><li>Cotton swabs</li><li>Microfiber cloth</li><li>Optional: black cardstock</li></ul></div>
+        <div><h3>Essential hardware</h3><ul><li>Jiusion USB digital microscope</li><li>Its included stand</li><li>Captrail base board and finger cradle</li><li>Calibration card</li><li>A computer</li></ul></div>
+        <div><h3>Imaging and cleanup</h3><ul><li>Mineral oil</li><li>Cotton swabs</li></ul></div>
       </div>
       <div class="bottom-line rv">
         <b>Bottom line</b>

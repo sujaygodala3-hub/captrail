@@ -2,7 +2,7 @@
 
 A low-cost nailfold microscope that uses AI to flag early signs of autoimmune and vascular disease for a doctor to review.
 
-**Live site:** https://captrail-seven.vercel.app
+**Live site:** https://captrail-app.vercel.app
 
 > Research prototype for screening and referral. Not a diagnostic tool, and it does not replace a doctor.
 

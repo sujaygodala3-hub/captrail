@@ -19,8 +19,8 @@ test('real model, consent, precision, neural traces, review, persistence and exp
  await page.locator('#showMasks').check();await page.locator('#replayTrace').click();expect(uploads).toBe(1);
  await page.locator('#traceModel').selectOption('v5_negative_regularized');await page.locator('#runTraceModel').click();await expect(page.locator('#researchMessage')).toContainText('Neural geometry loaded',{timeout:90000});expect(await page.locator('.trace-path').count()).toBeGreaterThan(0);
  await page.locator('#markCenterline').click();await page.locator('#researchStage').press('Enter');await page.locator('#researchStage').press('Shift+ArrowDown');await page.locator('#researchStage').press('Enter');await page.locator('#finishGeometry').click();
- await page.locator('#correctClass').selectOption('3');await page.locator('#reviewNotes').fill('Automated public-source QA. Not anatomical validation.');await page.locator('#saveReview').click();await expect(page.locator('#reviewState')).toContainText('Saved revision 1');await expect(page.locator('#reviewGeometryLayer path')).toHaveCount(1);
- await page.locator('#researchStage').scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('actual-trained-model.png'),fullPage:true});
+ await page.locator('#correctClass').selectOption('3');await page.locator('#reviewNotes').fill('Automated public-source QA. Not anatomical validation.');await page.locator('#saveReview').click();await expect(page.locator('#reviewState')).toContainText('Saved revision 1');await expect(page.locator('#reviewGeometryLayer path')).toHaveCount(1);await expect(page.locator('#traceModel')).toHaveValue('v5_negative_regularized');await expect(page.locator('#geometryNotice')).toContainText('Weakly trained neural proposals');
+ await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await page.screenshot({path:info.outputPath('actual-trained-model.png'),fullPage:true,animations:'disabled'});
  for(const id of ['exportJson','exportReport','exportOverlay']){const d=page.waitForEvent('download');await page.locator('#'+id).click();const file=await d;await file.saveAs(info.outputPath(file.suggestedFilename()));expect((await fs.stat(info.outputPath(file.suggestedFilename()))).size).toBeGreaterThan(100);}
  const access=await new AxeBuilder({page}).include('.research-workspace').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(access.violations.filter(v=>['critical','serious'].includes(v.impact))).toEqual([]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -31,7 +31,7 @@ test('real model, consent, precision, neural traces, review, persistence and exp
 test('malicious file rejected locally, responsive empty state and capture controls',async({page},info)=>{
  await page.goto('/');await page.locator('#researchFiles').setInputFiles({name:'image.png',mimeType:'image/png',buffer:Buffer.from('<svg><script>malicious()</script></svg>')});await expect(page.locator('#researchMessage')).toContainText('not a supported');
  await page.locator('#openCapture').click();await expect(page.locator('#btnStack')).toBeVisible();await expect(page.locator('#btnBurst')).toBeVisible();await expect(page.locator('#btnCal')).toBeVisible();await expect(page.locator('#externalReviewConsent')).not.toBeChecked();await page.locator('#captureStudio>summary').click();
- await page.screenshot({path:info.outputPath('empty-workspace.png'),fullPage:true});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await page.screenshot({path:info.outputPath('empty-workspace.png'),fullPage:true});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 
 test('failure states retain original, clear overlays, and recover without automatic uploads',async({page})=>{
@@ -60,5 +60,5 @@ test('capture architecture: simulated live camera, local voice, original transfe
  const dimensions=await page.evaluate(async()=>{const f=await window.CapTrailCapture.original();const b=await createImageBitmap(f);return {width:b.width,height:b.height,type:f.type};});expect(dimensions).toEqual({width:640,height:480,type:'image/png'});
  await page.locator('#useCapture').click();await expect(page.locator('#vesselViewport')).toBeVisible();expect(uploads).toBe(0);
  await page.locator('#openCapture').click();await page.locator('#btnLive').click();await expect(page.locator('#btnCapture')).toBeEnabled();await expect(page.locator('#btnBurst')).toBeEnabled();await expect(page.locator('#btnStack')).toBeEnabled();
- await page.screenshot({path:info.outputPath('simulated-camera-regression.png'),fullPage:true});
+ await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await page.screenshot({path:info.outputPath('simulated-camera-regression.png'),fullPage:true});
 });

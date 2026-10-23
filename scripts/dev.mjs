@@ -43,4 +43,5 @@ const server=http.createServer(async(req,res)=>{
  }catch{res.writeHead(404);res.end('Not found');}
 });
 server.listen(port,host,()=>console.log('CapTrail private preview listener ready'));
+if(backend){let probes=0;const timer=setInterval(async()=>{try{const r=await fetch(process.env.CAPTRAIL_ML_BACKEND_URL+'/ready',{signal:AbortSignal.timeout(15000)});const data=await r.json();await fs.writeFile(path.join(root,'.preview-readiness.json'),JSON.stringify({status:r.status,...data}));if(r.ok||++probes>=3)clearInterval(timer);}catch{if(++probes>=3)clearInterval(timer);}},16000);}
 for(const sig of ['SIGINT','SIGTERM'])process.on(sig,()=>{backend?.kill('SIGTERM');server.close(()=>process.exit());});

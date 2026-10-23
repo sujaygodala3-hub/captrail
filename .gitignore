@@ -14,3 +14,5 @@ playwright-report/
 
 .preview-python-status.json
 .preview-runtime/
+
+.preview-readiness.json

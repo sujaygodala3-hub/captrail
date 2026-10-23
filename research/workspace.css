@@ -11,3 +11,7 @@ body .wrap{max-width:1600px;padding:0 48px}.site-header{background:var(--paper)}
 body .research-workspace{padding-top:112px}@media(max-width:500px){body .research-workspace{padding-top:94px}}
 
 .section-label{font-size:9px}.section-label>span:last-child{font-size:8px}.r-muted{font-size:12px}.stage-top{font-size:9px}.stage-bottom{font-size:9px}.consent-note{color:#78636B}.capture-studio .stage{max-height:none}
+
+.annotation-tools{display:flex;gap:6px;flex-wrap:wrap;margin:15px 0 4px}.annotation-tools .r-btn{font-size:9px;padding:6px 8px;min-height:34px;flex:1}.annotating{cursor:crosshair!important}#annotationActions .text-button{font-size:10px}
+
+@media(max-width:500px){.research-grid{display:flex;flex-direction:column;gap:12px}.image-column,.research-inspector{display:contents}.optical-stage{width:100%;order:0}.viewer-tools{order:1;width:100%}.image-queue{order:2;width:100%}.evidence-note{order:3}.intake-section{order:4}.result-card{order:5;width:100%}#candidateInspector{order:6}.trace-section{order:7}.provenance-section{order:8}.research-inspector>.inspector-section{width:100%;background:#FFFCFA;border:1px solid var(--r-line);border-radius:14px}}

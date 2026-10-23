@@ -1,7 +1,7 @@
 # sims: Captrail simulation core
 
 Synthetic capillary, optical forward model, automated measurement, error curves, and the
-tools that tie them to the real Celestron. **All numbers are model outputs until S5 passes.**
+tools that tie them to the real microscope (Jiusion 40-1000x USB digital microscope, 640 x 480). **All numbers are model outputs until S5 passes.**
 Anything computed from a scope value that was not measured is stamped ASSUMED on its figures.
 
 ```
@@ -40,7 +40,7 @@ python export_dataset.py results/batch --out datasets/captrail-v1 \
 Read `datasets/captrail-v1/README.md` (dataset card) before training: what each file is, the splits, the LLM
 formats and the limits (not validated, estimated scale, 3 healthy subjects, quick-mode sims).
 
-## Workflow once the Celestron captures exist
+## Workflow once the microscope captures exist
 
 | Step | Command | Needs (see `data/README.md`) | Answers |
 | --- | --- | --- | --- |
@@ -95,14 +95,14 @@ Figure 0 shows example synthetic images at three blur/noise settings.
 
 ## What this does and does not show
 
-- Results are for the **simplified** forward model. Blur is Gaussian, tissue scattering and depth are not modeled, and noise is white. Do not quote numbers as properties of the Celestron.
+- Results are for the **simplified** forward model. Blur is Gaussian, tissue scattering and depth are not modeled, and noise is white. Do not quote numbers as properties of the microscope.
 - The width estimators assume two vertical limbs in a known ROI. Real images need orientation and ROI selection first.
 - E6 is an amplification argument for an idealized straight tube, not a blood-flow prediction.
 - Nothing here is diagnostic.
 
 ## Notes on the legacy first pass
 
-- Results are for the simplified forward model. Do not quote numbers as properties of the Celestron.
+- Results are for the simplified forward model. Do not quote numbers as properties of the microscope.
 - Its width estimators assume two vertical limbs in a known ROI.
 - The renderer was changed after the first pass (union of discs instead of nearest-point), so rerunning `run_experiments.py` may shift numbers slightly.
 

@@ -35,7 +35,7 @@ If any item fails, the report says "model not validated" on every S1 to S4 figur
 
 ## D1: synthetic training images versus real images (before any model is trained on synthetic data)
 
-Frames from `make_training_set.py` (colour, four morphology classes, YOLO labels) are compared with a held-out half of the real frames (the dataset's Morphology_detection images, and your own Celestron captures) using `domain_gap.py`. Target: classifier two-sample AUC at most 0.75 on held-out real frames, with the worst feature gaps listed. A low AUC does not prove the shapes are right, so the training claim is always made on REAL validation images: train on synthetic plus real, report mAP on real held-out frames, and report the real-only baseline next to it. The dataset's own published baseline is mAP50 about 0.78 and mAP50-95 about 0.44 on its validation split (from its repo's training log); quote ours against that, not against a synthetic test set.
+Frames from `make_training_set.py` (colour, four morphology classes, YOLO labels) are compared with a held-out half of the real frames (the dataset's Morphology_detection images, and your own microscope captures) using `domain_gap.py`. Target: classifier two-sample AUC at most 0.75 on held-out real frames, with the worst feature gaps listed. A low AUC does not prove the shapes are right, so the training claim is always made on REAL validation images: train on synthetic plus real, report mAP on real held-out frames, and report the real-only baseline next to it. The dataset's own published baseline is mAP50 about 0.78 and mAP50-95 about 0.44 on its validation split (from its repo's training log); quote ours against that, not against a synthetic test set.
 
 ## S7
 

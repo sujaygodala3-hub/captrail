@@ -1,7 +1,8 @@
 {
-  "pitch_um": 10.0,
+  "pitch_um": 100.0,
   "tick_width_um": null,
   "_tick_width_note": "REQUIRED for the sigma fit: measure or look up the real dark-tick width of your slide. If unknown leave null; sigma then comes from edge profiles only.",
   "bits": 8,
-  "min_levels": 3
+  "min_levels": 3,
+  "_pitch_note": "Captrail calibration card (build guide): 0.1 mm per small tick, 1 mm per long line. A 10 um stage micrometer would be 10.0."
 }

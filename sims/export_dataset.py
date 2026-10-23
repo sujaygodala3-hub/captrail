@@ -33,7 +33,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.0.0"
+VERSION = "2.0.0"
 SIG = 6                                   # significant digits kept in every float
 UM_PER_PX_EST, UM_LOW, UM_HIGH = 1.6, 1.3, 2.0
 STEPS = ("s1", "s2", "s4", "s6", "s7")
@@ -536,8 +536,9 @@ def build(batch, out, compare_with=None):
         T["noise_spectrum"] = write_table(out, "noise_spectrum", pd.read_csv(braw[0]["dir"] / "noise_spectrum.csv"))
     calib = dict(ruler=cal.get("ruler"), blank_card={k: v for k, v in (cal.get("blank") or {}).items() if k != "corr_fit"},
                  noise_model_used=dict(cal.get("noise_used") or {}, source="blank card, one exposure level"),
-                 note=("The ruler was photographed at a higher zoom than the nail captures (0.61 um/px would make limbs ~5 um, "
-                       "narrower than a red cell). Every *_um_est column uses the anatomical estimate in sessions.csv."))
+                 note=("The calibration card (0.1 mm small ticks) was photographed at a lower zoom than the nail captures: its scale "
+                       "would make loops ~190 um wide and ~1.5 per mm, which is anatomically impossible. Every *_um_est column uses the "
+                       "anatomical estimate in sessions.csv until the card is photographed at the nail zoom."))
     (out / "calibration").mkdir(parents=True, exist_ok=True)
     (out / "calibration" / "calibration.json").write_text(jdump(calib))
 
@@ -763,11 +764,13 @@ def write_schema_md(out):
 
 def write_card(out, bs, T, groups, dups, stab):
     F, Lp, Sp = T["frames"], T["loops"], T["splits"]
+    ruler_um = ((bs.get("calibration") or {}).get("ruler") or {}).get("um_per_px", {}).get("mean")
     ss = T["sessions"]
     llm = {s: sum(1 for _ in open(out / "llm" / f"sft_{s}.jsonl")) for s in ("train", "val", "test")}
     tasks = pd.Series([json.loads(l)["task"] for s in ("train", "val", "test") for l in open(out / "llm" / f"sft_{s}.jsonl")]).value_counts()
     L = [f"# Captrail capillaroscopy simulation dataset v{VERSION}", "",
-         "Measurements and simulation results from a low-cost USB nailfold capillaroscope (Celestron), produced by the",
+         "Measurements and simulation results from a low-cost USB nailfold capillaroscope (Jiusion 40-1000x USB digital microscope,",
+         "640 x 480, on the Captrail cradle), produced by the",
          "Captrail `sims` pipeline. Numbers only: no images, subjects pseudonymized. **Research prototype, not diagnostic.**", "",
          "## What is in it", "",
          "| file | rows | one row per |", "|---|---|---|"]
@@ -799,7 +802,10 @@ def write_card(out, bs, T, groups, dups, stab):
           "Captrail's pipeline, not clinical judgement.", "",
           "## Limits (read before training or quoting)", "",
           "- **Not validated.** No human rater has measured these loops yet (S5). Labels are the pipeline's output.",
-          "- **Scale is estimated.** `*_um_est` uses 1.6 um/px (bounds 1.3 to 2.0) from healthy anatomy. The ruler (0.610 um/px) was shot at a higher zoom than the nails.",
+          f"- **Scale is estimated.** `*_um_est` uses {UM_PER_PX_EST} um/px (bounds {UM_LOW} to {UM_HIGH}) from healthy anatomy (loop spacing and widths). "
+          + (f"The calibration card measures {ruler_um:.3f} um/px (0.1 mm ticks; the build guide's own value is 6.094), but at a lower zoom than the "
+             "nail captures: at that scale the loops would be ~190 um wide and ~1.5 per mm, which is anatomically impossible. Photograph the card "
+             "at the exact nail zoom to replace the estimate." if ruler_um else ""),
           f"- **Small and healthy.** {len(set(F.subject_id))} subjects, all healthy volunteers; no disease labels. Do not train a diagnostic classifier on this.",
           "- **Quick-mode sims.** Few replicates per scenario. `sims/metrics.csv` column `platform_unstable` lists metrics that changed between two platforms"
           + (f"; see `qa/platform_stability.csv`." if stab else "."),

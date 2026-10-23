@@ -559,7 +559,7 @@ class Budget:
         return not self.worked or self.left() >= need
 
 
-def main(folder, out, sims="quick", jobs=4, pitch_um=10.0, keep_extracted=False, budget=None):
+def main(folder, out, sims="quick", jobs=4, pitch_um=100.0, keep_extracted=False, budget=None):
     folder, out = Path(folder).expanduser(), Path(out)
     out.mkdir(parents=True, exist_ok=True)
     B_ = Budget(budget)
@@ -854,7 +854,8 @@ if __name__ == "__main__":
     g.add_argument("--full", action="store_true", help="full-length sims (slow)")
     g.add_argument("--sims", choices=["quick", "full", "none"], default=None)
     ap.add_argument("--jobs", type=int, default=4)
-    ap.add_argument("--pitch-um", type=float, default=10.0, help="ruler fine-tick spacing in um")
+    ap.add_argument("--pitch-um", type=float, default=100.0,
+                    help="ruler fine-tick spacing in um (the Captrail calibration card: 0.1 mm small ticks, 1 mm long lines)")
     ap.add_argument("--keep-extracted", action="store_true")
     ap.add_argument("--budget", type=float, default=None, help="stop after about this many seconds; rerun to continue (cached)")
     a = ap.parse_args()

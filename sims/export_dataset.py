@@ -814,7 +814,9 @@ def write_card(out, bs, T, groups, dups, stab):
           "python export_dataset.py results/batch --out datasets/captrail-v1", "python export_dataset.py --check datasets/captrail-v1", "```", "",
           f"Source run: batch code `{bs['code_sha256'][:12]}`, python {bs['versions']['python']}, numpy {bs['versions']['numpy']}, "
           f"scipy {bs['versions']['scipy']}, {bs['versions']['platform'].split('-')[0]}. The same inputs give byte-identical outputs on one machine "
-          "(`qa/reproducibility.csv`).", "",
+          "(`qa/reproducibility.csv`)."
+          + (f" {bs.get('units_from_other_machine')} sim steps were computed on a second machine (Linux) from byte-identical scope files and "
+             "merged by cache key, so all sims in this release come from one platform." if bs.get('units_from_other_machine') else ""), "",
           "Images stay on the team's computers. To build an image + keypoint set locally (never committed):", "",
           "```", "python export_dataset.py results/batch --out datasets/captrail-v1 --vision-images <folder of zips> --vision-out datasets/_local_vision", "```", ""]
     (out / "README.md").write_text("\n".join(L))

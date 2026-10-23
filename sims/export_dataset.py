@@ -901,7 +901,7 @@ def check(out):
 
 # ------------------------------------------------------------------------------------------- vision (local only)
 def build_vision(out, zips_folder, vision_out):
-    """Images from the original zips + COCO-style keypoint labels (apex) and boxes, for detector training.
+    """Images from the original zips or image folders + COCO-style keypoint labels (apex) and boxes, for detector training.
     Written to `vision_out`, which must stay out of git (images of real fingers)."""
     from PIL import Image
     out, vo = Path(out), Path(vision_out)
@@ -911,20 +911,28 @@ def build_vision(out, zips_folder, vision_out):
     lo = pd.read_csv(out / TABLE_PATH["loops"])
     keep = set(fr[fr.measured].frame_id)
     images, anns, found, sizes = [], [], {}, {}
-    for z in sorted(Path(zips_folder).expanduser().glob("*.zip")):
-        with zipfile.ZipFile(z) as zf:
-            for info in sorted(zf.infolist(), key=lambda i: i.filename):
-                base = Path(info.filename).name
-                if "__MACOSX" in info.filename or base not in want or want[base] in found or want[base] not in keep:
-                    continue
-                fid = want[base]
-                img = Image.open(io.BytesIO(zf.read(info))).convert("RGB")
-                rel = Path(fr.loc[fr.frame_id == fid, "split"].iloc[0]) / (fid.replace("/", "__") + ".png")
-                (vo / rel.parent).mkdir(parents=True, exist_ok=True)
-                img.save(vo / rel)
-                found[fid] = len(images) + 1
-                images.append(dict(id=found[fid], file_name=str(rel), width=img.width, height=img.height, frame_id=fid))
-                sizes[fid] = (img.width, img.height)
+    def sources(folder):
+        """(name, bytes-loader) for every image in the folder's zips and image sub-folders."""
+        root = Path(folder).expanduser()
+        for z in sorted(root.glob("*.zip")):
+            with zipfile.ZipFile(z) as zf:
+                for info in sorted(zf.infolist(), key=lambda i: i.filename):
+                    if "__MACOSX" not in info.filename:
+                        yield Path(info.filename).name, (lambda zf=zf, info=info: zf.read(info))
+        for p in sorted(q for q in root.rglob("*") if q.is_file() and q.suffix.lower() in (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp")):
+            yield p.name, p.read_bytes
+
+    for base, load in sources(zips_folder):
+        if base not in want or want[base] in found or want[base] not in keep:
+            continue
+        fid = want[base]
+        img = Image.open(io.BytesIO(load())).convert("RGB")
+        rel = Path(fr.loc[fr.frame_id == fid, "split"].iloc[0]) / (fid.replace("/", "__") + ".png")
+        (vo / rel.parent).mkdir(parents=True, exist_ok=True)
+        img.save(vo / rel)
+        found[fid] = len(images) + 1
+        images.append(dict(id=found[fid], file_name=str(rel), width=img.width, height=img.height, frame_id=fid))
+        sizes[fid] = (img.width, img.height)
     for k, l in enumerate(lo[lo.frame_id.isin(found)].sort_values("loop_id").itertuples(), 1):
         W, H = sizes[l.frame_id]
         half = (l.total_px / 2) if np.isfinite(l.total_px) else 12.0

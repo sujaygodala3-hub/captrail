@@ -93,3 +93,15 @@ def test_vision_labels_stay_inside_frames(tmp_path, batch):
         x, y, w, h = a["bbox"]
         W, H = size[a["image_id"]]
         assert x >= 0 and y >= 0 and x + w <= W + 1e-6 and y + h <= H + 1e-6 and a["auto_label"]
+
+
+def test_vision_reads_image_folders_too(tmp_path, batch):
+    d = tmp_path / "ds"
+    X.build(batch, d)
+    src = tmp_path / "folders"
+    for z in sorted((batch.parent / "in").glob("*.zip")):
+        with zipfile.ZipFile(z) as zf:
+            zf.extractall(src / z.stem)
+    vo = tmp_path / "vision"
+    X.build_vision(d, src, vo)
+    assert json.loads((vo / "annotations.json").read_text())["images"]

@@ -16,11 +16,11 @@ The production UX handoff was read in full (all eight files, README_FIRST and AS
 ## Validation evidence
 
 - Frontend: 33 passing Node contract/security tests; JavaScript syntax checks pass; production npm audit reports zero vulnerabilities at the recorded lockfile.
-- Backend local selected suite: 98 passed, two skipped. The earlier full restore attempt failed 14 artifact/inventory tests because the private connector could not restore large binary artifacts; this is not reported as a passing local full suite. Backend GitHub CI has the complete artifact checkout and is the authority for those tests.
-- Existing simulator suite: 84 passed on the initial checked-out revision. Newer main simulator input-preparation additions were preserved and must be included in the final CI result.
+- Backend local selected suite: 98 passed, two skipped. The earlier full restore attempt failed 14 artifact/inventory tests because the private connector could not restore large binary artifacts; this is not reported as a passing local full suite. Backend GitHub CI has the complete artifact checkout: **112 passed, two skipped**, one warning at `aed37826a9475638b8074a290a4bff1c3bb434dc`, run 40036381086.
+- Existing simulator suite: **85 passed**, one expected empty-slice warning, in 167.48 seconds on the final checkout, including the new main-branch input-preparation regression.
 - Actual source detector + V5 neural model through the bridge: login, upload, image retrieval, review save/reopen, stale revision 409 and logout revocation passed. Public source image SHA `3468326aa909ea15d18bc003b2496a54976cb99549821274fcb36d1a6e8cf76f`; 12 detector candidates; 93 ridge fragments; 106 V5 neural fragments. Three upload-to-saved times were 789.6, 702.9 and 686.5 ms. These are small-sample CPU timings, not production P95 or accuracy evidence.
-- GitHub container workflow at backend `575a13c880665dde936d75fd43a1221ff24d534e` passed Docker build, real-photo processing and the strict HIGH/CRITICAL vulnerability gate. Later changes through `bd22033` affect browser QA configuration only.
-- Browser CI executes Chromium 1440×900, Firefox 1024×768 and WebKit 390×844/DPR3 using a real Python service and public source photograph. It covers consent, model inference, geometry mapping, layers, neural tracing, review/persistence, exports, reduced motion, responsive overflow and accessibility. Its latest result must be checked; do not infer success from test creation.
+- GitHub container workflow at backend `575a13c880665dde936d75fd43a1221ff24d534e` passed Docker build, real-photo processing and the strict HIGH/CRITICAL vulnerability gate. Later backend changes affect browser QA and preview/evidence tooling, not production inference behavior.
+- Browser CI executes Chromium 1440×900, Firefox 1024×768 and WebKit 390×844/DPR3 using a real Python service and public source photograph. It covers consent, model inference, geometry mapping, layers, neural tracing, review/persistence, exports, reduced motion, responsive overflow and accessibility. Run **40037195459 passed: 10 tests passed, two explicit hardware-test skips**. It additionally verifies recovery from an injected startup 503 and Chromium simulated camera/voice capture. The display-preservation and screenshot-framing revision also passed: run **40037811775**, 10 passed and two skipped. Supplied visual artifacts are from this run; `reports/v6/browser-evidence-manifest.json` records exact hashes and commits.
 - The interactive managed browser rendered the new UI, then its file-picker and subsequent control calls timed out. Interactive sign-in/upload acceptance is not claimed from that session.
 
 ## Private preview
@@ -40,3 +40,24 @@ A lossless local float32 serialization is needed for this managed CPU environmen
 7. Server-side anatomical annotation/adjudication and calibration workflows already exist; this UI exposes provisional geometry correction and verified-reference display, not the complete multi-reader adjudication or calibration-approval administration.
 
 PR #3 was already merged. The follow-up is draft frontend PR #6. Backend work continues in draft PR #2; neither development branch is merged by this task.
+
+## Capture architecture preservation
+
+The original capture implementation was extracted from the existing page into `capture-core.js`, preserving 60 original named functions. The removed `simulateCapillaries` generated illustrative anatomy; the removed `useTrainedModel` adapter was replaced by the authenticated research workspace. Live `getUserMedia`, device selection, UVC settings, reconnect, video streaming, single capture, Best of 8, 40-frame stacking, enhancement, raw/enhanced download, operator calibration, Web Speech recognition/synthesis, local voice commands and optional `/api/voice` remain.
+
+The private preview now permits same-origin microphone access and routes the existing voice/commentary server handlers. External conversational answers still require a server-side Anthropic API key; none is provisioned or invented here. Local speech commands do not require that key. Camera and microphone require a browser secure context, so the temporary HTTP hostname may prevent physical-device access; the preserved production HTTPS architecture supports it.
+
+CI adds an explicitly simulated Chromium camera/voice regression: live video -> spoken capture command -> untouched PNG -> local research preview, with zero inference uploads before consent. This is not physical USB/UVC validation. Firefox/WebKit hardware tests remain explicitly skipped, rather than misreported as passes.
+
+## Test and evidence index
+
+- Backend full CI: https://github.com/aryansenthilkumar/CapTrail-Database/actions/runs/40037195430 — 112 passed, two skipped, one warning. Skipped local private/source evidence tests do not establish independent microscope accuracy.
+- Real browser acceptance: https://github.com/aryansenthilkumar/CapTrail-Database/actions/runs/40037195459 — 10 passed, two skipped; public source image and real checkpoints, test-only account.
+- Container security: https://github.com/aryansenthilkumar/CapTrail-Database/actions/runs/40034874185 — Docker build, real-image smoke and strict HIGH/CRITICAL gate passed.
+- API results: `reports/v6/real-api-acceptance.json`.
+- Exact-pixel scientific overlay reproduction: `python -m scripts.visual_evidence_v6` after installing the pinned source image and registered models.
+- Browser artifacts contain unedited screenshots, SVG/HTML/JSON exports and the test report. They contain no production login credentials. The camera regression uses a clearly synthetic green test source.
+
+No new accuracy training result is claimed by V6. This work integrates existing verified-checksum trained artifacts, improves usable research review, and strengthens reproducible acceptance. Neural traces still include spurious fragments and missed anatomy, visible in the supplied real-model evidence. Expert masks and independent validation remain necessary.
+
+The subsequent HTTP-compatibility patch removes the dependency on secure-context-only `crypto.randomUUID`, using 96-bit `crypto.getRandomValues` observation identifiers. The local check passed with `randomUUID` absent. Supplemental three-browser run 40038223956 covers the same condition at frontend `3a112d5cf9f865231fcd0be3163a984a7917e7e7`; at this report checkpoint it is still installing browser dependencies, not yet a test result.

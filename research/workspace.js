@@ -1,4 +1,4 @@
-import {CLASSES,COLORS,dimensions,modelInstances,effectiveInstances,reviewInstances,traceGeometry,pathData,imagePoint,lengthPx,validateFile,pairKey} from './contract.js';
+import {CLASSES,COLORS,dimensions,modelInstances,effectiveInstances,reviewInstances,traceGeometry,pathData,imagePoint,lengthPx,validateFile,pairKey,examinationId} from './contract.js';
 import {request,json,endpoint} from './api.js';
 const $=id=>document.getElementById(id),SVG='http://www.w3.org/2000/svg';
 let annotation=null;
@@ -30,7 +30,7 @@ async function loadFiles(files){
  for(const file of files){try{
   await validateFile(file);const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});const w=bmp.width,h=bmp.height;bmp.close();dimensions({image:{width:w,height:h}});
   if(state.files.reduce((sum,x)=>sum+x.w*x.h,0)+w*h>48000000)throw new Error('This local session has reached its 48 megapixel preview budget. Reopen saved observations or start a new tab.');
-  const entry={file,url:URL.createObjectURL(file),w,h,name:file.name,...pairKey(file.name),key:crypto.randomUUID()};state.files.push(entry);
+  const entry={file,url:URL.createObjectURL(file),w,h,name:file.name,...pairKey(file.name)};state.files.push(entry);
   await selectFile(entry);message('Preview is local. Confirm storage permission, sign in, then analyze the selected original.',true);
  }catch(e){failure(e);}}
  renderQueue();
@@ -105,7 +105,7 @@ $('analyzeImage').onclick=async()=>{
  const current=state.current;if(current.representation==='enhanced')return message('Select the paired original photograph for detection. Enhanced views are not counted as additional captures.');
  if(state.dirty&&!confirm('Discard unsaved review changes and run a new analysis?'))return;
  clearResults();state.analysis=null;state.trace=null;state.selection=null;state.dirty=false;message('');working(true,'Uploading and running trained detection');
- const started=performance.now();try{const fd=new FormData();fd.append('files',current.file,current.name);fd.append('metadata',JSON.stringify({pseudonymous_patient_id:$('participantId').value.trim(),examination_id:'ct-'+crypto.randomUUID().replaceAll('-','').slice(0,24),hand:$('handId').value,finger:$('fingerId').value,consent_to_store:true,consent_to_research_training:false}));fd.append('trace','true');fd.append('require_detector','true');
+ const started=performance.now();try{const fd=new FormData();fd.append('files',current.file,current.name);fd.append('metadata',JSON.stringify({pseudonymous_patient_id:$('participantId').value.trim(),examination_id:examinationId(),hand:$('handId').value,finger:$('fingerId').value,consent_to_store:true,consent_to_research_training:false}));fd.append('trace','true');fd.append('require_detector','true');
   const data=await request('analyze',{method:'POST',body:fd});if(!data.analyses?.[0])throw new Error('No analysis was returned.');renderAnalysis(data.analyses[0]);message(`Analysis saved in ${((performance.now()-started)/1000).toFixed(1)}s. These are research candidates, not confirmed anatomy.`,true);await loadSessions();
  }catch(e){clearResults();state.analysis=null;state.trace=null;failure(e);}finally{working(false);}
 };

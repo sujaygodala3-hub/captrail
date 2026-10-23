@@ -5,6 +5,8 @@ const image=process.env.CAPTRAIL_SOURCE_IMAGE;
 async function signIn(page){await page.locator('#sessionButton').click();await page.locator('#researchUser').fill('qa-researcher');await page.locator('#researchPassword').fill('test-only-public-source-fixture-2026');await page.locator('#submitSignIn').click();await expect(page.locator('#sessionButton')).toContainText('Sign out');}
 test('real model, consent, precision, neural traces, review, persistence and exports',async({page},info)=>{
  test.skip(!image,'Requires the isolated backend QA fixture and public source image.');
+ // Internal HTTP previews lack randomUUID; uploads must still work without it.
+ await page.addInitScript(()=>Object.defineProperty(crypto,'randomUUID',{value:undefined,configurable:true}));
  const errors=[];page.on('pageerror',e=>errors.push(e.message));let uploads=0;page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('op=analyze'))uploads++;});
  let readinessChecks=0;await page.route('**/api/ml-bridge?op=ready',route=>++readinessChecks===1?route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Test-only startup delay'})}):route.continue());
  await page.goto('/');await expect(page.locator('#modelStatus')).toContainText('Trained detector ready',{timeout:60000});expect(readinessChecks).toBeGreaterThan(1);

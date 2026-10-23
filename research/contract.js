@@ -28,3 +28,6 @@ export async function validateFile(file){
  if(!png&&!jpeg)throw new Error('This file is not a supported JPEG or PNG image.');
  return png?'image/png':'image/jpeg';
 }
+
+// getRandomValues remains available in the temporary internal HTTP preview.
+export function examinationId(){return 'ct-'+Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,'0')).join('');}

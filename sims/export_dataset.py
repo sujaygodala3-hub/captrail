@@ -787,8 +787,8 @@ def write_card(out, bs, T, groups, dups, stab):
         L.append(f"| {s.session_id} | {s.subjects} | {s.views} | {s.n_frames} | {s.n_usable_frames}/{s.n_measured_frames} | {s.n_loops_resolved} | {s.n_duplicate_inputs} |")
     L += ["", "## Splits", "",
           "Whole sites (subject + hand + digit) go to one split, so no finger appears in two splits. Within each session, sites are",
-          "dealt in the order of sha256(site_id): about 15% test, 15% val, the rest train, at least one site each, so both sessions",
-          "appear in every split. Scenario lookups (`simulation_lookup`) are all train.", "",
+          "dealt in the order of sha256(site_id): about 15% test, 15% val, the rest train, at least one site each, so every session",
+          "appears in every split. Scenario lookups (`simulation_lookup`) are all train.", "",
           "| split | sites | frames | loops |", "|---|---|---|---|"]
     for s in ("train", "val", "test"):
         L.append(f"| {s} | {int((Sp.split == s).sum())} | {int((F.split == s).sum())} | {int((Lp.split == s).sum())} |")
@@ -807,18 +807,21 @@ def write_card(out, bs, T, groups, dups, stab):
              "nail captures: at that scale the loops would be ~190 um wide and ~1.5 per mm, which is anatomically impossible. Photograph the card "
              "at the exact nail zoom to replace the estimate." if ruler_um else ""),
           f"- **Small and healthy.** {len(set(F.subject_id))} subjects, all healthy volunteers; no disease labels. Do not train a diagnostic classifier on this.",
-          "- **Quick-mode sims.** Few replicates per scenario. `sims/metrics.csv` column `platform_unstable` lists metrics that changed between two platforms"
-          + (f"; see `qa/platform_stability.csv`." if stab else "."),
+          ("- **Quick-mode sims.** Few replicates per scenario. `sims/metrics.csv` column `platform_unstable` lists metrics that changed between two "
+           "platforms; see `qa/platform_stability.csv`." if stab else
+           "- **Quick-mode sims.** Few replicates per scenario, all computed on one platform. A cross-platform check on dataset v1 found S1 apical "
+           "bias and S7 repeatability can move between machines (up to 6 points and 0.29 ICC); S4 decisions and density calls did not. Treat S1 "
+           "and S7 per-scenario values as approximate."),
           "- **Auto labels.** Apex positions and widths in `tables/loops.csv` are detector output, useful as pseudo-labels for a detector after a human check.", "",
           "## Reproduce", "", "```", "python batch_run.py <folder of capture zips> --out results/batch",
-          "python export_dataset.py results/batch --out datasets/captrail-v1", "python export_dataset.py --check datasets/captrail-v1", "```", "",
+          f"python export_dataset.py results/batch --out datasets/{out.name}", f"python export_dataset.py --check datasets/{out.name}", "```", "",
           f"Source run: batch code `{bs['code_sha256'][:12]}`, python {bs['versions']['python']}, numpy {bs['versions']['numpy']}, "
           f"scipy {bs['versions']['scipy']}, {bs['versions']['platform'].split('-')[0]}. The same inputs give byte-identical outputs on one machine "
           "(`qa/reproducibility.csv`)."
           + (f" {bs.get('units_from_other_machine')} sim steps were computed on a second machine (Linux) from byte-identical scope files and "
              "merged by cache key, so all sims in this release come from one platform." if bs.get('units_from_other_machine') else ""), "",
           "Images stay on the team's computers. To build an image + keypoint set locally (never committed):", "",
-          "```", "python export_dataset.py results/batch --out datasets/captrail-v1 --vision-images <folder of zips> --vision-out datasets/_local_vision", "```", ""]
+          "```", f"python export_dataset.py results/batch --out datasets/{out.name} --vision-images <folder of zips> --vision-out datasets/_local_vision", "```", ""]
     (out / "README.md").write_text("\n".join(L))
 
 

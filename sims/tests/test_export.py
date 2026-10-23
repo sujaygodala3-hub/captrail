@@ -44,7 +44,7 @@ def _batch(tmp_path):
 
 
 def test_export_is_deterministic_documented_and_private(tmp_path, batch):
-    a, b = tmp_path / "ds_a", tmp_path / "ds_b"
+    a, b = tmp_path / "a" / "captrail-vt", tmp_path / "b" / "captrail-vt"   # same name: the card prints its folder
     X.build(batch, a)
     X.build(batch, b)
     for f in sorted(p.relative_to(a) for p in a.rglob("*") if p.is_file() and "_private" not in p.parts):

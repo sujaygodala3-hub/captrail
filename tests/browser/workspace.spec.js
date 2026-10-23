@@ -6,7 +6,8 @@ async function signIn(page){await page.locator('#sessionButton').click();await p
 test('real model, consent, precision, neural traces, review, persistence and exports',async({page},info)=>{
  test.skip(!image,'Requires the isolated backend QA fixture and public source image.');
  const errors=[];page.on('pageerror',e=>errors.push(e.message));let uploads=0;page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('op=analyze'))uploads++;});
- await page.goto('/');await expect(page.locator('#modelStatus')).toContainText('Trained detector ready',{timeout:60000});
+ let readinessChecks=0;await page.route('**/api/ml-bridge?op=ready',route=>++readinessChecks===1?route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Test-only startup delay'})}):route.continue());
+ await page.goto('/');await expect(page.locator('#modelStatus')).toContainText('Trained detector ready',{timeout:60000});expect(readinessChecks).toBeGreaterThan(1);
  await page.locator('#researchFiles').setInputFiles(image);await expect(page.locator('#vesselViewport')).toBeVisible();expect(uploads).toBe(0);
  await page.locator('#analyzeImage').click();await expect(page.locator('#researchMessage')).toContainText('Confirm permission');expect(uploads).toBe(0);
  await signIn(page);const session=(await page.context().cookies()).find(c=>c.name==='captrail_session');expect(session.httpOnly).toBe(true);expect(session.sameSite).toBe('Strict');expect(await page.evaluate(()=>Object.keys(localStorage).some(k=>/token|password|session/i.test(k)))).toBe(false);await page.locator('#participantId').fill('PUBLIC-SOURCE-QA');await page.locator('#storageConsent').check();

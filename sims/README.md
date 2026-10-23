@@ -1,19 +1,46 @@
 # sims: Captrail simulation core
 
 Synthetic capillary, optical forward model, automated measurement, error curves, and the
-tools that tie them to the real Celestron. **All numbers are model outputs until S5 passes.**
+tools that tie them to the real microscope (Jiusion 40-1000x USB digital microscope, 640 x 480). **All numbers are model outputs until S5 passes.**
 Anything computed from a scope value that was not measured is stamped ASSUMED on its figures.
 
 ```
 pip install -r requirements.txt
-python -m pytest -q                                   # 70 tests, ~1 min
+python -m pytest -q                                   # 83 tests, ~3 min
 python run_s0.py                                      # real calibration -> results/scope_params.json
 python run_sims.py all --scope results/scope_params.json
 python run_sims.py all --quick                        # smoke run on assumed defaults (not a result)
 python run_experiments.py                             # legacy E1 to E6 first pass
 ```
 
-## Workflow once the Celestron captures exist
+## Where things are
+
+| Path | What | In git |
+| --- | --- | --- |
+| `capsim/` | Simulator, measurement and calibration library | yes |
+| `batch_run.py` | One pipeline for every capture zip in a folder: S0, session analysis, sims, manifests | yes |
+| `export_dataset.py` | Batch run -> versioned, documented training dataset (`--check` verifies one) | yes |
+| `datasets/captrail-v2/` | **The dataset**: tables, calibration, sims, splits, LLM files, card, schema, manifest | yes |
+| `datasets/captrail-v2/_private/` | Real subject names and file names | **no** |
+| `datasets/_local_vision/` | Images + apex labels for detector training | **no** (real fingers) |
+| `results/batch/` | Raw batch output (35 MB, reproducible) | **no** |
+| `sessions/2026-10-21_sujay/` | First single-session analysis, superseded by the dataset | yes (archive) |
+| `results/e*.csv`, `fig*.png` | Legacy E1 to E6 first pass | yes (archive) |
+
+## From capture zips to a training dataset
+
+```
+python batch_run.py ~/Desktop/Coding/Caprprp --out results/batch             # every zip, cached and resumable
+python export_dataset.py results/batch --out datasets/captrail-v2            # tidy dataset, pseudonymized
+python export_dataset.py --check datasets/captrail-v2                        # hashes, schema, splits, privacy
+python export_dataset.py results/batch --out datasets/captrail-v2 \
+    --vision-images ~/Desktop/Coding/Caprprp --vision-out datasets/_local_vision   # local images + COCO apex labels
+```
+
+Read `datasets/captrail-v2/README.md` (dataset card) before training: what each file is, the splits, the LLM
+formats and the limits (not validated, estimated scale, 3 healthy subjects, quick-mode sims).
+
+## Workflow once the microscope captures exist
 
 | Step | Command | Needs (see `data/README.md`) | Answers |
 | --- | --- | --- | --- |
@@ -68,14 +95,14 @@ Figure 0 shows example synthetic images at three blur/noise settings.
 
 ## What this does and does not show
 
-- Results are for the **simplified** forward model. Blur is Gaussian, tissue scattering and depth are not modeled, and noise is white. Do not quote numbers as properties of the Celestron.
+- Results are for the **simplified** forward model. Blur is Gaussian, tissue scattering and depth are not modeled, and noise is white. Do not quote numbers as properties of the microscope.
 - The width estimators assume two vertical limbs in a known ROI. Real images need orientation and ROI selection first.
 - E6 is an amplification argument for an idealized straight tube, not a blood-flow prediction.
 - Nothing here is diagnostic.
 
 ## Notes on the legacy first pass
 
-- Results are for the simplified forward model. Do not quote numbers as properties of the Celestron.
+- Results are for the simplified forward model. Do not quote numbers as properties of the microscope.
 - Its width estimators assume two vertical limbs in a known ROI.
 - The renderer was changed after the first pass (union of discs instead of nearest-point), so rerunning `run_experiments.py` may shift numbers slightly.
 

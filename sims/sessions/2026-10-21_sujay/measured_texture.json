@@ -1,0 +1,38 @@
+{
+  "central": {
+    "s4_density_call": {
+      "p_7_called_reduced": 0.0,
+      "p_9_called_reduced": 0.0,
+      "p_5_called_normal": 0.0,
+      "mean_est": {
+        "5": 5.05,
+        "7": 7.0,
+        "9": 9.0
+      }
+    }
+  },
+  "low": {
+    "s4_density_call": {
+      "p_7_called_reduced": 0.0,
+      "p_9_called_reduced": 0.0,
+      "p_5_called_normal": 0.0,
+      "mean_est": {
+        "5": 5.1015304591377415,
+        "7": 7.002100630189057,
+        "9": 9.002700810243073
+      }
+    }
+  },
+  "high": {
+    "s4_density_call": {
+      "p_7_called_reduced": 0.0,
+      "p_9_called_reduced": 0.0,
+      "p_5_called_normal": 0.0,
+      "mean_est": {
+        "5": 5.1,
+        "7": 7.0,
+        "9": 9.0
+      }
+    }
+  }
+}

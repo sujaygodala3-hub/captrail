@@ -12,7 +12,7 @@ from scipy import ndimage as ndi
 def forward(mask, res_um, *, sigma_um=2.0, contrast=0.35, illum_strength=0.0,
             illum_angle_deg=0.0, pixel_um=1.0, photons=None, read_noise=0.0,
             exposure=0.8, bits=8, rng=None, texture_amp=0.0, texture_corr_um=25.0,
-            shift_um=(0.0, 0.0)):
+            shift_um=(0.0, 0.0), corr_noise=None):
     """Simulate a detector image (float in [0,1]) from a fine-grid lumen mask.
 
     sigma_um        Gaussian PSF sigma (blur) in object space
@@ -24,6 +24,9 @@ def forward(mask, res_um, *, sigma_um=2.0, contrast=0.35, illum_strength=0.0,
     texture_amp     skin texture: band-limited multiplicative noise, fractional std (ASSUMED, sweep it)
     texture_corr_um correlation length of that texture
     shift_um        (dx, dy) sub-pixel position jitter of the scene before imaging (S7 re-seating)
+    corr_noise      spatially correlated sensor/processing noise, list of [scale_px, std] in intensity units,
+                    each a Gaussian-filtered normal field at DETECTOR pixel scale (fit from blank-card frames:
+                    calibration.fit_corr_noise). Real Celestron noise is blotchy, not white.
     """
     rng = rng or np.random.default_rng(0)
     ideal = 1.0 - contrast * mask.astype(np.float32)
@@ -53,8 +56,20 @@ def forward(mask, res_um, *, sigma_um=2.0, contrast=0.35, illum_strength=0.0,
         img = rng.poisson(np.clip(img, 0, None) * photons) / photons
     if read_noise:
         img = img + rng.normal(0.0, read_noise, img.shape)
+    for scale_px, amp in (corr_noise or ()):
+        if amp:
+            img = img + amp * corr_field(img.shape, scale_px, rng)
     q = 2 ** bits - 1
     return np.round(np.clip(img, 0, 1) * q) / q
+
+
+def corr_field(shape, scale_px, rng):
+    """Zero-mean, unit-SD normal field smoothed by a Gaussian of `scale_px` (0 = white)."""
+    n = rng.normal(size=shape)
+    if scale_px > 0:
+        n = ndi.gaussian_filter(n, scale_px, mode="wrap")
+        n = n / max(n.std(), 1e-12)
+    return n
 
 
 def depth_model(contrast0, sigma0_um, depth_um, mu_per_um, k):

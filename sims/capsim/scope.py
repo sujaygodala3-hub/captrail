@@ -28,6 +28,8 @@ class ScopeParams:
     contrast: float = 0.20           # fractional drop inside a lumen, no oil
     contrast_oil: float | None = None
     bits: int = 8
+    corr_noise: list | None = None   # [[scale_px, std], ...] correlated noise (blank-card frames); None = white only
+    texture_amp: float | None = None # skin texture amplitude for S2/S4 (measured on real frames); None = sweep default
     measured: dict = field(default_factory=lambda: {k: False for k in FIELDS})
     notes: dict = field(default_factory=dict)
     uncertainty: dict = field(default_factory=dict)   # absolute 1-SD of each MEASURED value (from S0)
@@ -66,6 +68,8 @@ class ScopeParams:
         kw = dict(sigma_um=self.sigma_um, contrast=c, illum_strength=self.illum_strength,
                   illum_angle_deg=self.illum_angle_deg, pixel_um=self.um_per_px,
                   photons=self.photons, read_noise=self.read_noise, bits=self.bits)
+        if self.corr_noise:
+            kw["corr_noise"] = [list(map(float, c)) for c in self.corr_noise]
         kw.update(over)
         return kw
 

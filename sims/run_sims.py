@@ -23,21 +23,23 @@ import plots_s as PS
 ROOT = Path(__file__).parent
 
 
-def main(steps, scope_path, quick, data):
+def main(steps, scope_path, quick, data, out_dir=None, look_path=None):
     sc = ScopeParams.load(scope_path)
-    out = ROOT / "results" / sc.tag()
+    out = Path(out_dir) if out_dir else ROOT / "results" / sc.tag()
     out.mkdir(parents=True, exist_ok=True)
     sc.save(out / "scope_used.json")
     data = Path(data)
     summary = dict(scope_tag=sc.tag(), assumed=sc.assumed(), quick=quick)
     want = lambda s: "all" in steps or s in steps
+    tex = {"texture": float(sc.texture_amp)} if sc.texture_amp is not None else {}   # measured skin texture, else sweep default
+    summary["texture_amp_used"] = tex.get("texture", "default 0.05")
 
     if want("s1"):
         df = W.s1_width_bias(sc, quick); df.to_csv(out / "s1_width_bias.csv", index=False)
         PS.fig_s1(df, sc, out)
         summary["s1_min_limb_under_10pct"] = W.s1_min_resolvable_limb(df, round(sc.sigma_um, 2), sc.um_per_px)
     if want("s2"):
-        df = W.s2_density(sc, quick); df.to_csv(out / "s2_density.csv", index=False)
+        df = W.s2_density(sc, quick, **tex); df.to_csv(out / "s2_density.csv", index=False)
         W.s2_texture(sc, quick).to_csv(out / "s2_texture.csv", index=False)
         PS.fig_s2(df, sc, out)
         summary["s2_auc_reduced_density"] = {f"contrast{c}": W.s2_roc_reduced_ci(df, sc.sigma_um, c) for c in sorted(df.contrast.unique())}
@@ -58,7 +60,7 @@ def main(steps, scope_path, quick, data):
         df = W.s4_misclassification(sc, quick); df.to_csv(out / "s4_misclassification.csv", index=False)
         PS.fig_s4(df, sc, out)
         summary["s4_max_sigma_err_le_5pct"] = W.max_sigma_for_error(df)
-        summary["s4_density_call"] = W.s4_density_call(sc, quick)
+        summary["s4_density_call"] = W.s4_density_call(sc, quick, **tex)
     if want("s5"):
         prof = data / "s5" / "slide_profile.csv"
         s5 = {}
@@ -104,13 +106,13 @@ def main(steps, scope_path, quick, data):
     if want("s9"):
         from PIL import Image
         from capsim import domain_gap as DG, render_rgb as R
-        lf = ROOT / "configs" / "look_fitted.json"
-        look = R.Look.load(lf) if lf.exists() else R.Look.dataset()
+        lf = Path(look_path) if look_path else ROOT / "configs" / "look_fitted.json"
+        look = (R.Look.celestron() if look_path == "celestron" else R.Look.load(lf)) if (look_path == "celestron" or lf.exists()) else R.Look.dataset()
         look = __import__("dataclasses").replace(look, px_um=sc.um_per_px) if sc.measured.get("um_per_px") else look
         rng = np.random.default_rng(9)
         frames = [R.render_scene(rng, look)["img"] for _ in range(24 if quick else 60)]
         Image.fromarray(np.concatenate([np.concatenate(frames[r * 4:(r + 1) * 4], 1) for r in range(4)], 0)).resize((1280, 960)).save(out / "fig9_synthetic_examples.png")
-        s9 = dict(look="configs/look_fitted.json" if lf.exists() else "Look.dataset() defaults (NOT fitted)", n_synth=len(frames))
+        s9 = dict(look=str(look_path or ("configs/look_fitted.json" if lf.exists() else "Look.dataset() defaults (NOT fitted)")), n_synth=len(frames))
         real_dir = data / "real_images"
         if real_dir.exists() and any(p.suffix.lower() in intake.IMG_EXT for p in real_dir.rglob("*")):
             gap = DG.compare_dirs(real_dir, frames, max_real=300)
@@ -135,5 +137,7 @@ if __name__ == "__main__":
     ap.add_argument("--scope", default="results/scope_params.json")
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--data", default="data")
+    ap.add_argument("--out", default=None, help="output folder (default results/<scope tag>)")
+    ap.add_argument("--look", default=None, help="S9: a Look json from fit_look.py, or 'celestron'")
     a = ap.parse_args()
-    main(a.steps, a.scope, a.quick, a.data)
+    main(a.steps, a.scope, a.quick, a.data, a.out, a.look)

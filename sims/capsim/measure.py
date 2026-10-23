@@ -147,18 +147,22 @@ def apical_width_fwhm(img, pixel_um, cx_um, half_band_um=3.0, flatfield=True):
 
 
 def total_width_fwhm(img, pixel_um, roi_rows, flatfield=True):
-    """Total loop width: outer half-depth edge of the left limb to outer edge of the right limb."""
+    """Total loop width: outer half-depth edge of the left limb to outer half-depth edge of the right limb.
+
+    The two limbs are the two most prominent dips in the row-averaged profile; each outer edge is found by
+    walking outward from its own dip (so a lighting residue or a neighbouring structure elsewhere in the
+    profile cannot stretch the width, which a global threshold did at low contrast)."""
     f = flatten(img, pixel_um) if flatfield else img
     prof = f[roi_rows[0]:roi_rows[1]].mean(0)
     d = np.percentile(prof, 90) - prof
-    lev = 0.5 * d.max()
-    above = np.where(d > lev)[0]
-    if len(above) < 2:
+    noise = np.median(np.abs(np.diff(prof))) / 0.6745 / np.sqrt(2)
+    peaks, props = find_peaks(d, prominence=max(6 * noise, 0.005))
+    if len(peaks) < 2:
         return float("nan")
-    i0, i1 = above[0], above[-1]
-    left = i0 - (d[i0] - lev) / max(d[i0] - d[i0 - 1], 1e-9) if i0 > 0 else i0
-    right = i1 + (d[i1] - lev) / max(d[i1] - d[i1 + 1], 1e-9) if i1 < len(d) - 1 else i1
-    return (right - left) * pixel_um
+    a, b = sorted(peaks[np.argsort(props["prominences"])[-2:]])
+    left = _crossing(d, a, 0.5 * d[a], -1)
+    right = _crossing(d, b, 0.5 * d[b], +1)
+    return float((right - left) * pixel_um)
 
 
 def count_apices(img, pixel_um, min_prominence_um=10.0, min_sep_um=20.0, min_area_um2=400.0, min_height_um=40.0, k_mad=3.0, threshold="mad"):

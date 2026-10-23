@@ -1,0 +1,193 @@
+{
+  "dataset": "captrail-capillaroscopy-sims",
+  "exporter_sha256": "bb3d3ce80b4ca4c67ffdcc999f37923bd0f4827c3d64763e2b51fc244c680a91",
+  "files": {
+    "README.md": {
+      "bytes": 5265,
+      "sha256": "1f47155a2bf9f6afde41a6d8bfb472629eae040a7e2d807c852ff59ce5ecbfec"
+    },
+    "SCHEMA.md": {
+      "bytes": 15202,
+      "sha256": "5a86854f06d75833c431f4e5d26611cb0f65a9b54b71f035c8dd6f627834aacd"
+    },
+    "calibration/calibration.json": {
+      "bytes": 1511,
+      "sha256": "dff031ba8faac5d675d4c80fc2fce6a86dd12091f1e2ac505e2d72c1026126f1"
+    },
+    "calibration/noise_spectrum.csv": {
+      "bytes": 223,
+      "rows": 5,
+      "sha256": "34cdcbc083a5eca91c7dae931a9be3a28f29dcb67a7abc06b6f88c4bf6df6ccd"
+    },
+    "calibration/ruler_photos.csv": {
+      "bytes": 340,
+      "rows": 3,
+      "sha256": "227565fd76e65d26c6c01539800f85a26edd0d65ce3b153b5a62225097684da7"
+    },
+    "llm/records.jsonl": {
+      "bytes": 380963,
+      "rows": 264,
+      "sha256": "2706d6d245469d85cf3d8f64632b4c95bc731db6696ced8fefe71211ad85c1c4"
+    },
+    "llm/sft_test.jsonl": {
+      "bytes": 246365,
+      "rows": 224,
+      "sha256": "c7c874d1e2d03916d91136eb8e4d63f15b6adeb1add738e7a2958783914c5a71"
+    },
+    "llm/sft_train.jsonl": {
+      "bytes": 1197341,
+      "rows": 1093,
+      "sha256": "c6d9b2a0c9ec8eb341734b6a3aba94dea78daea524746165aa8142aba0c675bc"
+    },
+    "llm/sft_val.jsonl": {
+      "bytes": 239821,
+      "rows": 218,
+      "sha256": "ff2a024b671bb036d83ef0cb17783557cf28d28e71cee795259d5bd42681a9bc"
+    },
+    "qa/reproducibility.csv": {
+      "bytes": 73,
+      "rows": 0,
+      "sha256": "b26b4aaafde39d4d98afeac0d04e2bf6bc958a3ae84ccc6567c2102e783263c8"
+    },
+    "sims/metrics.csv": {
+      "bytes": 14657,
+      "rows": 115,
+      "sha256": "a250c207f08f6b72f6dbd4a63135e1bc04e157a26d9e88f35c5a1fb578768a27"
+    },
+    "sims/s1_width_bias.csv": {
+      "bytes": 3627964,
+      "rows": 40320,
+      "sha256": "d061e0982891c8eaf4b0c6475a09d345aeac113a45903eae464bd56226811f4e"
+    },
+    "sims/s2_density.csv": {
+      "bytes": 953846,
+      "rows": 17250,
+      "sha256": "bbab64d6a3f80ababdc17acb3d07838b70c16629676de678a66e95e0167072ba"
+    },
+    "sims/s2_texture.csv": {
+      "bytes": 167643,
+      "rows": 4140,
+      "sha256": "cb9fb4ea3a1ce1e56bd1229acb05a24cbb9126cbf04e0b1a72d752f9ace5920c"
+    },
+    "sims/s4_misclassification.csv": {
+      "bytes": 80087,
+      "rows": 920,
+      "sha256": "fe480365a7cf78a682db76808e64d90f6f8bcccad24cdcf037c7f1f98568e405"
+    },
+    "sims/s6_propagation.csv": {
+      "bytes": 119112,
+      "rows": 1380,
+      "sha256": "7f9b6324a0abc7a30940cf6f84ebb79f4d766ae6793d0e7f7a4693014476efcd"
+    },
+    "sims/s7_repeatability.csv": {
+      "bytes": 7815,
+      "rows": 115,
+      "sha256": "26d1215ebf437b2aa8115b3a8e801f1fcb23284f7036f8712db532483fa28e51"
+    },
+    "sims/scenarios.csv": {
+      "bytes": 21449,
+      "rows": 115,
+      "sha256": "e5906b8c3aeda8e9820a13e12e4b82c40b4b4d9e22c6eb584b116fc8b5aa2266"
+    },
+    "tables/frames.csv": {
+      "bytes": 66108,
+      "rows": 264,
+      "sha256": "22d86c3484d36ddc1cf3130c3a482b649ea061fa3eb5908dc278f3bc3f66082f"
+    },
+    "tables/loops.csv": {
+      "bytes": 261085,
+      "rows": 1486,
+      "sha256": "badfc4e332bdb728f660a14356ec1fe0d6421cfa5f88d4f3f814c0951a0a5db8"
+    },
+    "tables/paired_views.csv": {
+      "bytes": 19067,
+      "rows": 131,
+      "sha256": "9f1424db24a4853c62116fad4393a234b6a56d34fd063367c70365e658092b1b"
+    },
+    "tables/sessions.csv": {
+      "bytes": 1150,
+      "rows": 5,
+      "sha256": "da2c5285c14ed5478cba33c3cd1a6ed66a917b157c3d6b74b78c2f2382ada100"
+    },
+    "tables/sites.csv": {
+      "bytes": 9299,
+      "rows": 73,
+      "sha256": "dec5b9c6eb5d3eec1510446431ae492d8237040bc690a7ac9050b90adf9ac4c7"
+    },
+    "tables/splits.csv": {
+      "bytes": 1606,
+      "rows": 39,
+      "sha256": "9e8f7c0d2671962f9e28792a545658c03a721b693bf893ea8744ba7e298eead5"
+    }
+  },
+  "source": {
+    "batch_code_sha256": "40e81b42b44751b134c7959c748841eeeae630695bddd91c82acfcece1c4fa58",
+    "inputs": [
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "d0bc1b2e65c53c79eefc0079c0c1d600593004d4fd973c6266c6e041f99800f8"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "35bba69aa347d1b93f8c508e011f5d8dbd5dc69a4b590a74cbbf27e7bbc542d3"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "f45d4d06119a8ed812bae2fddd5ff75d494a355e7c007fb0bd422a6673c56090"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "d6b117127eb11ae90f93036432e74426401a3b4acd1f66c22a194971c21b4135"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "98e0a09564c61a24ae9c0f2b59dfb467c56e12eab6fbc7c17510927bc1e142c5"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "5ed29886912f2084b3c30dec50f582af224b3fec654a5c490bff5f356ebae9be"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "f40600caa48e3b0bc935d03f7c85f3a4bc1d785d69f8f5a956c60352b4e8da17"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "e5ecb49ba429b391bb959d66329db2ef8f03b50a48d1dbe059dffa3afa122953"
+      },
+      {
+        "duplicate": false,
+        "kind": "ruler",
+        "sha256": "580b52b94b11d4db2423e85d42f3eb18fa8207fb0d1c8bf6b08beb684303d345"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "597aeb6d1375f8fd69a0ab24d43bf422c7b24fd09ddac9cc0808830e36f425fd"
+      },
+      {
+        "duplicate": false,
+        "kind": "blank",
+        "sha256": "591820883d4d5cdd857f02dd3318b1e51b3ae0e172e7f91abaebcffc4328b2c5"
+      }
+    ],
+    "sims_mode": "quick",
+    "versions": {
+      "numpy": "2.2.6",
+      "pandas": "2.3.3",
+      "platform": "Linux-6.8.0-138-generic-aarch64-with-glibc2.35",
+      "python": "3.10.12",
+      "scipy": "1.15.3",
+      "skimage": "0.25.2"
+    }
+  },
+  "version": "2.0.0"
+}

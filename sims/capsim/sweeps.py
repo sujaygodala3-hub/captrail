@@ -234,13 +234,14 @@ def s4_misclassification(scope, quick=False, seed=4, true_lo=45.0, true_hi=55.0)
     return pd.DataFrame(rows)
 
 
-def s4_density_call(scope, quick=False, seed=44):
-    """P(true 7/mm read as < 7) and P(true 5/mm read as >= 7), at the scope's sigma."""
+def s4_density_call(scope, quick=False, seed=44, texture=0.05):
+    """P(true 7/mm read as < 7) and P(true 5/mm read as >= 7), at the scope's sigma.
+    texture: skin texture amplitude (0.05 is a pessimistic default; measure it from real frames)."""
     reps = 10 if quick else 40
     rng = np.random.default_rng(seed)
     out = {}
     for d in (5, 7, 9):
-        est = np.array([M.density_per_mm(*row_image(scope, d, rng, 1.0, texture=0.05)[:2]) for _ in range(reps)])
+        est = np.array([M.density_per_mm(*row_image(scope, d, rng, 1.0, texture=texture)[:2]) for _ in range(reps)])
         out[d] = est
     return dict(p_7_called_reduced=float((out[7] < 7).mean()), p_9_called_reduced=float((out[9] < 7).mean()),
                 p_5_called_normal=float((out[5] >= 7).mean()), mean_est={k: float(v.mean()) for k, v in out.items()})

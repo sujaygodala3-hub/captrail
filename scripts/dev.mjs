@@ -22,6 +22,10 @@ if(config.backend_dir&&config.python){
  backend.on('exit',async code=>{await fs.writeFile(path.join(root,'.preview-status.json'),JSON.stringify({model_exit:code}));});
 }
 const bridge=await import('../api/ml-bridge.js');
+const optionalHandlers={
+ '/api/voice':await import('../api/voice.js'),
+ '/api/analyze':await import('../api/analyze.js'),
+};
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.woff2':'font/woff2','.ico':'image/x-icon'};
 const server=http.createServer(async(req,res)=>{
  try{
@@ -29,17 +33,18 @@ const server=http.createServer(async(req,res)=>{
  const publicHost=req.headers.host;
  // Managed preview terminates HTTPS; backend trusts only this loopback BFF.
  const protocol=req.headers['x-forwarded-proto']==='https'?'https':'http';
- if(incoming.pathname==='/api/ml-bridge'){
+ if(incoming.pathname==='/api/ml-bridge'||optionalHandlers[incoming.pathname]){
   const headers=new Headers();for(const [k,v] of Object.entries(req.headers))if(v!==undefined)headers.set(k,Array.isArray(v)?v.join(','):v);
   const r=new Request(`${protocol}://${publicHost}${req.url}`,{method:req.method,headers,...(!['GET','HEAD'].includes(req.method)?{body:Readable.toWeb(req),duplex:'half'}:{})});
-  const handler=bridge[req.method];const result=handler?await handler(r):new Response('Method not allowed',{status:405});
+  const route=incoming.pathname==='/api/ml-bridge'?bridge:optionalHandlers[incoming.pathname];
+  const handler=route[req.method];const result=handler?await handler(r):new Response('Method not allowed',{status:405});
   res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)Readable.fromWeb(result.body).pipe(res);else res.end();return;
  }
  if(incoming.pathname.startsWith('/api/')){res.writeHead(503,{'content-type':'application/json'});res.end(JSON.stringify({error:'Optional external commentary is not configured in this private preview.'}));return;}
  const pathname=decodeURIComponent(incoming.pathname);const relative=pathname==='/'?'scan.html':pathname.replace(/^\//,'');
  const p=path.resolve(root,relative);
  if(!p.startsWith(root+path.sep)||relative.split('/').some(s=>s.startsWith('.'))||!mime[path.extname(p)]||relative.startsWith('api/')||relative.startsWith('scripts/')||relative.startsWith('tests/')){res.writeHead(404);res.end();return;}
- const body=await fs.readFile(p);res.writeHead(200,{'content-type':mime[path.extname(p)],'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','x-frame-options':'DENY','permissions-policy':'camera=(self), microphone=()'});res.end(body);
+ const body=await fs.readFile(p);res.writeHead(200,{'content-type':mime[path.extname(p)],'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','x-frame-options':'DENY','permissions-policy':'camera=(self), microphone=(self)'});res.end(body);
  }catch{res.writeHead(404);res.end('Not found');}
 });
 server.listen(port,host,()=>console.log('CapTrail private preview listener ready'));

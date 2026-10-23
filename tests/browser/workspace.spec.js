@@ -45,3 +45,19 @@ test('failure states retain original, clear overlays, and recover without automa
  await page.context().setOffline(true);await expect(page.locator('#researchMessage')).toContainText('offline');expect(await page.locator('#researchImage').getAttribute('href')).toBe(original);await page.context().setOffline(false);
  await page.locator('#sessionButton').click();
 });
+
+
+test('capture architecture: simulated live camera, local voice, original transfer',async({page,browserName},info)=>{
+ test.skip(browserName!=='chromium','Synthetic device regression runs in Chromium; physical USB and speech hardware remain manual checks.');
+ let remoteVoice=0,uploads=0;page.on('request',r=>{if(r.url().includes('/api/voice'))remoteVoice++;if(r.url().includes('op=analyze'))uploads++;});
+ // Explicit test-only speech recognizer. Production uses the browser Web Speech API.
+ await page.addInitScript(()=>{window.SpeechRecognition=class{start(){setTimeout(()=>{this.onresult?.({results:[[{transcript:'capture'}]]});this.onend?.();},50);}stop(){this.onend?.();}};});
+ const response=await page.goto('/');expect(response.headers()['permissions-policy']).toContain('microphone=(self)');
+ await page.locator('#openCapture').click();await page.locator('#resSel').selectOption('640x480');await page.locator('#btnConnect').click();
+ await expect(page.locator('#btnCapture')).toBeEnabled();expect(await page.locator('#video').evaluate(v=>v.srcObject.getVideoTracks()[0].readyState)).toBe('live');
+ await page.locator('#micBtn').click();await expect(page.locator('#voiceReply')).toContainText('Captured.');await expect(page.locator('#btnLive')).toBeEnabled();expect(remoteVoice).toBe(0);
+ const dimensions=await page.evaluate(async()=>{const f=await window.CapTrailCapture.original();const b=await createImageBitmap(f);return {width:b.width,height:b.height,type:f.type};});expect(dimensions).toEqual({width:640,height:480,type:'image/png'});
+ await page.locator('#useCapture').click();await expect(page.locator('#vesselViewport')).toBeVisible();expect(uploads).toBe(0);
+ await page.locator('#openCapture').click();await page.locator('#btnLive').click();await expect(page.locator('#btnCapture')).toBeEnabled();await expect(page.locator('#btnBurst')).toBeEnabled();await expect(page.locator('#btnStack')).toBeEnabled();
+ await page.screenshot({path:info.outputPath('simulated-camera-regression.png'),fullPage:true});
+});

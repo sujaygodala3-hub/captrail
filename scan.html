@@ -245,8 +245,24 @@
 
       <div class="panel">
         <h3><span class="n">04</span>AI analysis <span class="exp-tag">Experimental, not a diagnosis</span></h3>
-        <p>Sends the selected image and calibration to Claude for analysis. Results are for a clinician to review, never a diagnosis.</p>
-        <div class="row"><button class="pb red" id="btnAnalyze" disabled>Analyze this image</button></div>
+        <p>Use the current experimental image review, or connect to the separately hosted, trained CapTrail vessel detector. Neither can diagnose disease.</p>
+        <div class="row"><button class="pb red" id="btnAnalyze" disabled>Experimental visual review</button><button class="pb" id="btnTrained" disabled>Trained capillary model</button></div>
+        <div id="mlControls" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px">
+          <label for="mlParticipant">Research participant pseudonym (no real names)</label>
+          <input id="mlParticipant" type="text" maxlength="60" autocomplete="off" placeholder="e.g. CT-001" style="width:100%">
+          <label style="display:flex;align-items:start;gap:8px;text-transform:none;letter-spacing:normal;font-size:13px;font-weight:400">
+            <input id="mlConsent" type="checkbox" style="margin-top:3px">
+            I have permission to upload and store this image in the private CapTrail research workspace.
+          </label>
+          <div id="mlLoginPane" hidden>
+            <label for="mlUser">Workspace user</label><input id="mlUser" autocomplete="username" placeholder="Username" style="width:100%">
+            <label for="mlPassword">Password</label><input id="mlPassword" type="password" autocomplete="current-password" style="width:100%">
+            <label for="mlToken">Or private workspace access token</label><input id="mlToken" type="password" autocomplete="off" placeholder="Token (single-operator mode)" style="width:100%">
+            <div class="row"><button type="button" class="pb" id="mlSignIn">Sign in to trained model</button></div>
+            <p class="note">Login uses a secure, same-origin, HttpOnly session cookie. Credentials are not saved in this page.</p>
+          </div>
+          <div class="status" id="mlStatus"><i></i><span>Trained model requires separate HTTPS hosting. No photo is sent until you click its button.</span></div>
+        </div>
         <div class="status" id="aiStatus"><i></i><span>Model not connected yet</span></div>
         <ul class="findings" id="findings"></ul>
         <p class="ai-note" id="aiNote" hidden></p>
@@ -276,6 +292,7 @@
 
 <div id="site-footer"></div>
 <script src="site.js"></script>
+<script src="ml-analysis.js"></script>
 <script>
 (() => {
   /* Where the Captrail model lives. Leave '' until the model is deployed. */
@@ -499,6 +516,7 @@
     $('btnRaw').disabled = !sel?.pair || !frames.includes(sel.pair);
     $('rawLbl').textContent = sel?.calibScale ? 'Show original' : 'Show enhanced';
     $('btnAnalyze').disabled = !sel || analyzing;
+    $('btnTrained').disabled = !sel || analyzing;
     $('btnEnhance').classList.toggle('on', look !== 'off');
     $('enhanceLbl').textContent = 'Enhance: ' + LOOKS[look].short;
     $('btnMeasure').classList.toggle('on', mode === 'measure');
@@ -1351,6 +1369,61 @@
     } finally {
       analyzing = false; b.textContent = 'Analyze this image'; syncButtons();
     }
+  };
+
+
+  /* ---------- trained capillary detector (separate authenticated backend) ---------- */
+  const ml = window.CapTrailML;
+  const mlStatus = (kind, message) => setStatus($('mlStatus'), kind, message);
+  let mlLoggedIn = false;
+  async function useTrainedModel() {
+    if (!sel || analyzing) return;
+    const f = sel;
+    if (!$('mlConsent').checked) return mlStatus('warn', 'Confirm permission to upload and store this image first.');
+    const pseudonym = $('mlParticipant').value.trim();
+    if (!/^[A-Za-z0-9_-]{3,60}$/.test(pseudonym)) return mlStatus('warn','Enter a pseudonym of 3–60 letters, digits, _ or -. No names.');
+    analyzing = true; syncButtons();
+    mlStatus('', 'Checking model readiness…');
+    try {
+      const ready = await ml.ready();
+      if (!ready.ok) throw new Error(ready.error || 'Trained model is not deployed or not ready.');
+      mlStatus('', 'Uploading one image to your private research workspace…');
+      const blob = await uploadBlob(f.canvas);
+      if (!blob) throw new Error('Could not encode image.');
+      const data = await ml.analyze(blob, {
+        pseudonymous_patient_id: pseudonym,
+        examination_id: 'ct-'+crypto.randomUUID().replaceAll('-','').slice(0,24),
+        consent_to_store: true,
+        consent_to_research_training: false
+      });
+      // The model returns xyxy in UPLOADED-image pixels, not the original capture pixels.
+      f.ai = ml.toOverlay(data, f.w, f.h);
+      if (sel === f) {
+        renderFindings(); drawOverlay();
+        mlStatus('ok','Trained research model: unreviewed vessel candidates. Not a diagnosis.');
+      }
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) {
+        $('mlLoginPane').hidden = false;
+        mlLoggedIn = false;
+        mlStatus('warn','Sign in to the separate CapTrail research workspace, then retry.');
+      } else mlStatus('err',error.message || 'The trained model request failed.');
+    } finally {
+      analyzing = false;
+      syncButtons();
+    }
+  }
+  $('btnTrained').onclick = useTrainedModel;
+  $('mlSignIn').onclick = async () => {
+    try {
+      const ready = await ml.ready();
+      if (!ready.ok) throw new Error(ready.error || 'The separate trained model is not ready.');
+      await ml.login({ username: $('mlUser').value, password: $('mlPassword').value, token: $('mlToken').value });
+      $('mlUser').value = ''; $('mlPassword').value = ''; $('mlToken').value = '';
+      $('mlLoginPane').hidden = true;
+      mlLoggedIn = true;
+      mlStatus('ok','Signed in. Select “Trained capillary model” to analyze a photo.');
+    } catch (error) { mlStatus('err',error.message || 'Sign-in failed.'); }
   };
 
   /* ---------- voice assistant ----------

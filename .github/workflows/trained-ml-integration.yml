@@ -1,26 +1,18 @@
-name: Test trained model frontend bridge
+name: Trained ML frontend contracts
 on:
   push:
-    branches: ['feature/trained-captrail-ai-integration']
-    paths:
-      - 'api/ml-bridge.js'
-      - 'ml-analysis.js'
-      - 'scan.html'
-      - 'tests/ml-bridge.test.mjs'
-      - '.github/workflows/trained-ml-integration.yml'
+    branches: [feature/trained-captrail-ai-integration, feature/research-workstation-v6]
   pull_request:
-    paths:
-      - 'api/ml-bridge.js'
-      - 'ml-analysis.js'
-      - 'scan.html'
-      - 'tests/ml-bridge.test.mjs'
+    paths: ['api/**', 'research/**', 'capture-core.js', 'ml-analysis.js', 'scan.html', 'tests/**', 'scripts/**', 'package*.json']
+permissions:
+  contents: read
 jobs:
-  test:
+  contract:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --check api/ml-bridge.js && node --check ml-analysis.js
-      - run: node --test tests/ml-bridge.test.mjs
+      - run: npm ci && npm run check && npm test
+      - run: npm audit --omit=dev --audit-level=high

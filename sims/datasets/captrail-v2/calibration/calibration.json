@@ -1,0 +1,58 @@
+{
+  "blank_card": {
+    "band_dn": {
+      "0.5-1.5": 0.671437,
+      "1.5-3.0": 0.775106,
+      "12.0-40.0": 1.07856,
+      "3.0-6.0": 0.905076,
+      "6.0-12.0": 0.846225
+    },
+    "drift_dn": 8.83583,
+    "flat_centre_over_edge": 0.950745,
+    "flat_spread_frac": 0.107749,
+    "mean_dn": 196.225,
+    "n_frames": 5,
+    "pixel_hp_noise_dn": 0.768472,
+    "white": {
+      "hp_attenuation": 0.94824,
+      "photons": 76186.2,
+      "white_dn": 0.810419
+    }
+  },
+  "noise_model_used": {
+    "corr_noise_frac": [
+      [
+        2.0,
+        0.0086081
+      ],
+      [
+        4.0,
+        0.00322494
+      ],
+      [
+        8.0,
+        0.00848864
+      ]
+    ],
+    "measured": true,
+    "photons": 76186.2,
+    "source": "blank card, one exposure level"
+  },
+  "note": "The calibration card (0.1 mm small ticks) was photographed at a lower zoom than the nail captures: its scale would make loops ~190 um wide and ~1.5 per mm, which is anatomically impossible. Every *_um_est column uses the anatomical estimate in sessions.csv until the card is photographed at the nail zoom.",
+  "ruler": {
+    "long_tick_check": 1.00908,
+    "method": "tick-band autocorrelation (calibration.umpx_from_slide)",
+    "n": 3,
+    "pitch_px_mean": 16.3874,
+    "pitch_um_assumed": 100.0,
+    "tick_sigma_px_median": 0.814772,
+    "tick_sigma_um_median": 4.97194,
+    "um_per_px": {
+      "cv_pct": 0.144647,
+      "mean": 6.10225,
+      "n": 3,
+      "sd": 0.00882674
+    },
+    "um_per_px_old_peakpicking": 5.87312
+  }
+}

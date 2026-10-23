@@ -20,8 +20,8 @@ python run_experiments.py                             # legacy E1 to E6 first pa
 | `capsim/` | Simulator, measurement and calibration library | yes |
 | `batch_run.py` | One pipeline for every capture zip in a folder: S0, session analysis, sims, manifests | yes |
 | `export_dataset.py` | Batch run -> versioned, documented training dataset (`--check` verifies one) | yes |
-| `datasets/captrail-v1/` | **The dataset**: tables, calibration, sims, splits, LLM files, card, schema, manifest | yes |
-| `datasets/captrail-v1/_private/` | Real subject names and file names | **no** |
+| `datasets/captrail-v2/` | **The dataset**: tables, calibration, sims, splits, LLM files, card, schema, manifest | yes |
+| `datasets/captrail-v2/_private/` | Real subject names and file names | **no** |
 | `datasets/_local_vision/` | Images + apex labels for detector training | **no** (real fingers) |
 | `results/batch/` | Raw batch output (35 MB, reproducible) | **no** |
 | `sessions/2026-10-21_sujay/` | First single-session analysis, superseded by the dataset | yes (archive) |
@@ -31,13 +31,13 @@ python run_experiments.py                             # legacy E1 to E6 first pa
 
 ```
 python batch_run.py ~/Desktop/Coding/Caprprp --out results/batch             # every zip, cached and resumable
-python export_dataset.py results/batch --out datasets/captrail-v1            # tidy dataset, pseudonymized
-python export_dataset.py --check datasets/captrail-v1                        # hashes, schema, splits, privacy
-python export_dataset.py results/batch --out datasets/captrail-v1 \
+python export_dataset.py results/batch --out datasets/captrail-v2            # tidy dataset, pseudonymized
+python export_dataset.py --check datasets/captrail-v2                        # hashes, schema, splits, privacy
+python export_dataset.py results/batch --out datasets/captrail-v2 \
     --vision-images ~/Desktop/Coding/Caprprp --vision-out datasets/_local_vision   # local images + COCO apex labels
 ```
 
-Read `datasets/captrail-v1/README.md` (dataset card) before training: what each file is, the splits, the LLM
+Read `datasets/captrail-v2/README.md` (dataset card) before training: what each file is, the splits, the LLM
 formats and the limits (not validated, estimated scale, 3 healthy subjects, quick-mode sims).
 
 ## Workflow once the microscope captures exist

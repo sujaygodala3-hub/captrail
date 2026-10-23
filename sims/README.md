@@ -18,6 +18,7 @@ python run_experiments.py                             # legacy E1 to E6 first pa
 | Path | What | In git |
 | --- | --- | --- |
 | `capsim/` | Simulator, measurement and calibration library | yes |
+| `prepare_inputs.py` | A team capture collection (person<K>-unenhanced/enhanced folders, ruler, white) -> clean, uniquely named inputs | yes |
 | `batch_run.py` | One pipeline for every capture zip in a folder: S0, session analysis, sims, manifests | yes |
 | `export_dataset.py` | Batch run -> versioned, documented training dataset (`--check` verifies one) | yes |
 | `datasets/captrail-v2/` | **The dataset**: tables, calibration, sims, splits, LLM files, card, schema, manifest | yes |
@@ -30,7 +31,8 @@ python run_experiments.py                             # legacy E1 to E6 first pa
 ## From capture zips to a training dataset
 
 ```
-python batch_run.py ~/Desktop/Coding/Caprprp --out results/batch             # every zip, cached and resumable
+python prepare_inputs.py "captrail images.zip" --out inputs_v2 --also sujay.zip   # folder = person; unique names
+python batch_run.py inputs_v2 --out results/batch                            # every input, cached and resumable
 python export_dataset.py results/batch --out datasets/captrail-v2            # tidy dataset, pseudonymized
 python export_dataset.py --check datasets/captrail-v2                        # hashes, schema, splits, privacy
 python export_dataset.py results/batch --out datasets/captrail-v2 \

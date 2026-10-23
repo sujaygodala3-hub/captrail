@@ -105,6 +105,29 @@
   .privacy{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:flex-start;padding:14px 4px 0}
   .privacy svg{width:18px;height:18px;flex:none;color:var(--red);margin-top:1px}
 
+  /* voice assistant */
+  .mic{position:fixed;right:20px;bottom:20px;z-index:60;width:60px;height:60px;border-radius:50%;border:0;background:var(--red);color:#fff;
+    display:grid;place-items:center;cursor:pointer;box-shadow:0 12px 30px -10px rgba(94,14,22,.6);transition:background .2s,transform .2s}
+  .mic:hover{background:var(--red-deep);transform:translateY(-1px)}
+  .mic svg{width:26px;height:26px}
+  .mic.listening{background:var(--red-deep)}
+  .mic.listening::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid rgba(224,83,95,.55);animation:micpulse 1.2s ease-out infinite}
+  @keyframes micpulse{from{transform:scale(.92);opacity:1}to{transform:scale(1.25);opacity:0}}
+  .mic:focus-visible{outline:3px solid #E0535F;outline-offset:3px}
+  .voice{position:fixed;right:20px;bottom:92px;z-index:60;width:min(340px,calc(100vw - 40px));background:var(--paper);border:1px solid var(--line);
+    border-radius:18px;padding:16px 18px 14px;box-shadow:0 24px 50px -24px rgba(42,6,9,.45);font-size:14.5px}
+  .voice-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .voice-status{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .voice-status i{width:8px;height:8px;border-radius:50%;background:#cfc5c2}
+  .voice.listening .voice-status{color:var(--red)} .voice.listening .voice-status i{background:#E0535F;animation:blink 1s infinite}
+  .voice-close{background:none;border:0;font-size:20px;line-height:1;color:var(--muted);cursor:pointer}
+  .voice-line{margin:6px 0 0;color:#4a403d;line-height:1.45}
+  .voice-line b{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .voice-line.reply span{color:var(--ink)}
+  .voice-tip{margin:10px 0 0;font-size:12px;color:var(--muted)}
+  .voice-note{position:fixed;right:20px;bottom:20px;z-index:60;font-size:13px;padding:10px 14px;border-radius:999px;background:var(--ink);color:#fff;
+    box-shadow:0 12px 30px -12px rgba(0,0,0,.4)}
+
   @media (max-width:1060px){
     .dual.has-sim{grid-template-columns:1fr}
     .lab{grid-template-columns:1fr}
@@ -155,7 +178,7 @@
       </div>
 
       <div class="bar">
-        <button class="tb primary" id="btnCapture" disabled title="Capture one frame (Space)">
+        <button class="tb primary" id="btnCapture" disabled title="Capture one frame (tap Space; hold Space to talk)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><span class="lbl">Capture</span></button>
         <button class="tb" id="btnStack" disabled title="Take 40 frames, align the sharpest 20 and merge them">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 3 8l9 5 9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg><span class="lbl">Stack 40</span></button>
@@ -237,6 +260,19 @@
     </aside>
   </section>
 </main>
+
+<!-- Voice assistant: speech is recognized by the browser; only the question text is sent to /api/voice. -->
+<button class="mic" id="micBtn" type="button" aria-label="Talk to Captrail" title="Talk to Captrail (or hold Space)" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+</button>
+<section class="voice" id="voicePanel" aria-live="polite" hidden>
+  <div class="voice-head"><span class="voice-status" id="voiceStatus"><i></i><span>Ready</span></span><button class="voice-close" id="voiceClose" type="button" aria-label="Close voice panel">×</button></div>
+  <p class="voice-line" id="voiceHeard" hidden><b>You said</b><span></span></p>
+  <p class="voice-line reply" id="voiceReply" hidden><b>Captrail</b><span></span></p>
+  <p class="voice-tip">Try “capture”, “best of eight”, “calibrate”, or ask a question. Hold Space to talk.</p>
+  <p class="voice-tip">Voice is processed by your browser; questions are sent as text.</p>
+</section>
+<div class="voice-note" id="voiceNote" role="status" hidden>Voice works in Chrome and Safari</div>
 
 <div id="site-footer"></div>
 <script src="site.js"></script>
@@ -1201,7 +1237,6 @@
   $('btnCal').onclick = () => setMode('calibrate');
   addEventListener('keydown', e => {
     if (e.key === 'Escape') setMode('none');
-    if (e.code === 'Space' && !e.target.closest('input,select,button,textarea') && !$('btnCapture').disabled) { e.preventDefault(); $('btnCapture').click(); }
   });
   overlay.addEventListener('pointerdown', e => {
     if (mode === 'none' || !sel) return;
@@ -1317,6 +1352,130 @@
       analyzing = false; b.textContent = 'Analyze this image'; syncButtons();
     }
   };
+
+  /* ---------- voice assistant ----------
+     Listening and talking use the browser's Web Speech API. Commands run locally;
+     anything else is a question sent as text (plus a little page state) to /api/voice. */
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const canTalk = 'speechSynthesis' in window;
+  const vPanel = $('voicePanel'), vBtn = $('micBtn');
+  let rec = null, listening = false, heard = '';
+  function vStatus(t, on) {
+    $('voiceStatus').querySelector('span').textContent = t;
+    vPanel.classList.toggle('listening', !!on); vBtn.classList.toggle('listening', !!on);
+    vBtn.setAttribute('aria-pressed', !!on);
+  }
+  function vLine(id, t) { const el = $(id); el.hidden = !t; el.querySelector('span').textContent = t || ''; }
+  function say(t) {
+    vLine('voiceReply', t); vPanel.hidden = false;
+    if (!canTalk || !t) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 1.02;
+    speechSynthesis.speak(u);
+  }
+  function listen() {
+    if (!Rec || listening) return;
+    if (canTalk) speechSynthesis.cancel();
+    vPanel.hidden = false; heard = ''; vLine('voiceHeard', ''); vLine('voiceReply', '');
+    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    rec = new R(); rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    rec.onresult = e => {
+      heard = [...e.results].map(r => r[0].transcript).join(' ').trim();
+      vLine('voiceHeard', heard);
+    };
+    rec.onerror = e => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') vLine('voiceReply', 'Microphone access is blocked. Allow it in the address bar to use voice.');
+      else if (e.error === 'no-speech') vLine('voiceReply', 'I didn’t hear anything. Try again.');
+      else if (e.error !== 'aborted') vLine('voiceReply', 'Voice didn’t work that time. Try again.');
+    };
+    rec.onend = () => { listening = false; vStatus('Ready'); if (heard) handleUtterance(heard); };
+    try { rec.start(); listening = true; vStatus('Listening...', true); }
+    catch { vStatus('Ready'); }
+  }
+  function stopListening() { if (rec && listening) rec.stop(); }
+
+  // Short spoken commands run right away; questions ("how do I…") go to the helper.
+  const VOICE_CMDS = [
+    ['stop', /^(stop|be quiet|quiet|stop talking|shut up|silence)$/],
+    ['best8', /\bbest of (eight|8)\b/],
+    ['enhanceOff', /^(turn )?(enhance|enhancement) off$|^turn off (enhance|enhancement)$/],
+    ['capture', /^(capture|take a (picture|photo|pic|snapshot)|snap|take picture)( now)?$/],
+    ['enhance', /^(enhance|enhancement|toggle enhance|enhance on|turn on (enhance|enhancement)|turn (enhance|enhancement) on)$/],
+    ['calibrate', /^(calibrate|start calibration|open calibration|calibration)$/],
+    ['analyze', /^(analy[sz]e|run analysis|analy[sz]e (this|the) (image|picture))$/],
+  ];
+  function matchCommand(text) {
+    const t = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/^(hey |ok |okay )?(captrail )?/, '').replace(/^(please |can you |could you )/, '').replace(/ please$/, '').trim();
+    if (/^(how|what|why|when|where|which|who|should|is|are|does|do|can i|could i|will)\b/.test(t) || t.split(' ').length > 6) return null;
+    const hit = VOICE_CMDS.find(([, rx]) => rx.test(t));
+    return hit ? hit[0] : null;
+  }
+  const needLive = () => stream ? 'Go back to the live view first.' : 'Connect the microscope first.';
+  function setLookOff() { let k = 0; while (look !== 'off' && k++ < 10) $('btnEnhance').click(); }
+  function runCommand(c) {
+    switch (c) {
+      case 'stop': if (canTalk) speechSynthesis.cancel(); vLine('voiceReply', 'Okay.'); return;
+      case 'capture': if ($('btnCapture').disabled) return say(needLive()); $('btnCapture').click(); return say('Captured.');
+      case 'best8': if ($('btnBurst').disabled) return say(stacking ? 'Already capturing.' : needLive()); $('btnBurst').click(); return say('Best of eight. Hold still.');
+      case 'enhance':
+        if (!sel) return say('Capture or select an image first.');
+        if (look === 'off') { $('btnEnhance').click(); return say(`Enhance on. ${LOOKS[look].label} view.`); }
+        setLookOff(); return say('Enhance off.');
+      case 'enhanceOff': if (!sel) return say('Capture or select an image first.'); setLookOff(); return say('Enhance off.');
+      case 'calibrate':
+        if (!sel) return say('Capture the calibration card first, then say calibrate.');
+        $('btnCal').click(); $('calStatus').closest('.panel').scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return say('Calibration on. Click the outer edges of two long lines two millimeters apart, then enter 2000.');
+      case 'analyze':
+        if ($('btnAnalyze').disabled) return say(analyzing ? 'Already analyzing.' : 'Capture or select an image first.');
+        $('btnAnalyze').click(); return say('Analyzing.');
+    }
+  }
+  // Only these facts go to the helper: no images, no audio.
+  function voiceState() {
+    const k = sel ? umPerPx() : null;
+    return { connected: !!stream, image: !!sel, calibrated: !!calib, um_per_px: k ?? calib?.umPerPx ?? null,
+             zoomed: !!sel?.calibScale, enhance: LOOKS[look].short };
+  }
+  async function ask(question) {
+    vStatus('Thinking...');
+    try {
+      const res = await fetch('/api/voice', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question, state: voiceState() }) });
+      let body = null; try { body = await res.json(); } catch {}
+      say(res.ok && body?.reply ? body.reply : (body?.error || (res.status === 404 ? 'The voice helper isn’t deployed here.' : 'Something went wrong. Try again.')));
+    } catch { say('I couldn’t reach the voice helper. Check your internet connection.'); }
+    finally { vStatus('Ready'); }
+  }
+  function handleUtterance(text) {
+    vLine('voiceHeard', text);
+    const c = matchCommand(text);
+    if (c) runCommand(c); else ask(text);
+  }
+  if (Rec) {
+    vBtn.hidden = false;
+    vBtn.onclick = () => (listening ? stopListening() : listen());
+  } else {
+    // No speech recognition (e.g. Firefox): no mic button, just a short note.
+    $('voiceNote').hidden = false; setTimeout(() => { $('voiceNote').hidden = true; }, 8000);
+  }
+  $('voiceClose').onclick = () => { stopListening(); if (canTalk) speechSynthesis.cancel(); vPanel.hidden = true; };
+  // Space: tap = capture (as before), hold = talk.
+  let spaceTimer = null, spaceTalk = false;
+  const spaceTarget = e => e.code === 'Space' && !e.target?.closest?.('input,select,button,textarea,[contenteditable]');
+  addEventListener('keydown', e => {
+    if (!spaceTarget(e)) return;
+    e.preventDefault();
+    if (e.repeat || spaceTimer || spaceTalk) return;
+    spaceTimer = setTimeout(() => { spaceTimer = null; if (Rec) { spaceTalk = true; listen(); } }, 350);
+  });
+  addEventListener('keyup', e => {
+    if (!spaceTarget(e)) return;
+    e.preventDefault();
+    if (spaceTimer) { clearTimeout(spaceTimer); spaceTimer = null; if (!$('btnCapture').disabled) $('btnCapture').click(); }
+    else if (spaceTalk) { spaceTalk = false; stopListening(); }
+  });
 
   renderCalib(); renderFindings(); syncButtons();
   addEventListener('pagehide', stopCamera);

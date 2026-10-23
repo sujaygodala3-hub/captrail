@@ -16,4 +16,4 @@ results/batch/
 # subject names and original file names never leave the team's computers
 datasets/**/_private/
 # images + labels built from real captures for detector training: local only
-datasets/_local_vision/
+datasets/_local_vision*/

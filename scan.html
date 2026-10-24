@@ -1540,8 +1540,7 @@
     switch (r.status) {
       case 'ok':
         stage.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        return say(r.count ? `Found ${r.count} capillary candidate${r.count === 1 ? '' : 's'}. These are unreviewed and not a diagnosis.`
-                           : 'No capillary candidates found. This is unreviewed and not a diagnosis.');
+        return say('Done.');
       case 'offline': return say('The trained model is offline right now.');
       case 'signin': showPanel(); return say('Please sign in to the trained model first.');
       case 'consent': showPanel(); return say('Please tick the permission box in the AI analysis panel first.');

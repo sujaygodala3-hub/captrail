@@ -9,7 +9,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const flag=(name,fallback)=>{const i=process.argv.indexOf(name);return i>=0?process.argv[i+1]:fallback;};
 const port=Number(flag('--port',process.env.PORT||3000)),host=flag('--host','0.0.0.0');
 const envFile=process.env.CAPTRAIL_PREVIEW_ENV||path.join(root,'.preview-runtime/config.json');
-let config={};try{config=JSON.parse((await fs.readFile(envFile,'utf8')).replaceAll('@site',root));}catch(e){await fs.writeFile(path.join(root,'.preview-status.json'),JSON.stringify({configuration_error:e.code,uid:process.getuid?.(),config_path:envFile,root,cwd:process.cwd()}));}
+let config={};try{config=JSON.parse((await fs.readFile(envFile,'utf8')).replaceAll('@site',root));}catch(e){if(process.env.NODE_ENV!=='production')await fs.writeFile(path.join(root,'.preview-status.json'),JSON.stringify({configuration_error:e.code,uid:process.getuid?.(),config_path:envFile,root,cwd:process.cwd()}));}
 if(config.backend_dir)await fs.writeFile(path.join(root,'.preview-status.json'),JSON.stringify({configuration_loaded:true,uid:process.getuid?.()}));
 let backend;
 

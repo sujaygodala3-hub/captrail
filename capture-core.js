@@ -11,7 +11,8 @@
   };
 
   let stream = null, frames = [], sel = null, mode = 'none', pts = [], look = 'off', analyzing = false, stacking = false;
-  let calib = store.get('calib'); // { umPerPx, w, h, at }
+  let calib = null; // persisted, unscoped scales must not transfer across captures
+  store.set('calib', null); // { umPerPx, w, h, at }
 
   window.CapTrailCapture = { original: async () => { if (!sel) throw new Error('Capture or select a microscope image first.'); const f=sel.calibScale && sel.pair ? sel.pair : sel; const blob=await new Promise(resolve=>f.canvas.toBlob(resolve,'image/png')); return new File([blob],(f.name||'microscope-capture').replace(/\.[^.]+$/,'')+'.png',{type:'image/png'}); } };
   /* ---------- status helpers ---------- */
@@ -893,28 +894,31 @@
   });
   $('calSave').onclick = () => {
     const um = parseFloat($('calUm').value);
-    if (pts.length !== 2 || !(um > 0)) return;
+    if (pts.length !== 2 || !Number.isFinite(um) || !(um > 0) || !sel) return;
     const px = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+    if (!Number.isFinite(px) || px <= 0) return showHint('Choose two distinct reference endpoints.');
     const scale = sel.calibScale || 1;
-    calib = { umPerPx: um / px / scale, w: sel.calibW || sel.w, h: sel.calibH || sel.h, at: Date.now() };
+    const original = sel.calibScale && sel.pair ? sel.pair : sel;
+    calib = { sourceFrameId: original.id, provisional: true, umPerPx: um / px / scale, w: sel.calibW || sel.w, h: sel.calibH || sel.h, at: Date.now() };
     store.set('calib', calib); setMode('none'); renderCalib(); renderMeasures();
   };
   $('calCancel').onclick = () => setMode('none');
   $('btnCalClear').onclick = () => { calib = null; store.set('calib', null); renderCalib(); renderMeasures(); };
   // A zoomed frame's µm per pixel is the stored calibration × its calibScale (0.5 for the 2× zoom).
-  function umPerPx() { return calib && sel && calib.w === (sel.calibW || sel.w) && calib.h === (sel.calibH || sel.h) ? calib.umPerPx * (sel.calibScale || 1) : null; }
+  function umPerPx() { return calib && sel && calib.sourceFrameId === (sel.calibScale && sel.pair ? sel.pair.id : sel.id) && calib.w === (sel.calibW || sel.w) && calib.h === (sel.calibH || sel.h) ? calib.umPerPx * (sel.calibScale || 1) : null; }
   function renderCalib() {
     $('calVal').innerHTML = calib ? `${calib.umPerPx.toFixed(3)} <small>µm / px</small>` : '— <small>µm / px</small>';
     if (!calib) return setStatus($('calStatus'), '', 'Not calibrated');
+    if (sel && calib.sourceFrameId !== (sel.calibScale && sel.pair ? sel.pair.id : sel.id)) return setStatus($('calStatus'), 'warn', 'This provisional scale belongs to another capture. Use a verified acquisition profile for physical measurements.');
     if (sel && (calib.w !== (sel.calibW || sel.w) || calib.h !== (sel.calibH || sel.h))) return setStatus($('calStatus'), 'warn', `Calibrated at ${calib.w}×${calib.h}; this image is ${sel.calibW || sel.w}×${sel.calibH || sel.h}. Recalibrate.`);
     if (sel?.calibScale) return setStatus($('calStatus'), 'ok', `Zoomed ${Math.round(1 / sel.calibScale)}×: measuring at ${umPerPx().toFixed(3)} µm/px (original ${calib.umPerPx.toFixed(3)} ÷ ${Math.round(1 / sel.calibScale)}).`);
-    setStatus($('calStatus'), 'ok', `Calibrated ${new Date(calib.at).toLocaleDateString()} at ${calib.w}×${calib.h}. Recalibrate if zoom or height changes.`);
+    setStatus($('calStatus'), 'ok', `Provisional local estimate ${new Date(calib.at).toLocaleDateString()} at ${calib.w}×${calib.h}. Recalibrate if zoom or height changes.`);
   }
   function renderMeasures() {
     renderCalib();
     const l = $('mlist'), k = umPerPx();
     if (!sel || !sel.measures.length) { l.innerHTML = '<li style="color:var(--muted)">None yet</li>'; drawOverlay(); return; }
-    l.innerHTML = sel.measures.map((m, i) => `<li><span>#${i + 1}</span><span><b>${k ? (m.px * k).toFixed(1) + ' µm' : m.px.toFixed(0) + ' px'}</b>${k ? '' : ' (calibrate for µm)'}</span><button data-i="${i}" aria-label="Remove">×</button></li>`).join('');
+    l.innerHTML = sel.measures.map((m, i) => `<li><span>#${i + 1}</span><span><b>${k ? (m.px * k).toFixed(1) + ' µm (provisional)' : m.px.toFixed(0) + ' px'}</b>${k ? '' : ' (calibrate for µm)'}</span><button data-i="${i}" aria-label="Remove">×</button></li>`).join('');
     l.querySelectorAll('button').forEach(b => b.onclick = () => { sel.measures.splice(+b.dataset.i, 1); renderMeasures(); });
     drawOverlay();
   }
@@ -928,7 +932,7 @@
     sel.measures.forEach((m, i) => {
       octx.strokeStyle = '#FFD166'; octx.beginPath(); octx.moveTo(...m.a); octx.lineTo(...m.b); octx.stroke();
       dot(m.a, '#FFD166'); dot(m.b, '#FFD166');
-      label(`#${i + 1} ${k ? (m.px * k).toFixed(1) + ' µm' : m.px.toFixed(0) + ' px'}`, (m.a[0] + m.b[0]) / 2, Math.min(m.a[1], m.b[1]));
+      label(`#${i + 1} ${k ? (m.px * k).toFixed(1) + ' µm (provisional)' : m.px.toFixed(0) + ' px'}`, (m.a[0] + m.b[0]) / 2, Math.min(m.a[1], m.b[1]));
     });
     (sel.ai?.findings || []).forEach(f => {
       if (!Array.isArray(f.box)) return;
@@ -1080,7 +1084,7 @@
   // Only these facts go to the helper: no images, no audio.
   function voiceState() {
     const k = sel ? umPerPx() : null;
-    return { connected: !!stream, image: !!sel, calibrated: !!calib, um_per_px: k ?? calib?.umPerPx ?? null,
+    return { connected: !!stream, image: !!sel, calibrated: false, provisional_scale: !!k, um_per_px: k ?? null,
              zoomed: !!sel?.calibScale, enhance: LOOKS[look].short };
   }
   async function ask(question) {

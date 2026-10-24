@@ -109,7 +109,7 @@
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>AI pattern detection</span>
         </button>
         <button class="layer" style="z-index:4;--f:#EFD3D5;--s:#C3A2A5;--t:#EFD3D5;--c:#17110F"
-          data-title="Calibrated measurement" data-text="The coordinate cross on the calibration card that came with the microscope (0.1 mm per small tick, 1 mm per long line) converts pixels into micrometers, so each scan reports real numbers, like loop width in µm and capillaries per millimeter, instead of just a picture.">
+          data-title="Calibrated measurement" data-text="The coordinate cross on the calibration card that came with the microscope (physical divisions must be confirmed from the reference specification) can support conditional pixel-to-micrometer conversion only after a qualified reviewer verifies the physical standard and matching acquisition settings. Vessel dimensions also require validated geometry; a detector box is not a vessel diameter.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2M15.5 4.5 17 6"/></svg>Calibrated measurement</span>
         </button>
@@ -209,7 +209,7 @@
           <table class="parts">
             <tr><td class="n">01</td><td class="what"><b>Jiusion 40X–1000X USB digital microscope + included stand</b><span>640 × 480 images, advertised 40–1000× magnification, built-in adjustable LED</span></td><td class="price">$25</td></tr>
             <tr><td class="n">02</td><td class="what"><b>Captrail base board and finger cradle (3D printed, about 82 g PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place and a dip that holds the microscope stand</span></td><td class="price">$2</td></tr>
-            <tr><td class="n">03</td><td class="what"><b>Calibration slide (came with the microscope)</b><span>Its coordinate cross: 0.1 mm per small tick, 1 mm per long line</span></td><td class="price">Included</td></tr>
+            <tr><td class="n">03</td><td class="what"><b>Calibration slide (came with the microscope)</b><span>Its coordinate cross: physical divisions must be confirmed from the reference specification</span></td><td class="price">Included</td></tr>
             <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$3</td></tr>
             <tr><td class="n">05</td><td class="what"><b>Cotton swabs</b><span>Applying and removing the drop of oil</span></td><td class="price">$2</td></tr>
           </table>
@@ -404,10 +404,10 @@
   const JOURNEY = [
     { title: 'Prototype built', status: 'done', live: true,
       text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated with the coordinate cross on its calibration card.',
-      stats: [['Build cost', '$32'], ['Calibration', '6.094 µm/px'], ['Assembly time', 'about 3 h 30 min (mostly printing)']] },
+      stats: [['Build cost', '$32'], ['Calibration', 'Card, per session'], ['Assembly time', 'about 3 h 30 min (mostly printing)']] },
     { title: 'First images', status: 'now', live: true,
       text: 'Microscope calibrated. Capturing our first real nailfold images now.',
-      stats: [['Resolution', '640 × 480'], ['Scale', '6.094 µm/px'], ['Field of view', 'about 3.9 × 2.9 mm']] },
+      stats: [['Resolution', '640 × 480'], ['Scale', 'Calibrated at nail zoom'], ['Field of view', 'Set by zoom and height']] },
     { title: 'Train the AI', status: 'next', goals: true,
       text: 'Our team is training a model to find and measure capillary loops in our images.',
       stats: [['Goal', 'Loops detected automatically'], ['Goal', 'Loop width measured in µm'], ['Goal', 'Results in under 10 seconds']] },

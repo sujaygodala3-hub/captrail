@@ -1,0 +1,198 @@
+{
+  "dataset": "captrail-capillaroscopy-sims",
+  "exporter_sha256": "4ff45fcad7c2ea236d0505e94c72d1307b48fa4b93249ef781bd18ad9252a2bb",
+  "files": {
+    "README.md": {
+      "bytes": 5691,
+      "sha256": "55cc068575fe875929acebd5ec20abf40cb973bd4601a39bf41a6b3b54280dd3"
+    },
+    "SCHEMA.md": {
+      "bytes": 15854,
+      "sha256": "c9dd1f895783cfcd8ee94de7518469300e29ee3378c5ff5d1ca1cb62a43f4e48"
+    },
+    "calibration/calibration.json": {
+      "bytes": 2456,
+      "sha256": "de7b3425151674664f05c30e0ae8077b03fbae4c8d2799c961c7d83c0c5fe214"
+    },
+    "calibration/noise_spectrum.csv": {
+      "bytes": 226,
+      "rows": 5,
+      "sha256": "568c2b17d76cb1d6dd992cb62e3f76e3967eadfe20810ef209a842718fc98c09"
+    },
+    "calibration/ruler_photos.csv": {
+      "bytes": 804,
+      "rows": 6,
+      "sha256": "9f4519e52d825b25137ebc247aea31574d23baaa27133386f889dccb2b762d6c"
+    },
+    "llm/records.jsonl": {
+      "bytes": 380767,
+      "rows": 264,
+      "sha256": "9d51ece25fd5a7dbe89cf425d21c4f0caaa47a7d19cb883e647467caea3b8b36"
+    },
+    "llm/sft_test.jsonl": {
+      "bytes": 257326,
+      "rows": 224,
+      "sha256": "418d3acc6661e5e86ed9b42d04acc05fac4e529528bb240356faf2fb4af941ac"
+    },
+    "llm/sft_train.jsonl": {
+      "bytes": 1241087,
+      "rows": 1081,
+      "sha256": "906b10c728b3b45ce944ea47997f97d143cfb99e5e984eed7adab58136a31a3d"
+    },
+    "llm/sft_val.jsonl": {
+      "bytes": 250512,
+      "rows": 218,
+      "sha256": "0c3d9ba6d62b5791f3d5430db2869dc0ecb3f63d53e5a4e1d66a2d7147c30371"
+    },
+    "qa/reproducibility.csv": {
+      "bytes": 73,
+      "rows": 0,
+      "sha256": "b26b4aaafde39d4d98afeac0d04e2bf6bc958a3ae84ccc6567c2102e783263c8"
+    },
+    "sims/metrics.csv": {
+      "bytes": 12833,
+      "rows": 97,
+      "sha256": "dcd4f15583239e338e34c47bf8488d9657604af4cf5d73b73e05de1723a33106"
+    },
+    "sims/s1_width_bias.csv": {
+      "bytes": 3216437,
+      "rows": 34920,
+      "sha256": "b91fbec0971991fe37dd431378fffc5fa30f0d4243ab7b051894f5aa8644794e"
+    },
+    "sims/s2_density.csv": {
+      "bytes": 915279,
+      "rows": 14550,
+      "sha256": "f7be5ecaa1795c9b3a4ec9e8affd0d5bd52c30f2da0561378b1e7e5369c7ab92"
+    },
+    "sims/s2_texture.csv": {
+      "bytes": 156879,
+      "rows": 3492,
+      "sha256": "656e557136aa9fb5a649114927d2abd5edfc15ee9e555b3053f0b6f4e163f25c"
+    },
+    "sims/s4_misclassification.csv": {
+      "bytes": 68393,
+      "rows": 776,
+      "sha256": "a40fb7dbbaf23447417f014e1920b0e0de63833404245030ca0a4c911986774f"
+    },
+    "sims/s6_propagation.csv": {
+      "bytes": 101558,
+      "rows": 1164,
+      "sha256": "ac8e9538427ce08a176c37b5c309c129ae9dbdeadbe6d63380e7c9cf265f78dd"
+    },
+    "sims/s7_repeatability.csv": {
+      "bytes": 6730,
+      "rows": 97,
+      "sha256": "acb0275eed3aae52d43ddb122dc266bd3d2da8f5fdbfa401abb8aaf6e2ddee26"
+    },
+    "sims/scenarios.csv": {
+      "bytes": 17618,
+      "rows": 97,
+      "sha256": "57931ebdf9fd62dcf37aa5f87c75173e73460b05f6b632d029b3f23249e653cc"
+    },
+    "tables/frames.csv": {
+      "bytes": 66093,
+      "rows": 264,
+      "sha256": "43be613526193cd73b1670e5eb34146dbdac2f06b6445f1361fe12a946317cb3"
+    },
+    "tables/loops.csv": {
+      "bytes": 260999,
+      "rows": 1486,
+      "sha256": "89353a6e3595955cc11ef27ab145dfdde47f6d415b160e153c4327dde3f1eba5"
+    },
+    "tables/paired_views.csv": {
+      "bytes": 19067,
+      "rows": 131,
+      "sha256": "9f1424db24a4853c62116fad4393a234b6a56d34fd063367c70365e658092b1b"
+    },
+    "tables/sessions.csv": {
+      "bytes": 1669,
+      "rows": 5,
+      "sha256": "353cfa7f73451c1bd95b7d7eb679c103cd46c2f98c999cfe2aeb6b596a52d94b"
+    },
+    "tables/sites.csv": {
+      "bytes": 9299,
+      "rows": 73,
+      "sha256": "dec5b9c6eb5d3eec1510446431ae492d8237040bc690a7ac9050b90adf9ac4c7"
+    },
+    "tables/splits.csv": {
+      "bytes": 1606,
+      "rows": 39,
+      "sha256": "9e8f7c0d2671962f9e28792a545658c03a721b693bf893ea8744ba7e298eead5"
+    }
+  },
+  "source": {
+    "batch_code_sha256": "f61090037070dcc4398d8ca9eb1e72ba31f6dcd1cf1f96d755503a43f40115d0",
+    "inputs": [
+      {
+        "duplicate": false,
+        "kind": "calibration",
+        "sha256": "87dbc11727a603941aa692b65fed138e654b6aa99323c9c00fcd87bbd9c30dad"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "d0bc1b2e65c53c79eefc0079c0c1d600593004d4fd973c6266c6e041f99800f8"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "35bba69aa347d1b93f8c508e011f5d8dbd5dc69a4b590a74cbbf27e7bbc542d3"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "f45d4d06119a8ed812bae2fddd5ff75d494a355e7c007fb0bd422a6673c56090"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "d6b117127eb11ae90f93036432e74426401a3b4acd1f66c22a194971c21b4135"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "98e0a09564c61a24ae9c0f2b59dfb467c56e12eab6fbc7c17510927bc1e142c5"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "5ed29886912f2084b3c30dec50f582af224b3fec654a5c490bff5f356ebae9be"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "f40600caa48e3b0bc935d03f7c85f3a4bc1d785d69f8f5a956c60352b4e8da17"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "e5ecb49ba429b391bb959d66329db2ef8f03b50a48d1dbe059dffa3afa122953"
+      },
+      {
+        "duplicate": false,
+        "kind": "ruler",
+        "sha256": "580b52b94b11d4db2423e85d42f3eb18fa8207fb0d1c8bf6b08beb684303d345"
+      },
+      {
+        "duplicate": false,
+        "kind": "capillary",
+        "sha256": "597aeb6d1375f8fd69a0ab24d43bf422c7b24fd09ddac9cc0808830e36f425fd"
+      },
+      {
+        "duplicate": false,
+        "kind": "blank",
+        "sha256": "591820883d4d5cdd857f02dd3318b1e51b3ae0e172e7f91abaebcffc4328b2c5"
+      }
+    ],
+    "sims_mode": "quick",
+    "versions": {
+      "numpy": "2.2.6",
+      "pandas": "2.3.3",
+      "platform": "Linux-6.8.0-138-generic-aarch64-with-glibc2.35",
+      "python": "3.10.12",
+      "scipy": "1.15.3",
+      "skimage": "0.25.2"
+    }
+  },
+  "version": "3.0.0"
+}

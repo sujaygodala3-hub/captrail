@@ -42,10 +42,20 @@
 
 - **Widths fit healthy anatomy** at the measured scale.
 - **Apex spacing does not.** About 5 detected loops per mm is below the 7 per mm normal cut-off, in healthy
-  volunteers. The likeliest cause is the detector missing faint or out-of-focus loops; the S2 density sims
-  show undercounting at this blur. It could also mean some captures were not at exactly the card's zoom.
-  So **do not read capillary density from this data**. Re-shoot the card at the start and end of each
-  session to rule out a zoom change.
+  volunteers. The sims do NOT explain it: at the measured blur they count a true 9 per mm as 9.0 per mm
+  (S4) and a true 7 per mm as 6.8 (S2 sweep). So the cause is something the simulator does not model:
+  loops too faint, out of focus or hidden by glare in the real frames for the detector to find, or captures
+  taken at a different zoom from the card. So **do not read capillary density from this data**. Re-shoot
+  the card at the start and end of each session to rule out a zoom change.
+
+## Simulated measurement error at the measured scale (dataset captrail-v3, quick mode)
+
+| | limb width bias | apical bias | total width bias | 45 vs 55 um giant-loop error | true 7/mm called reduced | repeat CV |
+| --- | --- | --- | --- | --- | --- | --- |
+| `measured` scope, 9 session views | 15 to 28% | 1.6 to 5.2% | 2.8 to 7.5% | 0 | 0 | 6.6 to 19.3% |
+
+Limbs (a median of about 8 px wide) are where blur hurts: their widths read 15 to 28% off, mostly too wide. Apical and total
+widths are within about 5 to 8%. Measure apical and total width; treat limb widths as relative only.
 - **Tissue adds blur.** The capillaries are blurrier than the card (2.33 vs 1.02 px). The skin scatters light
   on top of the optics, and the sims model this as the measured limb blur.
 

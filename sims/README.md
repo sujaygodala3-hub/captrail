@@ -44,7 +44,7 @@ python export_dataset.py results/batch --out datasets/captrail-v3 \
 ```
 
 Read `datasets/captrail-v3/README.md` (dataset card) before training: what each file is, the splits, the LLM
-formats and the limits (not validated by a human rater, healthy subjects only, quick-mode sims).
+formats and the limits (not validated by a human rater, healthy subjects only, loop density unreliable, quick-mode sims).
 
 **The scale.** A zip holding card photos (and optionally white-card frames) is a calibration input. A card
 whose scale lands in the nail-zoom range (0.8 to 3.0 um/px) becomes THE measured scale: every um value,

@@ -26,7 +26,7 @@
     const findings=entries.filter(x=>Array.isArray(x.bbox_xyxy)&&x.bbox_xyxy.length===4).map(x=>{
       const [x1,y1,x2,y2]=x.bbox_xyxy;
       return {
-        label:(x.class_name||'vessel candidate')+' — unreviewed',
+        label:x.class_name||'vessel candidate',
         confidence:null, // Uncalibrated detector scores must NOT appear as medical percentages.
         box:[x1*sx,y1*sy,Math.max(0,(x2-x1)*sx),Math.max(0,(y2-y1)*sy)]
       };
@@ -34,7 +34,7 @@
     const status=analysis.provenance?.inference_status||'unknown';
     const version=analysis.provenance?.model_version||'unknown';
     const quality=analysis.quality?.technical_rejection?' Image quality insufficient; model abstained.':'';
-    const note='Trained model '+version+' ('+status+'). '+findings.length+' unreviewed detector candidates. Box geometry is not vessel diameter. No diagnosis, healthy-status assessment, or physical-unit measurement is available.'+quality;
+    const note='Trained model '+version+' ('+status+'). '+findings.length+' detector candidates. Box geometry is not vessel diameter. No diagnosis, healthy-status assessment, or physical-unit measurement is available.'+quality;
     return {findings,width_um:null,density_per_mm:null,note,model_result:analysis};
   }
   root.CapTrailML={

@@ -1420,7 +1420,7 @@
       f.ai = ml.toOverlay(data, f.w, f.h);
       if (sel === f) {
         renderFindings(); drawOverlay();
-        mlStatus('ok','Trained research model: unreviewed vessel candidates. Not a diagnosis.');
+        mlStatus('ok','Trained research model: vessel candidates. Not a diagnosis.');
       }
       return { status: 'ok', count: (f.ai?.findings || []).length };
     } catch (error) {

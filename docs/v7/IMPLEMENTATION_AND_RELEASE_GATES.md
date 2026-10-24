@@ -1,0 +1,82 @@
+# CapTrail V7 — implementation and release gates
+
+This report supplements the historical V6 report. V7 builds on the existing frontend and trained-model backend; it does not replace their camera, model or storage architecture. The original production UX handoff contained eight instruction/checklist files, which were read in full. The subsequent full-stack prompt and calibration archive were also inspected. The checklist was implemented as executable tests where the available environment permits.
+
+## A. What was actually implemented
+
+**Research workstation.** The ivory/berry design now includes participant and examination selection, acquisition metadata, consent management, saved examinations, profile binding, comparison views and a complete calibration dialog. Uploads stay local until explicit permission and analysis. Real, indeterminate processing states identify work awaiting the server; no invented percentage or stage completion is displayed. Actual returned candidate boxes, masks and centerline vertices share original-image coordinates. Animation replay uses those coordinates and does not make another inference call. Selection, layer opacity, region labels, zoom/pan, fit and fullscreen expose the available evidence.
+
+**Comparisons and correction.** Paired original/enhanced files retain one acquisition identity when their combined payload fits the upload limit. Different-resolution representations have separate coordinate systems; the UI does not project original annotations onto an unregistered enhancement. Side-by-side and swipe views distinguish an actual enhanced file from reversible display contrast. Provisional review supports undo/redo, corrected morphology, exclusions and explicit centerline/boundary/apex geometry. The separate pixel annotation workspace exposes masks, uncertain regions, centerline/apex/junction/crossing points, reading revisions, independent-reader comparison and qualified adjudication. A reading opened from displayed AI results is explicitly model-assisted and cannot claim blindness. Draft or AI-generated masks are not expert ground truth.
+
+**Participants and persistence.** Named-account authorization, tenant separation and encrypted records remain. Pseudonym registration, optimistic-revision archive/reactivation, examination grouping, reopening, separate training-permission changes and administrator deletion now have frontend controls. Archives prevent new observations for that pseudonym without silently removing past evidence. Backups and key migration include the new encrypted participant table. JSON, standalone HTML and SVG exports preserve model/review provenance. Original predictions remain distinguishable from human corrections.
+
+**Calibration.** The new ruler viewer supports zoom/pan, manual and keyboard endpoints, server-side pixel tick proposals, uncertainty inputs, device/settings/optical configuration, persistence and qualified verification. Known supplied synthetic fixtures and explicit synthetic metadata block verification. Verification requires documented physical span and matching optics, qualified named review and a real reference. Profiles require exact device/settings/resolution, and verified profiles additionally require optical-configuration confirmation. Legacy profiles require reverification; legacy physical values are withheld on read/export. Detector box dimensions never become vessel diameter. PR #5's calibration correction is integrated into PR #6 and strengthened: the capture-local provisional scale is tied to the exact source frame and is not silently reused at another zoom.
+
+**Camera and voice.** Existing UVC device selection, live video, single capture, best-of-eight, forty-frame stacking, enhancement, raw/enhanced downloads, manual interaction and local Web Speech commands remain in `capture-core.js`. V7 changes its calibration transfer rules, not the acquisition algorithms. Optional external conversational commentary still requires its own server API key and separate consent; trained YOLO inference and local voice do not require that key.
+
+**Deployment and security.** A reproducible Compose deployment provides an isolated model service, same-origin Node gateway and HTTPS proxy, named-account initialization, random workspace token and encryption key, owner-readable secret storage, readiness checks, persistent volumes and encrypted recovery. Production cookies retain HttpOnly/Secure/SameSite protection. The gateway admits private HTTP only for an explicitly configured, fixed internal model hostname. Other production backend origins require HTTPS. Node's runtime image contains its complete required ELF closure and retained package/version/copyright inventory; unrelated Debian OpenSSL is not copied. The Python filelock dependency is patched. The HTTPS proxy is rebuilt from pinned Caddy source with patched Go/x/net; its static runtime retains module/build metadata and avoids unrelated vulnerable system packages. No CVE suppression or weakened production login rate limit was introduced.
+
+## B. Working links
+
+- Temporary managed preview: http://terminal.local:4173/ — loaded with the trained detector ready. The managed browser was used for local upload/comparison/calibration visual checks; named sign-in and inference are verified in the isolated real-backend browser/HTTPS staging suites below, not claimed from the signed-out managed browser session. This is an internal, temporary preview, not durable public HTTPS hosting. Named access is delivered separately in the private access file; no credential appears in this repository.
+- Frontend draft PR: https://github.com/sujaygodala3-hub/captrail/pull/6
+- Backend draft PR: https://github.com/aryansenthilkumar/CapTrail-Database/pull/2
+- Reproducible staging and Vercel connection: [DEPLOYMENT.md](https://github.com/aryansenthilkumar/CapTrail-Database/blob/codex/captrail-validation-hardening-v2/docs/v7/DEPLOYMENT.md).
+
+## C. Visual evidence
+
+The delivered screenshot sequence uses the permitted public source photograph `4830.jpg` and actual registered checkpoints. It covers upload, real processing, returned geometry, morphology, provisional review, side-by-side/swipe comparison, assisted anatomical draft, saved/reopened examination, calibration, sign-in/error states and desktop/tablet/mobile layouts. Exported HTML, SVG and JSON are included in the evidence archive. Screenshots are application captures, not generated model illustrations. The separate local calibration screenshot uses a supplied synthetic ruler and is labelled as an unverified preview; the automated calibration screenshot uses a declared synthetic software fixture with 40 px pitch.
+
+Visual inspection identified and corrected annotation-header contrast, mobile acquisition-select overflow and missing semantics on an empty image queue, and keyboard focus on the scrollable annotation canvas. Screenshot framing was improved to expose the top of the scrollable calibration dialog. Numerical coordinate tests and actual-browser assertions complement visual inspection; this does not establish anatomical correctness.
+
+## D. Testing evidence
+
+| Check | Verified result | Evidence |
+| --- | --- | --- |
+| Full backend | **121 passed, 2 skipped, 1 warning** | [40054912487](https://github.com/aryansenthilkumar/CapTrail-Database/actions/runs/40054912487) |
+| Frontend contracts/security/geometry | **46 passed, 0 failed**; syntax checks pass | [40054881026](https://github.com/sujaygodala3-hub/captrail/actions/runs/40054881026); `npm test && npm run check` |
+| Simulator regression | **85 passed, 1 warning**, 160.95 s | `cd sims && python -m pytest -q --disable-warnings` |
+| Real browser acceptance | **16 passed, 2 skipped, 0 failed** | [40054907079](https://github.com/aryansenthilkumar/CapTrail-Database/actions/runs/40054907079) |
+| Chromium desktop 1440×900 | **6 passed**; live simulated camera, local voice, best-of-eight, forty-frame stack and raw download exercised | Same browser run |
+| Firefox tablet 1024×768 | **5 passed, 1 explicit camera-simulation skip** | Same browser run |
+| WebKit mobile 390×844, DPR 3 | **5 passed, 1 explicit camera-simulation skip** | Same browser run |
+| Real container + HTTPS stack | Build, source photograph, all four segmentation models, named login, review, restart and encrypted backup/restore **passed** | [40054907082](https://github.com/aryansenthilkumar/CapTrail-Database/actions/runs/40054907082) |
+| Strict security gates | Backend **0 HIGH / 0 CRITICAL**; frontend **0 / 0**; HTTPS proxy **0 / 0** | Same container run; no ignore-unfixed or CVE suppression |
+| Existing dataset-code workflow | **4 geometry checks passed**; this small job is not a new full-data audit | [40053397677](https://github.com/aryansenthilkumar/CapTrail-Database/actions/runs/40053397677) |
+
+Runtime revisions tested: frontend [`fbbd2c4`](https://github.com/sujaygodala3-hub/captrail/commit/fbbd2c4bbf73dc8b1afc92af4c7864e416ffe6c3), backend [`3637023`](https://github.com/aryansenthilkumar/CapTrail-Database/commit/363702315598d3bec223b1169ad7a27a979af5e0). Later delivery commits change documentation/evidence only. Machine-readable counts, scan hashes and artifact identifiers are in `reports/v7/release-evidence.json`; screenshot/export hashes are in `reports/v7/browser-evidence-manifest.json`.
+
+Earlier iterations failed on dependency vulnerabilities, a missing CA bundle, annotation contrast/overflow, empty-queue semantics, canvas keyboard access and shared browser-test login limits. These were fixed and the final runs above passed. Browser jobs now use independent accounts/stores; the production rate limit remains unchanged. A previous browser dependency installation timed out; per-engine installation completed in the final run. The local full backend restore was incomplete, so only CI's complete artifact checkout is called a full-suite pass. No unresolved failure remains in the final enumerated gates; the external and performance acceptance items below remain open.
+
+The backend's two explicit skips are the absent private microscope photograph and a legacy exploratory-partition manifest. Neither skip is evidence of independent accuracy. Browser camera/speech simulation runs in Chromium; Firefox and WebKit each explicitly skip that one hardware-simulation case. They still execute the real upload/model/review/export and V7 calibration/annotation cases.
+
+Security and error tests include cookie attributes and revocation, CSRF markers/origins, tenant isolation, malformed and oversized files, image consent, calibration provenance, encrypted persistence, revision conflicts, unavailable models/readiness, injected HTTP 400/403/413/422/429/500/503 failures and offline preservation. Geometry tests cover coordinate round trips across viewport aspect ratios and DPR 1/2/3, invalid/out-of-bounds values, exact returned trace vertices, immutable model evidence and browser zoom coordinates. Accessibility assertions cover serious/critical WCAG findings in the workstation and anatomical workspace, not every possible assistive-technology interaction.
+
+Remaining performance acceptance: production-host cold-start/P95/throughput and memory measurements, multi-user load, sustained large-session stress, representative interrupted-transfer tests and physical-device acceptance. The 3.8 MiB frontend file budget is intentional; larger-image rejection is not proof of large-image inference performance. No stress/load result is invented.
+
+## E. AI evidence
+
+The registered source detector is `source_yolov8n`, version `nguyen-yolov8n-514af033-b68e404a`, SHA-256 `b68e404a7514930edffaa6f3a9a67f988fdb4b64a42ffd322beeb038d006844b`. The permitted test photograph SHA-256 is `3468326aa909ea15d18bc003b2496a54976cb99549821274fcb36d1a6e8cf76f`. It returns **12 detector candidates**, **93 image-guided ridge fragments** and, with the V5 negative-regularized neural model, **106 neural fragments**. These are candidate/fragment counts, not confirmed capillary counts. Real container smoke also exercises all four registered experimental segmentation checkpoints.
+
+The managed preview uses the previously verified lossless FP32 serialization (`source_runtime_fp32`, SHA `5f3d3e426bc480d0cc2b0e50b2ef49480a0973f4fa0c83d7f19f3e58d765f584`) because of its CPU runtime constraints. All 355 tensors were previously checked for numerical equality. This is not new training or a new accuracy result. CI and container acceptance use the registered source artifact directly.
+
+V7 claims no new anatomical accuracy. Existing source benchmarks and cohort provenance are preserved. Independent masks, adjudicated loop identities, source-person resolution and untouched cross-device/patient testing remain absent. Spurious and missed geometry is visible in the real-model screenshots. Synthetic-mask Dice, software ruler repeatability and source-development accuracy must not be described as validated clinical tracing. Disease or healthy-status prediction is unavailable.
+
+## F. Calibration result
+
+All eight supplied PNGs explicitly identify themselves in embedded metadata as synthetic computer-generated calibration images, not real captures. Three are rulers and five are white-reference fixtures. Original bytes were preserved privately and hashes recorded. Horizontal ruler pitches are **53.3293, 53.3417 and 53.3335 px**; mean **53.334845 px**, between-fixture SD **0.006316 px**. Only if an interval is exactly 100 µm does the arithmetic yield **1.874947 µm/px**. This matches the fixture design, not a real microscope measurement. No valid physical-reference uncertainty or matching optical acquisition is established.
+
+The earlier repository record is 16.3874 px per assumed 100 µm interval (mean 6.10225 µm/px). The numerical pitch ratio is 3.2546; synthetic fixtures cannot prove a physical zoom ratio. **Neither a global 1.88 µm/px scale nor the old 6.1 µm/px scale is enabled for nailfold images.** Separate device/zoom profiles and real, independently verified references are required. See [the full pixel, focus, illumination, distortion and uncertainty audit](https://github.com/aryansenthilkumar/CapTrail-Database/blob/codex/captrail-validation-hardening-v2/docs/v7/CALIBRATION_AUDIT.md).
+
+## G. Remaining external dependencies and release limits
+
+1. An authorized Docker-compatible backend host, resource/billing authorization, DNS/TLS control and access to the existing Vercel project's environment/deployment settings. Configure the HTTPS backend origin, deploy, then perform the documented user walkthrough. No such credentials or destination were available; public persistent deployment is not claimed.
+2. Real USB microscope and microphone hardware in a supported secure browser. Simulated streams cannot establish device settings, actual image quality or driver compatibility.
+3. Genuine ruler photographs at the nailfold acquisition optics, documented physical standard and uncertainty, repeated captures and a qualified verifier. The supplied archive cannot supply this evidence.
+4. Independent expert masks/centerlines, adjudicated loop identities, untouched participants/microscope types and validated unfamiliar-image rejection. These are required for anatomical accuracy claims and responsible model improvement; another unvalidated training run would not resolve them.
+5. Clinically confirmed cohorts, scientific/medical review and explicit release authorization before any medical feature or customer launch. Source diabetes/control folder labels remain provenance labels, not confirmed diagnoses.
+6. Production operational acceptance: backup retention/deletion policy, off-host encrypted recovery, monitoring, sizing, independent security review and hardware/performance acceptance on the chosen host. The successful disposable staging drill does not establish production operations.
+
+## H. GitHub status
+
+All completed implementation, tests, CI and deployment changes are pushed to frontend `feature/research-workstation-v6` / PR #6 and backend `codex/captrail-validation-hardening-v2` / PR #2. PR #5's relevant correction is incorporated into #6. Historical frontend PR #3 was already merged before this work. Both active development PRs remain open drafts; this task merged nothing and launched no medical feature. Backend PR #2 remains stacked on PR #1. Final evidence records the exact tested runtime revisions separately from later documentation commits.

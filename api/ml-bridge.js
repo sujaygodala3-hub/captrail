@@ -29,6 +29,8 @@ async function proxy(request,method){
   if(!route||route.method!==method)return reply({error:'Unsupported trained-model operation.'},405);
   const upstream=baseUrl();
   if(!upstream)return reply({error:'Trained model not configured. Deploy the private Python API over HTTPS and set CAPTRAIL_ML_BACKEND_URL in Vercel.'},503);
+  // Same-origin mutation marker (required by the CapTrail backend): demand it from the browser, then forward it.
+  if(method==='POST'&&request.headers.get('x-captrail-request')!=='1')return reply({error:'Missing same-origin request marker.'},403);
   const length=Number(request.headers.get('content-length')||0);
   if(length>4*1024*1024)return reply({error:'Image exceeds 4 MB gateway request limit.'},413);
   let response;
@@ -36,7 +38,7 @@ async function proxy(request,method){
     const headers={accept:'application/json'};
     const cookie=(request.headers.get('cookie')||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('captrail_session='));
     if(cookie)headers.cookie=cookie;
-    if(method==='POST')headers['content-type']=request.headers.get('content-type')||'application/octet-stream';
+    if(method==='POST'){headers['content-type']=request.headers.get('content-type')||'application/octet-stream';headers['x-captrail-request']='1';}
     response=await fetch(upstream+route.path,{
       method,headers,body:method==='POST'?request.body:undefined,
       ...(method==='POST'?{duplex:'half'}:{}),redirect:'manual',

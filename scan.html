@@ -1376,17 +1376,21 @@
   const ml = window.CapTrailML;
   const mlStatus = (kind, message) => setStatus($('mlStatus'), kind, message);
   let mlLoggedIn = false;
+  // Shown whenever the research backend can't be reached (not configured, computer off, tunnel closed,
+  // timeouts, Cloudflare/edge errors or no network) instead of a technical error.
+  const ML_OFFLINE = 'Our trained AI runs on our team’s research computer. See it in action in our demo video.';
+  const mlOffline = status => !status || [502, 503, 504].includes(status) || status >= 520;
   async function useTrainedModel() {
     if (!sel || analyzing) return;
     const f = sel;
+    mlStatus('', 'Checking model readiness…');
+    const ready = await ml.ready();
+    if (!ready.ok) return mlOffline(ready.status) ? mlStatus('', ML_OFFLINE) : mlStatus('err', ready.error || 'Trained model is not ready.');
     if (!$('mlConsent').checked) return mlStatus('warn', 'Confirm permission to upload and store this image first.');
     const pseudonym = $('mlParticipant').value.trim();
     if (!/^[A-Za-z0-9_-]{3,60}$/.test(pseudonym)) return mlStatus('warn','Enter a pseudonym of 3–60 letters, digits, _ or -. No names.');
     analyzing = true; syncButtons();
-    mlStatus('', 'Checking model readiness…');
     try {
-      const ready = await ml.ready();
-      if (!ready.ok) throw new Error(ready.error || 'Trained model is not deployed or not ready.');
       mlStatus('', 'Uploading one image to your private research workspace…');
       const blob = await uploadBlob(f.canvas);
       if (!blob) throw new Error('Could not encode image.');
@@ -1407,7 +1411,8 @@
         $('mlLoginPane').hidden = false;
         mlLoggedIn = false;
         mlStatus('warn','Sign in to the separate CapTrail research workspace, then retry.');
-      } else mlStatus('err',error.message || 'The trained model request failed.');
+      } else if (mlOffline(error.status)) mlStatus('', ML_OFFLINE);
+      else mlStatus('err',error.message || 'The trained model request failed.');
     } finally {
       analyzing = false;
       syncButtons();

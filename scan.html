@@ -285,7 +285,7 @@
   <div class="voice-head"><span class="voice-status" id="voiceStatus"><i></i><span>Ready</span></span><button class="voice-close" id="voiceClose" type="button" aria-label="Close voice panel">×</button></div>
   <p class="voice-line" id="voiceHeard" hidden><b>You said</b><span></span></p>
   <p class="voice-line reply" id="voiceReply" hidden><b>Captrail</b><span></span></p>
-  <p class="voice-tip">Try “capture”, “best of eight”, “calibrate”, or ask a question. Hold Space to talk.</p>
+  <p class="voice-tip">Try “capture”, “best of eight”, “detect”, “calibrate”, or ask a question. Hold Space to talk.</p>
   <p class="voice-tip">Voice is processed by your browser; questions are sent as text.</p>
 </section>
 <div class="voice-note" id="voiceNote" role="status" hidden>Voice works in Chrome and Safari</div>
@@ -1306,11 +1306,20 @@
       dot(m.a, '#FFD166'); dot(m.b, '#FFD166');
       label(`#${i + 1} ${k ? (m.px * k).toFixed(1) + ' µm' : m.px.toFixed(0) + ' px'}`, (m.a[0] + m.b[0]) / 2, Math.min(m.a[1], m.b[1]));
     });
+    // AI box labels are drawn at about 11px on screen so they don't cover the loops.
+    const shown = overlay.getBoundingClientRect().width || sel.w, px = 11 * sel.w / shown;
+    const boxLabel = (t, x, y) => {
+      octx.font = `600 ${px}px Inter, sans-serif`;
+      const w = octx.measureText(t).width + px * .8, hgt = px * 1.45, top = Math.max(0, y - hgt);
+      octx.fillStyle = 'rgba(0,0,0,.7)'; octx.fillRect(x - w / 2, top, w, hgt);
+      octx.fillStyle = '#fff'; octx.textAlign = 'center'; octx.textBaseline = 'middle'; octx.fillText(t, x, top + hgt / 2);
+      octx.textBaseline = 'alphabetic';
+    };
     (sel.ai?.findings || []).forEach(f => {
       if (!Array.isArray(f.box)) return;
       const [x, y, w, h] = f.box;
       octx.strokeStyle = '#E0535F'; octx.strokeRect(x, y, w, h);
-      label(`${f.label}${f.confidence != null ? ' ' + Math.round(f.confidence * 100) + '%' : ''}`, x + w / 2, y);
+      boxLabel(`${f.label}${f.confidence != null ? ' ' + Math.round(f.confidence * 100) + '%' : ''}`, x + w / 2, y);
     });
     if (pts.length) {
       const c = mode === 'calibrate' ? '#7CE0A3' : '#FFD166';
@@ -1380,16 +1389,23 @@
   // timeouts, Cloudflare/edge errors or no network) instead of a technical error.
   const ML_OFFLINE = 'Our trained AI runs on our team’s research computer. See it in action in our demo video.';
   const mlOffline = status => !status || [502, 503, 504].includes(status) || status >= 520;
-  async function useTrainedModel() {
-    if (!sel || analyzing) return;
+  // Returns what happened ({ status: 'ok' | 'offline' | 'signin' | 'consent' | 'pseudonym' | 'noimage' | 'busy' | 'error', count })
+  // so the voice command can say it; the button just shows the status line. onStart runs once the upload begins.
+  async function useTrainedModel({ onStart } = {}) {
+    if (!sel) return { status: 'noimage' };
+    if (analyzing) return { status: 'busy' };
     const f = sel;
     mlStatus('', 'Checking model readiness…');
     const ready = await ml.ready();
-    if (!ready.ok) return mlOffline(ready.status) ? mlStatus('', ML_OFFLINE) : mlStatus('err', ready.error || 'Trained model is not ready.');
-    if (!$('mlConsent').checked) return mlStatus('warn', 'Confirm permission to upload and store this image first.');
+    if (!ready.ok) {
+      if (mlOffline(ready.status)) { mlStatus('', ML_OFFLINE); return { status: 'offline' }; }
+      mlStatus('err', ready.error || 'Trained model is not ready.'); return { status: 'error' };
+    }
+    if (!$('mlConsent').checked) { mlStatus('warn', 'Confirm permission to upload and store this image first.'); return { status: 'consent' }; }
     const pseudonym = $('mlParticipant').value.trim();
-    if (!/^[A-Za-z0-9_-]{3,60}$/.test(pseudonym)) return mlStatus('warn','Enter a pseudonym of 3–60 letters, digits, _ or -. No names.');
+    if (!/^[A-Za-z0-9_-]{3,60}$/.test(pseudonym)) { mlStatus('warn','Enter a pseudonym of 3–60 letters, digits, _ or -. No names.'); return { status: 'pseudonym' }; }
     analyzing = true; syncButtons();
+    onStart?.();
     try {
       mlStatus('', 'Uploading one image to your private research workspace…');
       const blob = await uploadBlob(f.canvas);
@@ -1406,19 +1422,23 @@
         renderFindings(); drawOverlay();
         mlStatus('ok','Trained research model: unreviewed vessel candidates. Not a diagnosis.');
       }
+      return { status: 'ok', count: (f.ai?.findings || []).length };
     } catch (error) {
       if (error.status === 401 || error.status === 403) {
         $('mlLoginPane').hidden = false;
         mlLoggedIn = false;
         mlStatus('warn','Sign in to the separate CapTrail research workspace, then retry.');
-      } else if (mlOffline(error.status)) mlStatus('', ML_OFFLINE);
-      else mlStatus('err',error.message || 'The trained model request failed.');
+        return { status: 'signin' };
+      }
+      if (mlOffline(error.status)) { mlStatus('', ML_OFFLINE); return { status: 'offline' }; }
+      mlStatus('err',error.message || 'The trained model request failed.');
+      return { status: 'error' };
     } finally {
       analyzing = false;
       syncButtons();
     }
   }
-  $('btnTrained').onclick = useTrainedModel;
+  $('btnTrained').onclick = () => useTrainedModel();
   $('mlSignIn').onclick = async () => {
     try {
       const ready = await ml.ready();
@@ -1480,6 +1500,8 @@
     ['capture', /^(capture|take a (picture|photo|pic|snapshot)|snap|take picture)( now)?$/],
     ['enhance', /^(enhance|enhancement|toggle enhance|enhance on|turn on (enhance|enhancement)|turn (enhance|enhancement) on)$/],
     ['calibrate', /^(calibrate|start calibration|open calibration|calibration)$/],
+    // 'detect' phrases run the trained model; plain 'analyze' stays the experimental visual review.
+    ['detect', /^(detect|detect (the )?(capillaries|loops)|run (the )?(trained )?model|find (the )?(loops|capillaries)|analy[sz]e with (the )?trained model)$/],
     ['analyze', /^(analy[sz]e|run analysis|analy[sz]e (this|the) (image|picture))$/],
   ];
   function matchCommand(text) {
@@ -1505,9 +1527,28 @@
         if (!sel) return say('Capture the calibration card first, then say calibrate.');
         $('btnCal').click(); $('calStatus').closest('.panel').scrollIntoView({ block: 'center', behavior: 'smooth' });
         return say('Calibration on. Click the outer edges of two long lines two millimeters apart, then enter 2000.');
+      case 'detect': return detectByVoice();
       case 'analyze':
         if ($('btnAnalyze').disabled) return say(analyzing ? 'Already analyzing.' : 'Capture or select an image first.');
         $('btnAnalyze').click(); return say('Analyzing.');
+    }
+  }
+  async function detectByVoice() {
+    if (!sel) return say('Capture or upload an image first.');
+    const showPanel = () => $('mlStatus').closest('.panel').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const r = await useTrainedModel({ onStart: () => say('Detecting capillaries.') });
+    switch (r.status) {
+      case 'ok':
+        stage.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return say(r.count ? `Found ${r.count} capillary candidate${r.count === 1 ? '' : 's'}. These are unreviewed and not a diagnosis.`
+                           : 'No capillary candidates found. This is unreviewed and not a diagnosis.');
+      case 'offline': return say('The trained model is offline right now.');
+      case 'signin': showPanel(); return say('Please sign in to the trained model first.');
+      case 'consent': showPanel(); return say('Please tick the permission box in the AI analysis panel first.');
+      case 'pseudonym': showPanel(); return say('Please enter a participant ID first. No real names.');
+      case 'noimage': return say('Capture or upload an image first.');
+      case 'busy': return say('Already analyzing.');
+      default: showPanel(); return say('The trained model couldn’t finish. Check the AI analysis panel.');
     }
   }
   // Only these facts go to the helper: no images, no audio.

@@ -1,5 +1,6 @@
 # Official Node security release. Serving image contains only its ELF closure and app.
 FROM node:24.22.1-bookworm-slim AS dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force

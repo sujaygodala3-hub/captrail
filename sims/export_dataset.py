@@ -966,6 +966,23 @@ def write_manifest(out, bs):
 
 
 # ------------------------------------------------------------------------------------------- check
+def schema_from_md(out):
+    """{csv path: [columns]} from a dataset's own SCHEMA.md (used to check releases made by an older exporter)."""
+    exp, cur = {}, None
+    for line in (Path(out) / "SCHEMA.md").read_text().splitlines():
+        m = re.match(r"^## `([^`]+\.csv)`", line)
+        if m:
+            cur = m.group(1)
+            exp[cur] = []
+            continue
+        if line.startswith("## "):
+            cur = None
+        m = re.match(r"^\| `([^`]+)` \|", line)
+        if cur and m:
+            exp[cur].append(m.group(1))
+    return exp
+
+
 def check(out):
     """Problems found (empty list = good): hashes, schema, splits, JSONL, privacy."""
     out = Path(out)
@@ -977,11 +994,14 @@ def check(out):
             p.append(f"missing {rel}")
         elif sha(f.read_bytes()) != info["sha256"]:
             p.append(f"hash mismatch {rel}")
-    for name, rel in TABLE_PATH.items():
+    expected = {rel: [c for c, *_ in S[name]] for name, rel in TABLE_PATH.items()}
+    if str(man.get("version", VERSION)).split(".")[0] != VERSION.split(".")[0]:
+        expected = schema_from_md(out)     # an older release: check it against the schema it shipped with
+    for rel, cols_ok in expected.items():
         f = out / rel
         if f.exists():
             cols = list(pd.read_csv(f, nrows=0).columns)
-            if cols != [c for c, *_ in S[name]]:
+            if cols != cols_ok:
                 p.append(f"schema mismatch {rel}")
     fr = pd.read_csv(out / TABLE_PATH["frames"])
     sp = fr.groupby("site_id").split.nunique()

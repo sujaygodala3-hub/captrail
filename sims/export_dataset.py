@@ -863,6 +863,20 @@ def write_schema_md(out):
     (out / "SCHEMA.md").write_text("\n".join(L))
 
 
+def density_note(F):
+    """Loop density from the median apex spacing of usable measured frames, checked against the healthy >= 7/mm."""
+    Fu = F[(F.usable == True) & (F.measured == True)]   # noqa: E712
+    gap = float(Fu.median_gap_px.median()) * SCALE["um"] if len(Fu) else float("nan")
+    if not np.isfinite(gap) or gap <= 0:
+        return "- **Loop density not available.**"
+    per_mm = 1000.0 / gap
+    if per_mm < 7:
+        return (f"- **Loop density is not reliable.** Detected apexes are a median {gap:.0f} um apart (about {per_mm:.1f} per mm) in "
+                "healthy volunteers, below the 7 per mm normal cut-off: the detector misses faint or out-of-focus loops. Do not train "
+                "on, or quote, density from this data.")
+    return f"- **Loop density.** Detected apexes are a median {gap:.0f} um apart (about {per_mm:.1f} per mm)."
+
+
 def write_card(out, bs, T, groups, dups, stab):
     F, Lp, Sp = T["frames"], T["loops"], T["splits"]
     ruler_um = ((bs.get("calibration") or {}).get("ruler") or {}).get("um_per_px", {}).get("mean")
@@ -913,6 +927,7 @@ def write_card(out, bs, T, groups, dups, stab):
            f"- **Scale is estimated.** `*_um` uses {UM_PER_PX_EST} um/px (bounds {UM_LOW} to {UM_HIGH}) from healthy anatomy (loop spacing and widths). "
            "Photograph the card at the exact nail zoom to replace the estimate."),
           f"- **Small and healthy.** {len(set(F.subject_id))} subjects, all healthy volunteers; no disease labels. Do not train a diagnostic classifier on this.",
+          density_note(F),
           ("- **Quick-mode sims.** Few replicates per scenario. `sims/metrics.csv` column `platform_unstable` lists metrics that changed between two "
            "platforms; see `qa/platform_stability.csv`." if stab else
            "- **Quick-mode sims.** Few replicates per scenario, all computed on one platform. A cross-platform check on dataset v1 found S1 apical "

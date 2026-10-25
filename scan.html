@@ -36,6 +36,7 @@
   .hud{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
   .hud span{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
   .hud .warn{background:#FFF1D6;color:#7a4b00;font-weight:600}
+  .hud .check{background:rgba(142,27,36,.9);color:#fff;font-weight:600}
   .hud .live{color:#fff}.hud .live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#E0535F;margin-right:7px;animation:blink 1.4s infinite}
   .hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font-size:13px;padding:8px 14px;border-radius:999px;background:var(--red);color:#fff;white-space:nowrap;pointer-events:none}
 
@@ -502,15 +503,18 @@
   function renderHud() {
     const h = $('hud'); const bits = [];
     if (!sel && stream) bits.push('<span class="live">Live</span>');
-    if (sel) bits.push(`<span>${sel.label || (sel.source === 'scope' ? 'Captured' : 'Uploaded')} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
+    if (sel) bits.push(`<span>${sel.label || (sel.source === 'scope' ? 'Captured' : 'Uploaded')} · ${sel.w}×${sel.h}</span>`,
+      sel.check ? `<span class="check">${sel.check}</span>` : `<span>Sharpness ${sel.score}</span>`);
     if (look !== 'off' && sel) bits.push(`<span>${LOOKS[look].label} view</span>`);
     if (sel?.note) bits.push(`<span class="warn">${sel.note}</span>`);
     h.innerHTML = bits.join('');
   }
   function syncButtons() {
     const live = !!stream && !sel;
-    $('btnCapture').disabled = $('btnBurst').disabled = $('btnStack').disabled = !live || stacking;
-    $('btnBurst').title = 'Take 8 frames, merge them, and auto enhance';
+    $('btnCapture').disabled = $('btnStack').disabled = !live || stacking;
+    const checkable = !stream && uploadedOriginals().length > 0;
+    $('btnBurst').disabled = !(live || checkable) || stacking;
+    $('btnBurst').title = checkable ? 'Check the sharpness of the uploaded images' : 'Take 8 frames, merge them, and auto enhance';
     $('btnLive').disabled = !stream || !sel;
     ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
     $('btnRaw').disabled = !sel?.pair || !frames.includes(sel.pair);
@@ -536,8 +540,33 @@
   // Best of 8: grab 8 frames, align all of them to the sharpest and merge with a per-pixel median,
   // then run Auto enhance and show the result as the main capture.
   const ZOOM_MIN_SHARPNESS = 300;
+  // Uploaded originals only (auto-enhanced copies are sharpened, so they would win unfairly).
+  const uploadedOriginals = () => frames.filter(f => f.source === 'upload' && !f.calibScale);
+  // No microscope: score the real uploaded images. Nothing is generated and no "8 frames" are claimed.
+  async function sharpnessCheck() {
+    const list = uploadedOriginals();
+    if (!list.length || stacking) return;
+    stacking = true; syncButtons();
+    try {
+      for (const f of frames) { delete f.check; delete f.checkBest; }
+      for (let i = 0; i < list.length; i++) {
+        showHint(`Scoring sharpness… ${i + 1}/${list.length}`);
+        list[i].score = sharpness(list[i].canvas);
+        await new Promise(r => setTimeout(r, 140));
+      }
+      const best = list.reduce((a, b) => (b.score > a.score ? b : a));
+      const label = `Sharpness check (${list.length} image${list.length === 1 ? '' : 's'})`;
+      for (const f of list) f.check = `${label}: ${f.score}${list.length > 1 && f === best ? ' · sharpest' : ''}`;
+      if (list.length > 1) best.checkBest = true;
+      showHint('');
+      showFrame(best);
+    } finally {
+      showHint(''); stacking = false; syncButtons();
+    }
+  }
   $('btnBurst').onclick = async () => {
-    if (!stream || sel || stacking) return;
+    if (!stream) return sharpnessCheck();
+    if (sel || stacking) return;
     stacking = true; syncButtons();
     try {
       const shots = [];
@@ -1203,9 +1232,10 @@
   function renderGallery() {
     const g = $('gallery');
     if (!frames.length && !stream) { g.innerHTML = '<div class="gallery-empty">Captured and uploaded images appear here, scored for sharpness.</div>'; return; }
-    const best = frames.reduce((m, f) => Math.max(m, f.score), -1);
+    const best = frames.reduce((m, f) => Math.max(m, f.score), -1), checked = frames.some(f => f.checkBest);
+    const isBest = f => checked ? !!f.checkBest : frames.length > 1 && f.score === best;
     g.innerHTML = (stream ? `<button class="thumb live-thumb${sel ? '' : ' sel'}" data-live>● Live</button>` : '') +
-      frames.map(f => `<button class="thumb${sel === f ? ' sel' : ''}" data-id="${f.id}" title="${f.name || 'Capture'}"><img src="${f.thumb}" alt=""><span class="sc">${f.score}</span>${frames.length > 1 && f.score === best ? '<span class="best">SHARPEST</span>' : ''}</button>`).join('');
+      frames.map(f => `<button class="thumb${sel === f ? ' sel' : ''}" data-id="${f.id}" title="${f.name || 'Capture'}"><img src="${f.thumb}" alt=""><span class="sc">${f.score}</span>${isBest(f) ? '<span class="best">SHARPEST</span>' : ''}</button>`).join('');
     g.querySelectorAll('.thumb').forEach(b => b.onclick = () => b.dataset.live !== undefined ? goLive() : showFrame(frames.find(f => f.id === b.dataset.id)));
   }
   $('btnDelete').onclick = () => {
@@ -1517,7 +1547,7 @@
     switch (c) {
       case 'stop': if (canTalk) speechSynthesis.cancel(); vLine('voiceReply', 'Okay.'); return;
       case 'capture': if ($('btnCapture').disabled) return say(needLive()); $('btnCapture').click(); return say('Captured.');
-      case 'best8': if ($('btnBurst').disabled) return say(stacking ? 'Already capturing.' : needLive()); $('btnBurst').click(); return say('Best of eight. Hold still.');
+      case 'best8': if ($('btnBurst').disabled) return say(stacking ? 'Already capturing.' : needLive()); $('btnBurst').click(); return say(stream ? 'Best of eight. Hold still.' : 'Checking sharpness.');
       case 'enhance':
         if (!sel) return say('Capture or select an image first.');
         if (look === 'off') { $('btnEnhance').click(); return say(`Enhance on. ${LOOKS[look].label} view.`); }

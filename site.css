@@ -581,3 +581,8 @@ footer .foot-bot a:hover{color:#fff}
 @media (max-width:560px){
   .ai-stats{padding:18px 20px;width:100%;justify-content:space-between}
 }
+
+/* team monograms: brand cards instead of photo placeholders */
+.person .pic{background:linear-gradient(160deg,#B5171F,#6E0D14)}
+.person .pic::before{content:"";position:absolute;right:-18%;bottom:-14%;width:78%;aspect-ratio:274/271;background:url("images/brand/captrail-mark-white.svg") center/contain no-repeat;opacity:.12}
+.person .pic .ini{position:relative;color:#fff;opacity:.95}

@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Captrail | Nailfold screening at the fingertip</title>
+<meta name="description" content="Captrail is a $32 open-source nailfold microscope. It images the tiny blood vessels at the base of the fingernail, measures them in micrometers, and flags unusual loops for a doctor to review.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#B5171F">
+<link rel="canonical" href="https://captrail-app.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Captrail">
+<meta property="og:title" content="Captrail | Nailfold screening at the fingertip">
+<meta property="og:description" content="A $32 open-source nailfold microscope. Measured in micrometers. Reviewed by a doctor.">
+<meta property="og:url" content="https://captrail-app.vercel.app/">
+<meta property="og:image" content="https://captrail-app.vercel.app/images/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,6 +36,24 @@
 <main id="top">
 
   <!-- HERO -->
+  <section class="hero2">
+    <div class="hero2-bg" aria-hidden="true"></div>
+    <div class="hero2-grid">
+      <div class="hero2-copy">
+        <a class="hero-chip rise" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener"><i></i>Open source · built by four high school students</a>
+        <h1 class="rise" style="--d:.08s">See disease<br><span class="grad">where it&nbsp;starts.</span></h1>
+        <p class="rise" style="--d:.16s">Captrail is a $32 nailfold microscope. It images the tiny blood vessels at the base of your fingernail, measures them in real micrometers, and flags unusual loops for a doctor to review.</p>
+        <div class="hero2-ctas rise" style="--d:.24s">
+          <a class="btn btn-red" href="scan.html">Open the microscope <span aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="#how">How it works</a>
+          <a class="btn btn-gh" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#gh"/></svg>GitHub</a>
+        </div>
+        <dl class="hero2-stats rise" style="--d:.32s">
+          <div><dt>Build cost</dt><dd>$32</dd></div>
+          <div><dt>Microns per pixel</dt><dd>3.745</dd></div>
+          <div><dt>Printed parts</dt><dd>2</dd></div>
+          <div><dt>Open source</dt><dd>100%</dd></div>
+        </dl>
       </div>
 
       <figure class="hv-wrap rise" style="--d:.2s" aria-label="Illustration of the Captrail microscope view">
@@ -76,8 +109,8 @@
 
   <div class="ticker" aria-hidden="true">
     <div class="ticker-track">
-      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>Research morphology</span><span>Clinician in the loop</span><span>Research validation ongoing</span>
-      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>Research morphology</span><span>Clinician in the loop</span><span>Research validation ongoing</span>
+      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>AI pattern flagging</span><span>Clinician in the loop</span><span>Built for referral, not diagnosis</span>
+      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>AI pattern flagging</span><span>Clinician in the loop</span><span>Built for referral, not diagnosis</span>
     </div>
   </div>
 
@@ -133,7 +166,7 @@
         <div class="who">Our purpose</div><div class="role">The Captrail team</div>
       </figure>
       <figure class="quote">
-        <blockquote>“CapTrail brings microscope images and research evidence into <em>one place for closer review.</em>”</blockquote>
+        <blockquote>“Captrail doesn’t diagnose. It gives a doctor <em>a clearer, earlier reason</em> to look closer.”</blockquote>
         <div class="who">How we think about AI</div><div class="role">The Captrail team</div>
       </figure>
       <figure class="quote">
@@ -179,12 +212,12 @@
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.9.7 3.2 2.4 3.5 5.2"/></svg>Clinician review</span>
         </button>
         <button class="layer" style="z-index:5;--f:#F8ECEC;--s:#CDBDBD;--t:#F8ECEC;--c:#17110F"
-          data-title="AI pattern detection" data-tag="1" data-text="The source-trained detector proposes bushy, crossing, hairpin, and tortuous regions. Scores are uncalibrated; geometry requires human review. No disease prediction or independent microscope accuracy is established.">
+          data-title="AI pattern detection" data-tag="1" data-text="Our trained model outlines each capillary loop and labels its shape: hairpin, crossing, tortuous or bushy. Version 5 cut false vessel area on 12 test controls from 12.75% to 2.62%. Every label is a suggestion for a person to check, and no expert accuracy is established yet.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>AI pattern detection</span>
         </button>
         <button class="layer" style="z-index:4;--f:#EFD3D5;--s:#C3A2A5;--t:#EFD3D5;--c:#17110F"
-          data-title="Calibrated measurement" data-text="The coordinate cross on the calibration card that came with the microscope (physical divisions must be confirmed from the reference specification) can support conditional pixel-to-micrometer conversion only after a qualified reviewer verifies the physical standard and matching acquisition settings. Vessel dimensions also require validated geometry; a detector box is not a vessel diameter.">
+          data-title="Calibrated measurement" data-text="The coordinate cross on the calibration card that came with the microscope (0.1 mm per small tick, 1 mm per long line) converts pixels into micrometers, so each scan reports real numbers, like loop width in µm and capillaries per millimeter, instead of just a picture.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2M15.5 4.5 17 6"/></svg>Calibrated measurement</span>
         </button>
@@ -235,7 +268,7 @@
           <ol>
             <li><b>01</b><div>Capture <span>· sharpest frames over USB</span></div></li>
             <li><b>02</b><div>Calibrate <span>· pixels to micrometers</span></div></li>
-            <li><b>03</b><div>Detect <span>· AI marks abnormal patterns</span></div></li>
+            <li><b>03</b><div>Detect <span>· AI outlines and labels loops</span></div></li>
           </ol>
           <div class="foot">Every measurement traces back to the calibration card.</div>
         </div>
@@ -243,8 +276,8 @@
         <div class="col out" id="outCol">
           <div class="col-label out-label">Output</div>
           <div class="node" id="o-width"><i class="pin"></i><div><b>Measure</b><span>Loop width in µm</span></div></div>
-          <div class="node" id="o-density"><i class="pin"></i><div><b>Measure</b><span>Capillaries per mm</span></div></div>
-          <div class="node" id="o-flags"><i class="pin"></i><div><b>Flags</b><span>Giant loops, bleeds, dropout</span></div></div>
+          <div class="node" id="o-density"><i class="pin"></i><div><b>Label</b><span>Hairpin, crossing, tortuous, bushy</span></div></div>
+          <div class="node" id="o-flags"><i class="pin"></i><div><b>Explain</b><span>Optional plain-language AI review</span></div></div>
           <div class="node" id="o-doc"><i class="pin"></i><div><b>Then</b><span>Sent to a clinician for review</span></div></div>
         </div>
       </div>
@@ -339,7 +372,7 @@
           <table class="parts">
             <tr><td class="n">01</td><td class="what"><b>Jiusion 40X–1000X USB digital microscope + included stand</b><span>640 × 480 images, advertised 40–1000× magnification, built-in adjustable LED</span></td><td class="price">$25</td></tr>
             <tr><td class="n">02</td><td class="what"><b>Captrail base board and finger cradle (3D printed, about 82 g PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place and a dip that holds the microscope stand</span></td><td class="price">$2</td></tr>
-            <tr><td class="n">03</td><td class="what"><b>Calibration slide (came with the microscope)</b><span>Its coordinate cross: physical divisions must be confirmed from the reference specification</span></td><td class="price">Included</td></tr>
+            <tr><td class="n">03</td><td class="what"><b>Calibration slide (came with the microscope)</b><span>Its coordinate cross: 0.1 mm per small tick, 1 mm per long line</span></td><td class="price">Included</td></tr>
             <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$3</td></tr>
             <tr><td class="n">05</td><td class="what"><b>Cotton swabs</b><span>Applying and removing the drop of oil</span></td><td class="price">$2</td></tr>
           </table>
@@ -357,7 +390,7 @@
     </div>
   </section>
 
-  <!-- RESULTS: scroll-driven journey. Fill in the JOURNEY data in the script at the bottom. -->
+  <!-- RESULTS: scroll-driven journey (data in JOURNEY at the bottom) -->
   <section class="journey" id="results">
     <div class="journey-sticky">
       <div class="j-left">
@@ -374,7 +407,7 @@
   <section class="safety" data-header="dark">
     <div class="wrap">
       <p class="eyebrow">Safety and limits</p>
-      <blockquote class="rv">Captrail is a research prototype for image analysis, not a diagnostic tool. It does not replace a doctor.</blockquote>
+      <blockquote class="rv">Captrail is a research prototype for screening and referral, not a diagnostic tool. It does not replace a doctor.</blockquote>
       <div class="safety-grid">
         <div class="rv"><b>Consent first</b><p>We get consent before imaging anyone, every time.</p></div>
         <div class="rv"><b>How images are handled</b><p>Images stay on the device unless you choose to run AI analysis. We don’t store names with images, and we only image people who give consent.</p></div>
@@ -393,8 +426,6 @@
         </div>
         <p class="rv">Four students from four Georgia high schools, building a cheaper, faster way to spot disease in the smallest blood vessels.</p>
       </div>
-      <!-- PHOTOS: add <img src="images/name.jpg" alt="Full name"> inside each .pic to replace the initials,
-           and a <p class="why">one line</p> after the role -->
       <div class="people">
         <article class="person rv"><div class="pic"><span class="ini">SG</span></div><h3>Sujay Godala</h3><div class="r">Co-founder · Denmark High School</div></article>
         <article class="person rv"><div class="pic"><span class="ini">SR</span></div><h3>Smyan Reddy</h3><div class="r">Co-founder · Lambert High School</div></article>
@@ -556,6 +587,15 @@
      live: true adds a link to the Microscope page. */
   const JOURNEY = [
     { title: 'Prototype built', status: 'done', live: true,
+      text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated at nail zoom with the coordinate cross on its calibration card.',
+      stats: [['Build cost', '$32'], ['Calibration', '3.745 µm/px'], ['Assembly, mostly printing', 'about 3.5 h']] },
+    { title: 'First images', status: 'done', live: true,
+      text: 'Real nailfold capillaries captured on our own setup, with the scale recalibrated at the exact zoom we use on the nail.',
+      stats: [['Resolution', '640 × 480'], ['Scale', '3.745 µm/px'], ['Field of view', 'about 2.4 × 1.8 mm']] },
+    { title: 'Train the AI', status: 'now', live: true,
+      text: 'Our trained model outlines capillaries and labels their shape as suggestions for a person to review. Version 5 cut false vessel area on 12 test controls by about five times. Next: measure agreement with trained human raters.',
+      stats: [['False vessel area, V4', '12.75%'], ['False vessel area, V5', '2.62%'], ['Expert accuracy', '']] },
+    { title: 'Test with more people', status: 'next', goals: true,
       text: 'Scan volunteers who give consent, using the same setup every time.',
       stats: [['Goal', '10 volunteers'], ['Goal', '3 images per finger'], ['Goal', 'Same settings for every scan']] },
     { title: 'Work with a clinician', status: 'planned', goals: true,

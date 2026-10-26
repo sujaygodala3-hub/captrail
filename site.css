@@ -550,3 +550,34 @@ footer .foot-bot a:hover{color:#fff}
 @media (max-width:560px){
   .impact-grid{grid-template-columns:1fr}
 }
+
+/* ================= v3.1: software walkthrough, AI results ================= */
+.walk{padding:clamp(100px,12vw,160px) 0;background:var(--bg);border-top:1px solid var(--line)}
+.walk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(16px,2vw,26px)}
+.clip-screen{aspect-ratio:800/480;background:#fff;border-radius:16px}
+.walk-cta{margin-top:40px}
+
+.ai{background:var(--dark);color:#fff;padding:clamp(100px,12vw,160px) 0;position:relative;overflow:hidden}
+.ai::before{content:"";position:absolute;left:-200px;top:-220px;width:760px;height:760px;background:radial-gradient(closest-side,rgba(181,23,31,.32),transparent);pointer-events:none}
+.ai-grid{position:relative;display:grid;grid-template-columns:.95fr 1.05fr;gap:clamp(40px,6vw,90px);align-items:center}
+.ai .eyebrow{color:#FF7A84}
+.ai h2{font-size:clamp(38px,4.8vw,68px)}
+.ai-copy > p:not(.eyebrow){color:rgba(255,255,255,.72);font-size:clamp(16.5px,1.4vw,19px);max-width:540px;margin:24px 0 0}
+.ai-stats{display:flex;align-items:center;gap:clamp(16px,2.4vw,32px);margin-top:40px;padding:24px 28px;border:1px solid rgba(255,255,255,.14);border-radius:20px;background:rgba(255,255,255,.04);width:fit-content}
+.ai-stats small{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:rgba(255,255,255,.55)}
+.ai-stats b{display:block;font:500 clamp(40px,4.6vw,64px)/1 var(--display);letter-spacing:-.03em;margin-top:8px;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.55);text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:rgba(255,122,132,.7)}
+.ai-stats .good b{color:#7EE0A1;text-decoration:none}
+.ai-stats i{font-style:normal;font-size:28px;color:rgba(255,255,255,.4)}
+.ai .ai-def{font-size:14.5px!important;margin-top:14px!important;color:rgba(255,255,255,.6)!important}
+.ai .ai-note{font-size:14.5px!important;color:rgba(255,255,255,.5)!important;border-left:2px solid #FF7A84;padding-left:14px;margin-top:22px!important}
+.ai-fig{margin:0}
+.ai-fig img{width:100%;height:auto;border-radius:18px;border:1px solid rgba(255,255,255,.12);box-shadow:0 50px 100px -50px rgba(0,0,0,.9)}
+.ai-fig figcaption{margin-top:16px;font-size:14px;color:rgba(255,255,255,.6);line-height:1.5}
+
+@media (max-width:980px){
+  .walk-grid{grid-template-columns:1fr}
+  .ai-grid{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .ai-stats{padding:18px 20px;width:100%;justify-content:space-between}
+}

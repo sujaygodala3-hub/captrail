@@ -26,6 +26,19 @@
 | --- | --- |
 | <img src="docs/screenshots/in-action.jpg" alt="Clips of the Captrail rig and the Microscope page" width="440"> | <img src="docs/screenshots/microscope.jpg" alt="The Captrail Microscope page" width="440"> |
 
+## The AI, measured honestly
+
+Our trained model outlines capillaries and labels their shape. Version 5 adds negative regularization, which penalizes it for marking vessels where there are none.
+
+| False vessel area on 12 test control images (lower is better) | |
+| --- | --- |
+| Previous V4 model | 12.75% |
+| **New V5 model** | **2.62%** |
+
+<p align="center"><img src="images/media/model-v4-v5.jpg" alt="Original image, previous weak-label model, V5 matched control and V5 negative-regularized model" width="640"></p>
+
+These are the team's own tests. No expert accuracy has been established yet, and every label is a suggestion for a person to review.
+
 ## At a glance
 
 | | |
@@ -41,7 +54,7 @@
 
 | Path | What it is |
 | --- | --- |
-| `index.html` | Landing page: real clips, why it matters, how it works, build, results, team, open source |
+| `index.html` | Landing page: real clips, why it matters, how it works, Microscope page walkthrough, AI results, build, results, team, open source |
 | `build.html` | Parts list and step-by-step assembly guide |
 | `scan.html` | Microscope app: live view, Best of 8, µm calibration, click-to-measure, AI analysis, voice commands |
 | `site.css` / `site.js` | Shared styles, header and footer (add header pages in the `PAGES` list in `site.js`) |
@@ -50,7 +63,7 @@
 | `sims/` | Microscope physics simulations, calibration code and tests |
 | `tests/` | Automated tests for the model bridge |
 | `images/brand/` | Logo, mark, favicon source and social preview image |
-| `images/media/` | Clips of the real setup used on the landing page |
+| `images/media/` | Clips of the real setup and screen recordings used on the landing page |
 | `404.html` | Branded not-found page |
 
 ## Calibration

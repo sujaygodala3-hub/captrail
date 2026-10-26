@@ -6,8 +6,6 @@
     let response;
     try { response=await fetch(bridge+'?op='+encodeURIComponent(op),{
       method,body,credentials:'same-origin',
-      // x-captrail-request marks a same-origin mutation; the bridge and backend require it on POST.
-      headers:{...(method==='GET' ? {} : {'x-captrail-request':'1'}),...(body instanceof FormData || !body ? {} : {'content-type':'application/json'})},
       cache:'no-store'
     }); }
     catch { const error=new Error('Cannot reach the trained-model gateway. Check backend hosting.'); error.status=503; throw error; }

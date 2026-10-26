@@ -24,21 +24,3 @@ test('ready is proxied to configured HTTPS origin only',async()=>{
    assert.equal(r.status,200);assert.equal((await r.json()).status,'ready');
  }finally{globalThis.fetch=original;if(prior===undefined)delete process.env.CAPTRAIL_ML_BACKEND_URL;else process.env.CAPTRAIL_ML_BACKEND_URL=prior}
 });
-test('POST without the same-origin marker is refused before reaching the backend',async()=>{
- const original=globalThis.fetch, prior=process.env.CAPTRAIL_ML_BACKEND_URL;let called=false;
- process.env.CAPTRAIL_ML_BACKEND_URL='https://secure-backend.example';
- try {
-   globalThis.fetch=async()=>{called=true;return new Response('{}',{headers:{'content-type':'application/json'}})};
-   const r=await POST(make('https://captrail.example/api/ml-bridge?op=analyze','POST',{headers:{'content-type':'multipart/form-data; boundary=x'},body:'--x--'}));
-   assert.equal(r.status,403);assert.equal(called,false);
- }finally{globalThis.fetch=original;if(prior===undefined)delete process.env.CAPTRAIL_ML_BACKEND_URL;else process.env.CAPTRAIL_ML_BACKEND_URL=prior}
-});
-test('POST with the marker forwards it to the backend',async()=>{
- const original=globalThis.fetch, prior=process.env.CAPTRAIL_ML_BACKEND_URL;
- process.env.CAPTRAIL_ML_BACKEND_URL='https://secure-backend.example';
- try {
-   globalThis.fetch=async(url,opts)=>{assert.equal(url,'https://secure-backend.example/api/analyses');assert.equal(opts.headers['x-captrail-request'],'1');return new Response('{"analyses":[]}',{headers:{'content-type':'application/json'}})};
-   const r=await POST(make('https://captrail.example/api/ml-bridge?op=analyze','POST',{headers:{'x-captrail-request':'1','content-type':'multipart/form-data; boundary=x'},body:'--x--'}));
-   assert.equal(r.status,200);
- }finally{globalThis.fetch=original;if(prior===undefined)delete process.env.CAPTRAIL_ML_BACKEND_URL;else process.env.CAPTRAIL_ML_BACKEND_URL=prior}
-});

@@ -5,6 +5,9 @@
     },
     "api/voice.js": {
       "maxDuration": 30
+    },
+    "api/ml-bridge.js": {
+      "maxDuration": 120
     }
   }
 }

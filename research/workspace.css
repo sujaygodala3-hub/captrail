@@ -22,3 +22,160 @@ body .research-workspace{padding-top:112px}@media(max-width:500px){body .researc
 @media(max-width:800px){.calibration-grid{grid-template-columns:1fr}.calibration-dialog,.comparison-dialog{padding:18px;width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:15px}.calibration-stage{height:340px}.calibration-form{padding:18px}.comparison-images img{height:300px}.workspace-actions{justify-content:flex-start}.opacity-grid{grid-template-columns:1fr 1fr}.calibration-heading .overline{letter-spacing:1px}}@media(max-width:500px){.comparison-images:not(.split){grid-template-columns:1fr}.comparison-images img{height:260px}.cal-statistics{gap:10px;padding:14px}.cal-statistics strong{font-size:13px}.calibration-stage{height:300px}}
 
 .processing-stages{list-style:none;padding:0;text-align:left;font-size:10px;line-height:1.9;color:#BECBD1;margin:12px 0;max-width:280px}.processing-stages li{padding:5px 0;border-top:1px solid #34424A}.model-working{padding:20px;box-sizing:border-box}#calibrationDialog .session-item{white-space:normal}#calibrationDialog .session-item span{white-space:normal;max-width:none}#calibrationDialog .session-item small{white-space:normal}
+
+/* =====================================================================
+   Captrail design layer (CSS only): brand palette, readable type scale,
+   optical-stage art. No markup or behavior changes.
+   ===================================================================== */
+:root{--oxblood:#B5171F;--coral:#E0535F;--optical:#0B1013}
+body .wrap{padding:0 clamp(16px,3.4vw,48px)}
+
+/* heading */
+.research-workspace{position:relative;padding-top:64px}
+.overline{font-size:11.5px;letter-spacing:.18em}
+.berry-dot{width:7px;height:7px;box-shadow:0 0 0 4px rgba(181,23,31,.14)}
+.version-tag{font-size:11px;padding:3px 7px;border-radius:6px;background:#fff}
+.work-heading h1{font-size:clamp(40px,4.8vw,74px);letter-spacing:-.022em;font-weight:500;line-height:1.02;margin:22px 0 18px}
+.work-heading p{font-size:clamp(15px,1.25vw,17.5px);max-width:520px;line-height:1.6}
+.r-btn{font-size:14px;border-radius:999px;min-height:46px;padding:11px 20px;border-color:#D8CBCB;background:rgba(255,255,255,.6)}
+.r-btn.primary{box-shadow:0 10px 24px -12px rgba(181,23,31,.65)}
+.r-btn.primary:hover:not(:disabled){background:#8A1119}
+.r-btn.light{background:#fff;border-color:#fff;color:var(--ink)}
+.text-button{font-size:13px}
+.work-nav{gap:34px;margin:30px 0 28px}
+.work-nav a{font-size:14.5px;color:#6E6461}
+.work-nav a:hover{color:var(--ink)}
+.work-nav a span{font-size:11.5px;padding:2px 7px}
+.research-badge{font-size:10.5px;letter-spacing:.14em;padding:6px 10px;border-radius:999px;background:#fff}
+.research-grid{grid-template-columns:minmax(0,1fr) 360px;gap:28px}
+
+/* optical stage: the microscope view */
+.optical-stage{height:clamp(460px,58vh,640px);border-radius:26px;border:1px solid #1A242A;
+  background:
+    radial-gradient(900px 520px at 50% 115%,rgba(181,23,31,.30),transparent 62%),
+    radial-gradient(700px 420px at 50% -20%,rgba(120,170,175,.10),transparent 60%),
+    linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/48px 48px,
+    var(--optical);
+  box-shadow:0 50px 90px -50px rgba(20,6,8,.75),inset 0 1px 0 rgba(255,255,255,.06)}
+.optical-stage::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(ellipse 75% 70% at 50% 50%,transparent 55%,rgba(0,0,0,.45))}
+.stage-top,.stage-bottom{left:26px;right:26px}
+.stage-top{top:22px;font-size:10.5px;letter-spacing:.16em;color:#A9B6BB}
+.stage-bottom{bottom:20px;font-size:10.5px;letter-spacing:.16em;color:#A9B6BB}
+.stage-dot{width:7px;height:7px;background:#FF6B76;box-shadow:0 0 0 4px rgba(255,107,118,.18);animation:blink 1.6s infinite}
+.zoom-controls{border-radius:999px;background:rgba(19,28,33,.85);backdrop-filter:blur(8px)}
+.optics-mark{width:120px;height:120px;margin-bottom:26px}
+.optics-mark:before{inset:-30px;border-color:rgba(255,255,255,.07);
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.22) 0 .5deg,transparent .5deg 10deg);
+  -webkit-mask:radial-gradient(circle closest-side,transparent 92%,#000 93%,#000 99%,transparent 100%);
+  mask:radial-gradient(circle closest-side,transparent 92%,#000 93%,#000 99%,transparent 100%);
+  animation:spin 60s linear infinite}
+.optics-mark svg{stroke:#8FA6AE;stroke-width:.8}
+.drop-zone .overline{font-size:10.5px;letter-spacing:.24em;color:#93A4AC}
+.drop-zone h2{font-size:clamp(26px,2.4vw,34px);font-weight:500;letter-spacing:-.02em}
+.drop-zone p{font-size:15px;line-height:1.7;color:#BCC8CD}
+.drop-zone .r-btn{min-width:180px}
+.upload-spec{font-size:12px;color:#8C9BA2}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{50%{opacity:.3}}
+
+/* tools under the stage */
+.viewer-tools{padding:16px 4px 14px}
+.layer-tools label{font-size:13px;color:#5C5054}
+.layer-tools input{width:15px;height:15px}
+.queue-item{border-radius:12px;padding:6px}
+.queue-item small{font-size:10.5px}
+.display-options summary{font-size:13.5px;cursor:pointer}
+.evidence-note{padding:18px 2px 24px}
+.evidence-note p{font-size:13px;line-height:1.65}
+.note-symbol{width:18px;height:18px;font-size:12px;line-height:16px}
+
+/* cards */
+.result-card,.saved-sessions{border-radius:22px;padding:28px;background:#fff;box-shadow:0 20px 50px -40px rgba(42,6,9,.35)}
+.section-label{font-size:11px;letter-spacing:.16em;color:#7A6669}
+.section-label>span:last-child{font-size:10px;letter-spacing:.12em}
+.morphology-heading h2,.saved-sessions h2{font-size:clamp(24px,2vw,30px);letter-spacing:-.02em;font-weight:500}
+.morphology-heading p{font-size:14px}
+.morph-empty{font-size:14px}
+.morph-item{font-size:13px}
+.morph-item strong{font-size:24px}
+.morph-track{height:6px}
+
+/* inspector */
+.research-inspector{border-radius:22px;background:#fff;box-shadow:0 30px 60px -45px rgba(42,6,9,.45)}
+.inspector-section{padding:26px}
+.inspector-section h2{font-size:24px;letter-spacing:-.02em;font-weight:500}
+.r-muted{font-size:14px}
+.r-label{font-size:12.5px;font-weight:600;color:#4F4145}
+.r-input{font-size:14.5px;min-height:46px;border-radius:12px;padding:10px 14px;background:#fff}
+.r-input:focus{border-color:var(--oxblood);outline:none;box-shadow:0 0 0 4px rgba(181,23,31,.12)}
+.consent-row{font-size:13px}
+.consent-row input{width:16px;height:16px}
+.consent-note{font-size:12px}
+.analyze-button{min-height:52px;font-size:15px;border-radius:14px}
+.model-status{font-size:12.5px}
+.status-led{width:8px;height:8px;box-shadow:0 0 0 3px rgba(165,104,36,.18)}
+.model-status.ready .status-led{box-shadow:0 0 0 3px rgba(36,124,101,.18)}
+.candidate-facts{font-size:13px}
+.trace-section .r-muted{font-size:12.5px}
+.outline-tag{font-size:10.5px;border-radius:999px;padding:3px 8px}
+.export-actions .r-btn{font-size:12.5px;min-height:40px}
+.r-message{font-size:14px;border-radius:14px}
+
+/* sessions */
+.session-item{border-radius:14px;padding:14px 16px}
+.session-item small{font-size:11.5px}
+.history-list{font-size:13px}
+
+/* capture studio: a clear, inviting row */
+.capture-studio{border-radius:22px;background:#fff;box-shadow:0 20px 50px -40px rgba(42,6,9,.35)}
+.capture-studio>summary{padding:24px 28px;font-size:clamp(20px,1.7vw,24px);letter-spacing:-.015em;position:relative}
+.capture-studio>summary small{font-size:12.5px;margin-right:44px}
+.capture-studio>summary::after{content:"+";position:absolute;right:26px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;
+  display:grid;place-items:center;background:var(--oxblood);color:#fff;font-size:20px;line-height:1;transition:transform .25s}
+.capture-studio[open]>summary::after{content:"–"}
+.capture-studio>summary:hover{background:#FCF7F5;border-radius:22px}
+.capture-transfer{font-size:13px}
+.capture-studio .privacy{font-size:12.5px}
+
+/* dialogs and footer */
+.research-dialog{border-radius:24px}
+.research-dialog p{font-size:14px}
+.research-dialog .consent-note{font-size:12px}
+.research-footer{font-size:12.5px}
+
+@media (max-width:980px){
+  .research-grid{grid-template-columns:minmax(0,1fr)}
+  .work-heading{flex-direction:column;align-items:flex-start}
+  .workspace-actions{align-self:stretch;flex-wrap:wrap;padding-bottom:0}
+  .work-nav{gap:22px;overflow-x:auto}
+}
+@media (max-width:500px){
+  body .research-workspace{padding-top:94px}
+  .overline{font-size:10.5px;letter-spacing:.14em}
+  .work-heading h1{font-size:38px;margin:16px 0 12px}
+  .work-heading p{font-size:15px}
+  .workspace-actions .r-btn{font-size:13px;padding:9px 10px;min-height:44px}
+  .work-nav a{font-size:13.5px;padding:14px 0;white-space:nowrap}
+  .optical-stage{height:460px;border-radius:20px}
+  .stage-top{left:16px;right:16px;font-size:9.5px;letter-spacing:.12em}
+  .stage-top>span:last-child{display:none}
+  .stage-bottom{left:16px;right:16px;font-size:9px;letter-spacing:.1em}
+  .drop-zone{padding:56px 18px 84px}
+  .optics-mark{width:72px;height:72px;margin-bottom:16px}
+  .optics-mark:before{inset:-18px}
+  .drop-zone .overline{font-size:9.5px;letter-spacing:.18em}
+  .drop-zone h2{font-size:24px;margin:14px 0 10px}
+  .drop-zone p{font-size:13.5px;line-height:1.6}
+  .upload-spec{font-size:10.5px}
+  .viewer-tools{padding:6px 2px 4px}
+  .layer-tools label{font-size:12.5px}
+  .viewer-tools .text-button{font-size:12px}
+  .evidence-note p{font-size:12.5px}
+  .morphology-heading h2{font-size:22px}
+  .morph-item{font-size:11.5px}.morph-item strong{font-size:20px}
+  .capture-studio>summary{padding:20px;flex-direction:column;align-items:flex-start;gap:6px}
+  .capture-studio>summary small{margin-right:40px}
+}
+@media (prefers-reduced-motion:reduce){.optics-mark:before,.stage-dot{animation:none}}

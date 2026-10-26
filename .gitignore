@@ -2,17 +2,3 @@
 .env*
 .DS_Store
 node_modules
-
-.env
-.env.*
-node_modules/
-test-results/
-playwright-report/
-.openai/
-
-.preview-status.json
-
-.preview-python-status.json
-.preview-runtime/
-
-.preview-readiness.json

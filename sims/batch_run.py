@@ -9,6 +9,9 @@ What it does, identically, for every zip (or folder of images) it finds:
   2. sorts every image by its PIXELS into capillary / ruler / blank-card frames
   3. ruler zips  -> um/px (S0) and the blur at the ruler's zoom
      blank zips  -> camera noise spectrum: per-pixel noise and the blotchy (correlated) part
+     calibration zips (card photos + white-card frames together) -> both of the above
+     A ruler whose scale is in the nail-zoom range (NAIL_ZOOM_UMPX) becomes THE measured scale for every
+     capillary frame; without one, the anatomical estimate (SCALES) is used and labelled as such.
   4. capillary zips -> analyze_session (glare mask, loops, widths, shared-sigma blur) and then
      the same summaries per FINGER, per CONDITION (raw / enhanced / grey) and per CAPTURE PHASE
   5. builds scope files from what was measured (blur, contrast, lighting, noise spectrum, skin texture)
@@ -43,7 +46,8 @@ from capsim.scope import ScopeParams   # noqa: E402
 
 IMG_EXT = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 SKIP = re.compile(r"^(captrail_results|_|\.)")
-SCALES = {"anat_central": 1.6, "anat_low": 1.3, "anat_high": 2.0}   # um/px, anatomical (Piotto 2016) until the ruler is confirmed
+SCALES = {"anat_central": 1.6, "anat_low": 1.3, "anat_high": 2.0}   # um/px, anatomical (Piotto 2016): used only with no nail-zoom card
+NAIL_ZOOM_UMPX = (0.8, 3.0)   # a card photographed at nail zoom lands here; the low-zoom card (6.1 um/px) does not
 QUICK_STEPS = ["s1", "s2", "s4", "s6", "s7"]
 FULL_STEPS = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"]
 HASHED = {".csv", ".json"}
@@ -59,7 +63,7 @@ def sha256(path, chunk=1 << 20):
     return h.hexdigest()
 
 
-ANALYSIS_VERSION = "1"   # bump when batch_run's analysis functions change (group tables, texture, scopes, ruler, blank)
+ANALYSIS_VERSION = "2"   # 2: crosshair-card ladder, calibration zips, measured nail-zoom scale   # bump when batch_run's analysis functions change (group tables, texture, scopes, ruler, blank)
 STEP_COST = {"s1": 50, "s2": 95, "s3": 60, "s4": 50, "s5": 25, "s6": 18, "s7": 12, "s8": 150}   # s, one core busy among 4
 
 
@@ -146,9 +150,11 @@ def input_hash(src):
 def classify_image(rgb):
     """'ruler' | 'blank' | 'capillary', from pixels only.
 
-    ruler: the most periodic band of rows repeats strongly at one pitch (mean autocorrelation over the first
-    five periods >= 0.6 with >= 10 periods in view), as a stage micrometer does and a row of capillary loops
-    does not; blank: almost no structure; otherwise capillary."""
+    ruler: either the most periodic band of rows repeats strongly at one pitch (mean autocorrelation over the
+    first five periods >= 0.6 with >= 10 periods in view), as a stage micrometer or a low-zoom card does, or a
+    crosshair arm carries >= 6 ticks on one exact lattice (calibration.is_card_ladder), as the card does at
+    nail zoom; a row of capillary loops does neither. blank: almost no structure; otherwise capillary.
+    The metrics also say whether the frame would pass the relaxed blank test used inside calibration zips."""
     from scipy import ndimage as ndi
     g = np.asarray(rgb, float)[..., 1]
     try:
@@ -156,12 +162,28 @@ def classify_image(rgb):
         ac, nper = r["autocorr"], r["n_periods"]
     except Exception:
         ac, nper = 0.0, 0
-    rel = g / np.maximum(ndi.gaussian_filter(g, 30), 1e-6) - 1
-    dark = float((ndi.gaussian_filter(rel, 1.5) < -0.06).mean())
-    m = dict(tick_autocorr=float(ac), periods=int(nper), std=float(g.std()), dark_frac=dark)
+    sm = ndi.gaussian_filter(g, 30)
+    rel = g / np.maximum(sm, 1e-6) - 1
+    rels = ndi.gaussian_filter(rel, 1.5)
+    dark = float((rels < -0.06).mean())
+    m = dict(tick_autocorr=float(ac), periods=int(nper), std=float(g.std()), dark_frac=dark,
+             hp_std=float((g - sm).std()), dark10_frac=float((rels < -0.10).mean()))
+    ladder, dips = None, {}
+    if not (ac >= 0.6 and nper >= 10):
+        for arm, gg in (("h", g), ("v", np.rot90(g))):
+            dips[arm], a0 = C.straight_line_dip(gg)
+            if dips[arm] < 30:          # no crosshair arm: skip the (slower) tick search
+                continue
+            lr = C.tick_ladder(gg, angles=np.linspace(a0 - 1, a0 + 1, 9))
+            if C.is_card_ladder(lr, gg.shape[0]):
+                ladder = (arm, lr)
+                break
+    m.update(line_dip=float(max(dips.values())) if dips else float("nan"),
+             card_ladder=ladder[0] if ladder else "", card_pitch_px=float(ladder[1]["pitch_px"]) if ladder else float("nan"))
+    m["blank_relaxed"] = bool(m["hp_std"] < 5.0 and m["dark10_frac"] < 0.01)
     if float(g.std()) < 15 and dark < 0.002:
         return "blank", m
-    if ac >= 0.6 and nper >= 10:
+    if (ac >= 0.6 and nper >= 10) or ladder:
         return "ruler", m
     return "capillary", m
 
@@ -176,30 +198,46 @@ def run_ruler(files, out, pitch_um):
     for p in files:
         g = load_rgb(p)[..., 1].astype(float)
         r = dict(file=p.name)
+        lad = None
         try:
-            v, se, info = C.umpx_from_slide(g, pitch_um)
+            v, se, info = C.umpx_from_ladder(g, pitch_um)
+            lad = info.pop("_ladders")
             r.update(um_per_px=v, se=se, pitch_px=info["pitch_px"], tilt_deg=info["angle_deg"], periods=info["n_periods"],
-                     long_tick_px=C.long_tick_spacing_px(g))
-            r["long_over_10_fine"] = r["long_tick_px"] / (10 * info["pitch_px"])
-        except Exception as e:
-            r["error"] = str(e)
+                     method="crosshair tick ladder", arms="+".join(info["arms"]), aspect_v_over_h=info["aspect"],
+                     **{k: info[k] for k in info if k.endswith(("_pitch_px", "_ticks", "_rms_res_px")) and k != "pitch_px"})
+        except ValueError:
+            try:
+                v, se, info = C.umpx_from_slide(g, pitch_um)
+                r.update(um_per_px=v, se=se, pitch_px=info["pitch_px"], tilt_deg=info["angle_deg"], periods=info["n_periods"],
+                         long_tick_px=C.long_tick_spacing_px(g), method="tick-band autocorrelation")
+                r["long_over_10_fine"] = r["long_tick_px"] / (10 * info["pitch_px"])
+            except Exception as e:
+                r["error"] = str(e)
         try:
             v_old = C.umpx_from_ticks(C.tick_profile(g), pitch_um)[0]
             r["um_per_px_peakpicking_old"] = v_old
         except Exception:
             pass
         try:
-            b = C.tick_blur_sigma(g)
-            r.update(tick_sigma_px=b["sigma_px"], tick_width_px=b["tick_width_px"])
+            if lad:     # fold the ticks of each arm the ladder found, then average the arms
+                bs = [C.tick_blur_sigma(None, pitch_px=a["pitch_px"], band=a["band"], rows=20) for a in lad.values()]
+                r.update(tick_sigma_px=float(np.mean([b["sigma_px"] for b in bs])), tick_width_px=float(np.mean([b["tick_width_px"] for b in bs])))
+            else:
+                b = C.tick_blur_sigma(g)
+                r.update(tick_sigma_px=b["sigma_px"], tick_width_px=b["tick_width_px"])
         except Exception as e:
             r["blur_error"] = str(e)
         rows.append(r)
     D = pd.DataFrame(rows)
     D.to_csv(out / "ruler_frames.csv", index=False)
     ok = D.dropna(subset=["um_per_px"]) if "um_per_px" in D else D.iloc[:0]
-    s = dict(pitch_um_assumed=pitch_um, n=int(len(ok)), method="tick-band autocorrelation (calibration.umpx_from_slide)")
+    meth = sorted(set(ok.method)) if "method" in ok else []
+    s = dict(pitch_um_assumed=pitch_um, n=int(len(ok)), method=" + ".join(meth) or "none")
+    if "aspect_v_over_h" in ok and ok.aspect_v_over_h.notna().any():
+        s["aspect_v_over_h"] = float(ok.aspect_v_over_h.mean())
     if len(ok):
         s["um_per_px"] = C.umpx_summary(ok.um_per_px.tolist())
+        s["nail_zoom"] = bool(NAIL_ZOOM_UMPX[0] <= s["um_per_px"]["mean"] <= NAIL_ZOOM_UMPX[1])
         s["pitch_px_mean"] = float(ok.pitch_px.mean())
         s["long_tick_check"] = float(np.nanmedian(ok.long_over_10_fine)) if "long_over_10_fine" in ok else None
         if "um_per_px_peakpicking_old" in ok:
@@ -477,7 +515,7 @@ def hash_outputs(d):
     return res
 
 
-def analyse_capillary(r, o, work, noise, white_only, ruler):
+def analyse_capillary(r, o, work, noise, white_only, ruler, scale=None):
     """Session analysis, tables, skin texture and scope files for one capillary input. Returns a JSON-able state."""
     import analyze_session as AS
     sess = work / (r["tag"] + "_capillary")
@@ -498,7 +536,8 @@ def analyse_capillary(r, o, work, noise, white_only, ruler):
         return dict(summary=summ, base=None, scopes={}, texture=dict(estimator_median=None, texture_amp=None, n_frames=0))
     base = dict(sigma_px=float(U.sigma_px.median()), contrast=float(U.lumen_contrast_fit.median()),
                 illum=float(U.illum_strength.median()), photons=noise["photons"], corr_noise_frac=noise["corr_noise_frac"])
-    px_c = SCALES["anat_central"]
+    scale = scale or dict(um_per_px=SCALES["anat_central"], status="anatomical_estimate")
+    px_c = scale["um_per_px"]
     est = [RD.texture_strength(load_rgb(sess / f), px_c) for f in U.file]
     tex, ttab = calibrate_texture(float(np.median(est)), px_c, base)
     ttab.to_csv(o / "texture_calibration.csv", index=False)
@@ -508,15 +547,23 @@ def analyse_capillary(r, o, work, noise, white_only, ruler):
                   sigma_contrast_illum="median over usable measured frames (shared-sigma limb fit)",
                   texture=f"estimator {np.median(est):.4f} on {len(est)} frames, inverted by simulation -> {tex:.4f}")
     scopes = {}
-    for nm, s_ in SCALES.items():
-        scopes[nm] = build_scope(s_, base["sigma_px"], base["contrast"], base["illum"], noise, tex,
-                                 dict(common, um_per_px=f"ANATOMICAL ESTIMATE {s_} (bounds 1.3-2.0), not the ruler"))
+    if scale["status"] == "measured":
+        scopes["measured"] = build_scope(px_c, base["sigma_px"], base["contrast"], base["illum"], noise, tex,
+                                         dict(common, um_per_px=f"MEASURED {px_c:.4f} um/px: {scale['source']}"))
+        scopes["measured"].measured["um_per_px"] = True
+    else:
+        for nm, s_ in SCALES.items():
+            scopes[nm] = build_scope(s_, base["sigma_px"], base["contrast"], base["illum"], noise, tex,
+                                     dict(common, um_per_px=f"ANATOMICAL ESTIMATE {s_} (bounds 1.3-2.0), not the ruler"))
     scopes["white_noise_only"] = build_scope(px_c, base["sigma_px"], base["contrast"], base["illum"], white_only, tex,
                                              dict(common, ablation="correlated noise removed: what the sims assumed before the blank card"))
     for _, row in PF.iterrows():
         if row.usable_frames >= 1 and np.isfinite(row.sigma_px):
             scopes[f"finger_{row.finger}"] = build_scope(px_c, row.sigma_px, row.contrast, row.illum, noise, tex,
-                                                         dict(common, finger=row.finger, usable_frames=int(row.usable_frames)))
+                                                         dict(common, finger=row.finger, usable_frames=int(row.usable_frames),
+                                                              um_per_px=f"{scale['status']} {px_c:.4f}"))
+            if scale["status"] == "measured":
+                scopes[f"finger_{row.finger}"].measured["um_per_px"] = True
     if ruler and "tick_sigma_px_median" in ruler:
         u = ruler["um_per_px"]["mean"]
         scopes["ruler_zoom"] = build_scope(u, ruler["tick_sigma_px_median"], base["contrast"], base["illum"], noise, tex,
@@ -528,7 +575,7 @@ def analyse_capillary(r, o, work, noise, white_only, ruler):
         p = o / "scopes" / f"{nm}.json"
         sc.save(p)
         paths[nm] = str(p)
-    return dict(summary=summ, base=base, texture=texture, scopes=paths)
+    return dict(summary=summ, base=base, texture=texture, scopes=paths, scale=scale)
 
 
 def _key(*parts):
@@ -559,11 +606,11 @@ class Budget:
         return not self.worked or self.left() >= need
 
 
-def main(folder, out, sims="quick", jobs=4, pitch_um=100.0, keep_extracted=False, budget=None):
+def main(folder, out, sims="quick", jobs=4, pitch_um=100.0, keep_extracted=False, budget=None, work=None):
     folder, out = Path(folder).expanduser(), Path(out)
     out.mkdir(parents=True, exist_ok=True)
     B_ = Budget(budget)
-    work = out / "_extracted"
+    work = Path(work).expanduser() if work else out / "_extracted"     # scratch: extracted images, rewritten per run
     inputs = discover(folder)
     if not inputs:
         raise SystemExit(f"no zips or image folders in {folder}")
@@ -594,31 +641,55 @@ def main(folder, out, sims="quick", jobs=4, pitch_um=100.0, keep_extracted=False
             d = extract(src, work / tag)
             files = sorted(p for p in d.iterdir() if p.suffix.lower() in IMG_EXT)
             kinds = [(p, *classify_image(load_rgb(p))) for p in files]
+            rul = [p for p, k, _ in kinds if k == "ruler"]
+            if rul and all(k in ("ruler", "blank") or m["blank_relaxed"] for _, k, m in kinds) and len(rul) < len(kinds):
+                # a calibration zip: card photos plus white-card frames shot at the same zoom. The white card at nail
+                # zoom shows paper texture and vignetting, so it fails the strict blank test; inside a zip that also
+                # holds card photos, every other frame must pass the relaxed test (structure under 5 DN, no dark lines)
+                kinds = [(p, k if k == "ruler" else "blank", m) for p, k, m in kinds]
             counts = pd.Series([k for _, k, _ in kinds]).value_counts().to_dict()
             kind = max(counts, key=counts.get) if counts else "empty"
+            if counts.get("ruler") and counts.get("blank") and set(counts) == {"ruler", "blank"}:
+                kind = "calibration"
             o.mkdir(parents=True, exist_ok=True)
             pd.DataFrame([dict(file=p.name, kind=k, **m) for p, k, m in kinds]).to_csv(o / "image_types.csv", index=False)
-            st = dict(n_images=len(files), image_kinds=counts, kind=kind, files=[p.name for p, k, _ in kinds if k == kind])
-            if kind == "ruler":
-                st["result"] = run_ruler([d / f for f in st["files"]], o, pitch_um)
-            elif kind == "blank":
-                st["result"] = run_blank([d / f for f in st["files"]], o)
+            st = dict(n_images=len(files), image_kinds=counts, kind=kind,
+                      files=[p.name for p, k, _ in kinds if k == kind or kind == "calibration"])
+            if kind in ("ruler", "calibration"):
+                st["result_ruler" if kind == "calibration" else "result"] = run_ruler([d / p.name for p, k, _ in kinds if k == "ruler"], o, pitch_um)
+            if kind in ("blank", "calibration"):
+                st["result_blank" if kind == "calibration" else "result"] = run_blank([d / p.name for p, k, _ in kinds if k == "blank"], o)
             (o / "input_state.json").write_text(json.dumps(st, indent=2, default=float))
             _mark(o, k1)
         r.update(n_images=st["n_images"], image_kinds=st["image_kinds"], kind=st["kind"], result=st.get("result"))
         r["_files"] = [work / tag / f for f in st["files"]]
         if r["kind"] in cal:
             cal[r["kind"]].append(r)
+        elif r["kind"] == "calibration":
+            r["result"] = dict(ruler=st["result_ruler"], blank=st["result_blank"])
+            cal["ruler"].append(dict(r, result=st["result_ruler"]))
+            cal["blank"].append(dict(r, result=st["result_blank"]))
         runs.append(r)
         print(f"  {src.name}: {r['kind']} ({r['n_images']} images){'  [identical to ' + r['duplicate_of'] + ']' if r['duplicate_of'] else ''}", flush=True)
 
-    # ---- shared calibration (first ruler zip, first blank zip; all are reported)
-    ruler = cal["ruler"][0]["result"] if cal["ruler"] else None
-    blank = cal["blank"][0]["result"] if cal["blank"] else None
+    # ---- shared calibration. The scale: the first ruler at nail zoom (NAIL_ZOOM_UMPX) is THE measured scale; a
+    # ruler at another zoom only feeds the ruler_zoom what-if scope. The noise: the blank card shot alongside the
+    # nail-zoom ruler if there is one (same zoom, same session), else the first blank.
+    nail = next((c_ for c_ in cal["ruler"] if (c_["result"] or {}).get("nail_zoom")), None)
+    other = next((c_ for c_ in cal["ruler"] if not (c_["result"] or {}).get("nail_zoom") and (c_["result"] or {}).get("um_per_px")), None)
+    ruler = other["result"] if other else None
+    scale = (dict(um_per_px=nail["result"]["um_per_px"]["mean"], sd=nail["result"]["um_per_px"]["sd"], n=nail["result"]["n"],
+                  tick_sigma_px=nail["result"].get("tick_sigma_px_median"), aspect_v_over_h=nail["result"].get("aspect_v_over_h"),
+                  status="measured", source=f"calibration card at nail zoom, {nail['input']} ({nail['result']['n']} photos, "
+                                            f"{nail['result']['pitch_um_assumed']:g} um ticks, {nail['result']['method']})")
+             if nail else dict(um_per_px=SCALES["anat_central"], low=SCALES["anat_low"], high=SCALES["anat_high"], status="anatomical_estimate",
+                               source="anatomical estimate (no calibration card at nail zoom)"))
+    bl = next((c_ for c_ in cal["blank"] if nail and c_["sha256"] == nail["sha256"]), cal["blank"][0] if cal["blank"] else None)
+    blank = bl["result"] if bl else None
     if blank:
         noise = dict(photons=blank["white"]["photons"], measured=True,
                      corr_noise_frac=[[s_, a_ / 255.0] for s_, a_ in blank["corr_fit"]["components"]],
-                     source=f"blank card {cal['blank'][0]['input']}, {blank['n_frames']} frames at one exposure level")
+                     source=f"blank card {bl['input']}, {blank['n_frames']} frames at one exposure level")
     else:
         noise = dict(photons=50000.0, measured=False, corr_noise_frac=None, source="no blank-card zip: white-noise default")
     white_only = dict(noise, corr_noise_frac=None)
@@ -630,7 +701,7 @@ def main(folder, out, sims="quick", jobs=4, pitch_um=100.0, keep_extracted=False
         if r["kind"] != "capillary":
             continue
         o = out / r["tag"]
-        k2 = _key("session", r["sha256"], ahash, noise, ruler)
+        k2 = _key("session", r["sha256"], ahash, noise, ruler, scale)
         if _done(o / "session", k2):
             st = json.loads((o / "session_state.json").read_text())
         else:
@@ -639,7 +710,7 @@ def main(folder, out, sims="quick", jobs=4, pitch_um=100.0, keep_extracted=False
                 print(f"  {r['input']}: session analysis deferred (time budget)", flush=True)
                 continue
             B_.worked = True
-            st = analyse_capillary(r, o, work, noise, white_only, ruler)
+            st = analyse_capillary(r, o, work, noise, white_only, ruler, scale)
             (o / "session_state.json").write_text(json.dumps(st, indent=2, default=float))
             _mark(o / "session", k2)
         r.update(summary=st["summary"], base=st["base"], texture=st["texture"], scopes=st["scopes"])
@@ -761,7 +832,10 @@ def main(folder, out, sims="quick", jobs=4, pitch_um=100.0, keep_extracted=False
         other += [r["unit"] for r in json.loads(f.read_text()) if r.get("action") == "filled"]
     batch = dict(folder=str(folder), sims=sims, code_sha256=code_hash(), versions=versions(),
                  inputs=[{k: v for k, v in r.items() if not k.startswith("_") and k not in ("outputs", "summary")} for r in runs],
-                 calibration=dict(ruler=ruler, blank=blank, noise_used=noise), determinism=det, paired_raw_vs_enhanced=paired,
+                 calibration=dict(scale=scale, nail_zoom_ruler=nail["result"] if nail else None, ruler=ruler, blank=blank, noise_used=noise,
+                                  rulers_all=[dict(input=c_["input"], **{k: (c_["result"] or {}).get(k) for k in ("um_per_px", "n", "method", "nail_zoom", "tick_sigma_px_median", "aspect_v_over_h")}) for c_ in cal["ruler"]],
+                                  blanks_all=[dict(input=c_["input"], n_frames=(c_["result"] or {}).get("n_frames"), pixel_hp_noise_dn=(c_["result"] or {}).get("pixel_hp_noise_dn")) for c_ in cal["blank"]]),
+                 determinism=det, paired_raw_vs_enhanced=paired,
                  units_from_other_machine=len(other))
     (out / "batch_summary.json").write_text(json.dumps(batch, indent=2, default=float))
     write_report(out, batch, runs)
@@ -786,6 +860,17 @@ def write_report(out, batch, runs):
         L.append(f"| {r['input']} | `{r['sha256'][:12]}` | {r['n_images']} | {r['kind']} | {'identical to ' + r['duplicate_of'] if r['duplicate_of'] else ''} |")
     c = batch["calibration"]
     L += ["", "## Calibration", ""]
+    sc_ = c.get("scale") or {}
+    if sc_.get("status") == "measured":
+        L.append(f"- **Scale (measured at nail zoom): {_f(sc_['um_per_px'], 4)} um/px** (SD {_f(sc_.get('sd'), 5)} over {sc_.get('n')} card photos; "
+                 f"vertical/horizontal pitch {_f(sc_.get('aspect_v_over_h'), 4)}; card blur {_f(sc_.get('tick_sigma_px'))} px). Source: {sc_['source']}. "
+                 "Every um value and every sim scope uses it.")
+    else:
+        L.append(f"- Scale: **anatomical estimate** {sc_.get('um_per_px')} um/px (bounds {sc_.get('low')} to {sc_.get('high')}); no card was photographed at nail zoom.")
+    for rr_ in c.get("rulers_all", []):
+        u_ = (rr_.get("um_per_px") or {})
+        L.append(f"- Card/ruler input {rr_['input']}: {_f(u_.get('mean'), 4)} um/px (n={rr_.get('n')}, {rr_.get('method')}), "
+                 f"{'nail zoom' if rr_.get('nail_zoom') else 'not nail zoom (what-if scope ruler_zoom only)'}.")
     if c["ruler"]:
         u = c["ruler"]["um_per_px"]
         L.append(f"- Ruler: **{_f(u['mean'], 3)} um/px** (SD {_f(u['sd'], 3)}, n={c['ruler']['n']}) if one fine tick = "
@@ -841,8 +926,9 @@ def write_report(out, batch, runs):
         for d in batch["determinism"]:
             rd = "; ".join(f"{k}: {v}" for k, v in d["real_differences"].items()) or "none"
             L.append(f"| {d['a']} | {d['b']} | {d['files_compared']} | {d['byte_identical']} | {d['float_equal']} | {rd} |")
-    L += ["", "All widths are model-checked but NOT validated against human measurement (S5). um values use the anatomical",
-          "scale unless the scenario says ruler. Reproduce: `python batch_run.py <folder> --out <out>`."]
+    L += ["", "All widths are model-checked but NOT validated against human measurement (S5). um values use the measured",
+          "nail-zoom scale when a card was photographed at nail zoom, otherwise the anatomical estimate (see Calibration).",
+          "Reproduce: `python batch_run.py <folder> --out <out>`."]
     (out / "BATCH_REPORT.md").write_text("\n".join(L) + "\n")
 
 
@@ -858,7 +944,9 @@ if __name__ == "__main__":
                     help="ruler fine-tick spacing in um (the Captrail calibration card: 0.1 mm small ticks, 1 mm long lines)")
     ap.add_argument("--keep-extracted", action="store_true")
     ap.add_argument("--budget", type=float, default=None, help="stop after about this many seconds; rerun to continue (cached)")
+    ap.add_argument("--work", default=None, help="scratch folder for extracted images (default <out>/_extracted); "
+                                                 "put it where files may be deleted")
     a = ap.parse_args()
     res = main(a.folder, a.out, sims=a.sims or ("full" if a.full else "quick"), jobs=a.jobs, pitch_um=a.pitch_um,
-               keep_extracted=a.keep_extracted, budget=a.budget)
+               keep_extracted=a.keep_extracted, budget=a.budget, work=a.work)
     sys.exit(3 if res is None else 0)

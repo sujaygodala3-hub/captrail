@@ -19,35 +19,5 @@ async function boundedBody(request){
  const body=new Uint8Array(total);let offset=0;for(const c of chunks){body.set(c,offset);offset+=c.length;}return body;
 }
 async function proxy(request,method){
- const url=new URL(request.url),origin=request.headers.get('origin'),op=url.searchParams.get('op');
- if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return reply({error:'Cross-site requests are not permitted.'},403);
- let route=fixed[op];
- if(records[op]){const id=url.searchParams.get('id');if(!/^[a-f0-9]{32}$/.test(id||''))return reply({error:'Invalid analysis identifier.'},400);route=[records[op][0],'/api/analyses/'+id+records[op][1]];}
- const other={'calibration-image':['GET','/api/calibrations/','/image'],'calibration-record':['GET','/api/calibrations/',''],'remove-calibration':['DELETE','/api/calibrations/',''],'archive-participant':['POST','/api/participants/','']};
- if(other[op]){const id=url.searchParams.get('id');if(!/^[a-f0-9]{32}$/.test(id||''))return reply({error:'Invalid record identifier.'},400);const [verb,prefix,suffix]=other[op];route=[verb,prefix+id+suffix];}
- if(!route||route[0]!==method)return reply({error:'Unsupported trained-model operation.'},405);
- if(method!=='GET'&&request.headers.get('x-captrail-request')!=='1')return reply({error:'Missing same-origin request marker.'},403);
- const upstream=baseUrl();if(!upstream)return reply({error:'The research model is temporarily unavailable. Your photo has not been sent.'},503);
- const binary=['image','calibration-image'].includes(op);
- const headers={accept:binary?'image/png':'application/json'};
- if(upstream==='http://model:8000'&&process.env.CAPTRAIL_INTERNAL_NETWORK==='1')headers['x-forwarded-proto']=url.protocol==='https:'?'https':'http';
- const cookie=(request.headers.get('cookie')||'').split(';').map(x=>x.trim()).find(x=>/^captrail_session=[A-Za-z0-9._-]+$/.test(x));if(cookie)headers.cookie=cookie;
- let body;
- try{if(method!=='GET'){headers['x-captrail-request']='1';headers['content-type']=request.headers.get('content-type')||'application/json';body=await boundedBody(request);}}
- catch(e){return reply({error:'This request exceeds the 4 MiB limit. Select fewer or smaller originals; no automatic resizing is applied.'},e.status||400);}
- let path=route[1];if(op==='image')path+='?enhanced='+String(url.searchParams.get('enhanced')==='true');
- let response;
- try{response=await fetch(upstream+path,{method,headers,body,redirect:'manual',signal:AbortSignal.timeout(['analyze','segmentation'].includes(op)?120000:20000)});}
- catch{return reply({error:'The model connection was interrupted. Reopen saved sessions before retrying an upload; it may have finished on the server.'},503);}
- if(response.status>=300&&response.status<400)return reply({error:'Unexpected backend redirect.'},502);
- const type=response.headers.get('content-type')||'';
- if(!(type.includes('application/json')||(binary&&response.ok&&type.startsWith('image/png'))))return reply({error:'The model returned an unreadable response.'},response.status>=400?response.status:502);
- const out=new Headers({'content-type':type,'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'});
- if(op==='login'||op==='logout'){
-  const session=response.headers.get('set-cookie');
-  if(session){const match=op==='logout'&&response.ok?['','']:session.match(/^captrail_session=([A-Za-z0-9._-]*)(?:;|$)/);if(!match)return reply({error:'Invalid session response.'},502);
-   out.set('set-cookie',`captrail_session=${match[1]}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${op==='logout'?0:28800}${url.protocol==='https:'?'; Secure':''}`);}
- }
- return new Response(response.body,{status:response.status,headers:out});
 }
 export const GET=r=>proxy(r,'GET');export const POST=r=>proxy(r,'POST');export const DELETE=r=>proxy(r,'DELETE');

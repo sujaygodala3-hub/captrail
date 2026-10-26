@@ -11,12 +11,13 @@
   const links = PAGES.map(p => `<a href="${p.href}"${p.href === here ? ' aria-current="page"' : ''}>${p.label}</a>`).join('');
   const REPO = 'https://github.com/sujaygodala3-hub/captrail';
   const gh = `<a class="gh-link" href="${REPO}" target="_blank" rel="noopener" aria-label="Captrail on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#gh"/></svg><span>GitHub</span></a>`;
-  const logo = '<a class="logo" href="index.html"><svg><use href="#mark"/></svg>Captrail</a>';
+  const logo = '<a class="logo" href="index.html" aria-label="Captrail home">'
+    + '<img class="logo-c" src="images/brand/captrail-logo.svg" alt="Captrail" width="106" height="28">'
+    + '<img class="logo-w" src="images/brand/captrail-logo-white.svg" alt="" aria-hidden="true" width="106" height="28"></a>';
 
   document.body.insertAdjacentHTML('afterbegin',
     `<svg width="0" height="0" style="position:absolute" aria-hidden="true">
       <symbol id="gh" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
-      <symbol id="mark" viewBox="0 0 24 24"><path d="M5 22V10a3.5 3.5 0 0 1 7 0v12M12 22V6a4 4 0 0 1 8 0v16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
     </svg>`);
 
   const headerSlot = document.getElementById('site-header');
@@ -57,6 +58,34 @@
   if (menuBtn) {
     menuBtn.addEventListener('click', () => { const o = menu.classList.toggle('open'); menuBtn.setAttribute('aria-expanded', o); });
     menu.addEventListener('click', e => { if (e.target.tagName === 'A') menu.classList.remove('open'); });
+  }
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* clips: play only while on screen; with reduced motion, show controls instead */
+  const clips = [...document.querySelectorAll('video.autoclip')];
+  if (reduce) clips.forEach(v => { v.controls = true; v.preload = 'metadata'; });
+  else if (clips.length) {
+    const vo = new IntersectionObserver(es => es.forEach(e => {
+      const v = e.target;
+      if (e.isIntersecting) { if (v.preload === 'none') v.preload = 'auto'; v.play().catch(err => { if (err && err.name !== 'AbortError') v.controls = true; }); }
+      else v.pause();
+    }), { threshold: .35 });
+    clips.forEach(v => vo.observe(v));
+  }
+
+  /* count-up numbers */
+  const nums = [...document.querySelectorAll('[data-count]')];
+  if (!reduce && nums.length) {
+    const fmt = (el, x) => (el.dataset.pre || '') + x.toFixed(+el.dataset.dec || 0);
+    const co = new IntersectionObserver(es => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      co.unobserve(e.target);
+      const el = e.target, end = parseFloat(el.dataset.count), t0 = performance.now(), dur = 1200;
+      const step = now => { const k = Math.min((now - t0) / dur, 1); el.textContent = fmt(el, end * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }), { threshold: .6 });
+    nums.forEach(el => co.observe(el));
   }
 
   /* reveal on scroll */

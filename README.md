@@ -1,12 +1,30 @@
-# Captrail
+<p align="center">
+  <a href="https://captrail-app.vercel.app"><img src="images/brand/captrail-logo.svg" alt="Captrail" width="420"></a>
+</p>
 
-**A $32 nailfold microscope that images the tiny blood vessels at the base of your fingernail, measures them in micrometers, and flags unusual loops for a doctor to review.**
+<p align="center"><b>A $32 nailfold microscope that images the tiny blood vessels at the base of your fingernail,<br>measures them in micrometers, and flags unusual loops for a doctor to review.</b></p>
 
-[![Live site](https://img.shields.io/badge/live%20site-captrail--app.vercel.app-8E1B24?style=for-the-badge)](https://captrail-app.vercel.app)
-[![Microscope app](https://img.shields.io/badge/try%20it-microscope%20app-17110F?style=for-the-badge)](https://captrail-app.vercel.app/scan.html)
-[![Build guide](https://img.shields.io/badge/build%20it-guide-B8434E?style=for-the-badge)](https://captrail-app.vercel.app/build.html)
+<p align="center">
+  <a href="https://captrail-app.vercel.app"><img src="https://img.shields.io/badge/live%20site-captrail--app.vercel.app-B5171F?style=for-the-badge" alt="Live site"></a>
+  <a href="https://captrail-app.vercel.app/scan.html"><img src="https://img.shields.io/badge/try%20it-microscope%20app-17110F?style=for-the-badge" alt="Microscope app"></a>
+  <a href="https://captrail-app.vercel.app/build.html"><img src="https://img.shields.io/badge/build%20it-guide-D2454F?style=for-the-badge" alt="Build guide"></a>
+</p>
 
 > Research prototype for screening and referral. Not a diagnostic tool, and it does not replace a doctor.
+
+<p align="center"><a href="https://captrail-app.vercel.app"><img src="docs/screenshots/landing.jpg" alt="The Captrail landing page" width="900"></a></p>
+
+## How it works
+
+1. **Rest a finger** in the 3D-printed cradle. It clicks onto pegs on the base board, so the finger lands in the same spot every time.
+2. **Add one drop of mineral oil** to the nailfold to cut glare.
+3. **Open the [Microscope page](https://captrail-app.vercel.app/scan.html).** The USB microscope shows up as a camera in the browser. Best of 8 keeps the sharpest frame.
+4. **Calibrate once** with the card at nail zoom. Every measurement is then in micrometers.
+5. **Measure and flag.** Click across a loop for its width, run the trained loop-shape model, or ask for an AI review. A clinician makes every call.
+
+| Real hardware, real capillaries | The Microscope page |
+| --- | --- |
+| <img src="docs/screenshots/in-action.jpg" alt="Clips of the Captrail rig and the Microscope page" width="440"> | <img src="docs/screenshots/microscope.jpg" alt="The Captrail Microscope page" width="440"> |
 
 ## At a glance
 
@@ -23,7 +41,7 @@
 
 | Path | What it is |
 | --- | --- |
-| `index.html` | Landing page: purpose, how it works, hardware to software, results, team, open source |
+| `index.html` | Landing page: real clips, why it matters, how it works, build, results, team, open source |
 | `build.html` | Parts list and step-by-step assembly guide |
 | `scan.html` | Microscope app: live view, Best of 8, µm calibration, click-to-measure, AI analysis, voice commands |
 | `site.css` / `site.js` | Shared styles, header and footer (add header pages in the `PAGES` list in `site.js`) |
@@ -31,6 +49,9 @@
 | `captrail_print_files/` | Finger cradle and base board, `.stl` and `.gcode` |
 | `sims/` | Microscope physics simulations, calibration code and tests |
 | `tests/` | Automated tests for the model bridge |
+| `images/brand/` | Logo, mark, favicon source and social preview image |
+| `images/media/` | Clips of the real setup used on the landing page |
+| `404.html` | Branded not-found page |
 
 ## Calibration
 

@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Microscope | Captrail</title>
 <meta name="description" content="Connect the USB microscope, capture nailfold images, calibrate to micrometers and send scans to the Captrail model.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#B5171F">
+<link rel="canonical" href="https://captrail-app.vercel.app/scan.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Captrail">
+<meta property="og:title" content="Microscope | Captrail">
+<meta property="og:description" content="Connect the USB microscope, capture nailfold images, calibrate to micrometers and send scans to the Captrail model.">
+<meta property="og:url" content="https://captrail-app.vercel.app/scan.html">
+<meta property="og:image" content="https://captrail-app.vercel.app/images/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -59,7 +73,7 @@
   .live-thumb{display:grid;place-items:center;color:#fff;font-size:12px;background:linear-gradient(135deg,#3a0a10,#1a0507)}
   .gallery-empty{font-size:13px;color:rgba(255,255,255,.5);padding:10px 4px}
 
-  .side{display:grid;gap:14px}
+  .side{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);min-width:0}
   .panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px}
   .panel h3{font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;margin-bottom:6px}
   .panel h3 .n{font:600 11px/1 var(--body);letter-spacing:.1em;color:#fff;background:var(--red);border-radius:999px;padding:5px 8px}
@@ -131,7 +145,7 @@
 
   @media (max-width:1060px){
     .dual.has-sim{grid-template-columns:1fr}
-    .lab{grid-template-columns:1fr}
+    .lab{grid-template-columns:minmax(0,1fr)}
     .stage-wrap{position:relative;top:0}
     .stage{max-height:none}
   }
@@ -151,7 +165,7 @@
     <p class="eyebrow">Microscope</p>
     <h1>Connect the microscope</h1>
     <p class="sub">The USB microscope shows up as a camera, so this page can read it directly: live view, capture, calibration to micrometers, and sending scans to the Captrail model. Already saving images in the microscope’s own app? Upload them here instead.</p>
-    <div class="how3"><span><b>1</b>Plug in over USB</span><span><b>2</b>Calibrate with the slide</span><span><b>3</b>Capture, measure, analyze</span></div>
+    <div class="how3"><span><b>1</b>Plug in over USB</span><span><b>2</b>Calibrate with the card</span><span><b>3</b>Capture, measure, analyze</span></div>
   </section>
 
   <section class="lab">

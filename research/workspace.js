@@ -11,7 +11,9 @@ function message(value,success=false){text('researchMessage',value);$('researchM
 function element(tag,attrs={},content){const e=document.createElement(tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);if(content!==undefined)e.textContent=content;return e;}
 function svg(tag,attrs){const e=document.createElementNS(SVG,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);return e;}
 function facts(target,rows){$(target).replaceChildren(...rows.flatMap(([k,v])=>[element('dt',{},k),element('dd',{},String(v))]));}
-function failure(error){message(error.message||'This action could not be completed.');if(error.status===401){state.me=null;authUI();openSignIn();}}
+const ML_OFFLINE='Our trained AI runs on our team’s research computer. See it in action in our demo video.';
+const mlOffline=error=>!error.status?/^Connection interrupted/.test(error.message||''):[502,503,504].includes(error.status)||error.status>=520;
+function failure(error){state.offline=mlOffline(error);message(state.offline?ML_OFFLINE:error.message||'This action could not be completed.');if(error.status===401){state.me=null;authUI();openSignIn();}}
 const observations=setupObservations({principal:()=>state.me,current:()=>state.current,message,openRecord:id=>reopen(id).catch(failure)});
 const calibration=setupCalibration({principal:()=>state.me,onProfiles:observations.setProfiles});
 const comparison=setupComparison({current:()=>state.current,analysis:()=>state.analysis,files:()=>state.files,message});
@@ -78,7 +80,7 @@ function renderGeometry(animate=false){
  $('boxLayer').replaceChildren(...instances.map(i=>{const [x1,y1,x2,y2]=i.bbox_xyxy;const rect=svg('rect',{x:x1,y:y1,width:x2-x1,height:y2-y1,stroke:COLORS[i.class_id]||'#FFD08C',class:'candidate-box'+(state.selection===i.instance_id?' selected':''),'data-instance':i.instance_id});const t=svg('title',{});t.textContent=i.instance_id+' · '+i.class_name;rect.append(t);return rect;}));
  const reviewed=[];for(const i of instances){if(!a.review)break;if(i.centerline)reviewed.push(svg('path',{d:pathData(i.centerline),class:'review-path'}));if(i.polygon)reviewed.push(svg('path',{d:pathData(i.polygon,true),class:'review-path'}));if(i.apex)reviewed.push(svg('circle',{cx:i.apex[0],cy:i.apex[1],r:3,fill:'#FFD08C'}));}$('reviewGeometryLayer').replaceChildren(...reviewed);
  $('showBoxes').disabled=!instances.length;$('showTraces').disabled=!geometry.fragments.length;$('showMasks').disabled=!geometry.masks.length;$('showReview').disabled=!reviewed.length;$('replayTrace').disabled=!geometry.fragments.length;
- text('geometryNotice',`${instances.length} ${a.review?'reviewed candidate regions':'unreviewed detector candidates'} · ${geometry.fragments.length} separate trace fragments. ${state.trace?.model_id?'Weakly trained neural proposals':'Image-ridge proposals'}; anatomical correspondence is unvalidated. Fragments are not a capillary count.${state.trace?.output_truncated?' Output reached the bounded geometry limit.':''}`);
+ text('geometryNotice',`${instances.length} ${a.review?'reviewed candidate regions':'detector candidates'} · ${geometry.fragments.length} separate trace fragments. ${state.trace?.model_id?'Weakly trained neural proposals':'Image-ridge proposals'}; anatomical correspondence is unvalidated. Fragments are not a capillary count.${state.trace?.output_truncated?' Output reached the bounded geometry limit.':''}`);
  layers();$('showLabels').onchange();if(animate)replay();
 }
 for(const [id,layer] of [['boxOpacity','boxLayer'],['traceOpacity','traceLayer'],['maskOpacity','maskLayer'],['reviewOpacity','reviewGeometryLayer']])$(id).oninput=()=>$(layer).style.opacity=$(id).value;
@@ -90,7 +92,7 @@ function replay(){const g=$('traceLayer');g.classList.remove('replaying');reques
 function renderAnalysis(a,animate=true){
  modelInstances(a);const {w,h}=dimensions(a);if(w!==state.current.w||h!==state.current.h)throw new Error('The analysis dimensions do not match this photograph. Overlay withheld.');
  undoEdits=[];redoEdits=[];state.analysis=a;state.trace=a.tracing;state.edits=reviewInstances(a);state.dirty=false;const instances=effectiveInstances(a);state.selection=instances[0]?.instance_id||null;
- text('candidateCount',instances.length+' REGIONS');text('morphologyLayer',a.review?'HUMAN REVIEW · PROVISIONAL':'MODEL OUTPUT · UNREVIEWED');text('recordRevision','REV '+a.review_revision);
+ text('candidateCount',instances.length+' REGIONS');text('morphologyLayer',a.review?'HUMAN REVIEW · PROVISIONAL':'MODEL OUTPUT');text('recordRevision','REV '+a.review_revision);
  text('stageCaption',a.provenance.inference_status==='completed'?'MODEL OUTPUT · RESEARCH ONLY':'MODEL ABSTAINED · NO DETECTION');
  text('reviewState',`Saved revision ${a.review_revision}. Corrections stay provisional; expert approval is not assigned here.`);$('reviewNotes').value=a.review?.notes||'';
  $('reviewControls').hidden=false;const writable=state.me&&state.me.role!=='viewer';$('saveReview').hidden=!writable;
@@ -133,7 +135,7 @@ $('runTraceModel').onclick=async()=>{if(!state.analysis||state.busy)return;const
 let readinessPending=null,readinessTimer=null;
 function checkReady(){
  if(readinessPending)return readinessPending;clearTimeout(readinessTimer);
- readinessPending=(async()=>{try{const r=await request('ready',{signal:AbortSignal.timeout(22000)});state.ready=r.status==='ready';$('modelStatus').classList.toggle('ready',state.ready);$('modelStatus').lastElementChild.textContent=state.ready?'Trained detector ready · private workspace':'Model starting · checking again shortly';}catch{state.ready=false;$('modelStatus').classList.remove('ready');$('modelStatus').lastElementChild.textContent='Model unavailable · checking again · photos remain local';}finally{sync();readinessPending=null;if(!state.ready&&!document.hidden)readinessTimer=setTimeout(checkReady,5000);}})();return readinessPending;
+ readinessPending=(async()=>{try{const r=await request('ready',{signal:AbortSignal.timeout(22000)});state.ready=r.status==='ready';$('modelStatus').classList.toggle('ready',state.ready);$('modelStatus').lastElementChild.textContent=state.ready?'Trained detector ready · private workspace':'Model starting · checking again shortly';}catch{state.ready=false;$('modelStatus').classList.remove('ready');$('modelStatus').lastElementChild.textContent=ML_OFFLINE;}finally{sync();readinessPending=null;if(!state.ready&&!document.hidden)readinessTimer=setTimeout(checkReady,5000);}})();return readinessPending;
 }
 addEventListener('pagehide',()=>clearTimeout(readinessTimer));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!state.ready)checkReady();else if(document.hidden)clearTimeout(readinessTimer);});
@@ -162,6 +164,19 @@ $('chooseImages').onclick=()=>$('researchFiles').click();$('researchFiles').onch
 for(const t of ['dragenter','dragover'])$('researchStage').addEventListener(t,e=>{e.preventDefault();$('researchStage').classList.add('dragging');});for(const t of ['dragleave','drop'])$('researchStage').addEventListener(t,e=>{e.preventDefault();$('researchStage').classList.remove('dragging');if(t==='drop')loadFiles([...e.dataTransfer.files]);});
 $('openCapture').onclick=()=>{$('captureStudio').open=true;$('captureStudio').scrollIntoView({behavior:'smooth'});};
 $('useCapture').onclick=async()=>{try{await loadFiles([await window.CapTrailCapture.original()]);$('researchStage').scrollIntoView({behavior:'smooth'});}catch(e){failure(e);}};
+// Voice "detect": load the selected capture and run the trained model. Returns a short status for the voice helper.
+window.CapTrailResearch={async detect({onStart}={}){
+ if(state.busy)return 'busy';if(!state.ready)return 'offline';
+ try{await loadFiles([await window.CapTrailCapture.original()]);}catch{return 'noimage';}
+ if(!state.current?.file)return 'error';
+ const go=$('analyzeImage');go.scrollIntoView({behavior:'smooth',block:'center'});
+ if(!state.me){openSignIn();return 'signin';}
+ if(!$('storageConsent').checked)return 'consent';
+ if(!/^[A-Za-z0-9_-]{3,60}$/.test($('participantId').value.trim())){$('participantId').focus();return 'pseudonym';}
+ onStart?.();state.offline=false;await go.onclick();
+ if(state.analysis){$('researchStage').scrollIntoView({behavior:'smooth',block:'center'});return 'ok';}
+ return state.offline?'offline':'error';
+}};
 addEventListener('beforeunload',e=>{if(state.dirty||state.busy){e.preventDefault();e.returnValue='';}});
 addEventListener('online',()=>{checkReady();message('Connection restored. Refresh saved sessions before retrying an upload.',true);});addEventListener('offline',()=>message('You are offline. Your local original remains available; saving and inference need a connection.'));
 (async()=>{await checkReady();try{state.me=await request('me');authUI();await Promise.all([loadSessions(),loadModels(),calibration.refresh(),observations.refresh()]);}catch(e){if(e.status!==401&&state.ready)message(e.message);}sync();})();

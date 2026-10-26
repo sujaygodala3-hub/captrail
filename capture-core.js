@@ -208,15 +208,17 @@
   function renderHud() {
     const h = $('hud'); const bits = [];
     if (!sel && stream) bits.push('<span class="live">Live</span>');
-    if (sel) bits.push(`<span>${escHtml(sel.label || (sel.source === 'scope' ? 'Captured' : 'Uploaded'))} · ${sel.w}×${sel.h}</span>`, `<span>Sharpness ${sel.score}</span>`);
+    if (sel) bits.push(`<span>${escHtml(sel.label || (sel.source === 'scope' ? 'Captured' : 'Uploaded'))} · ${sel.w}×${sel.h}</span>`, sel.check ? `<span class="check">${escHtml(sel.check)}</span>` : `<span>Sharpness ${sel.score}</span>`);
     if (look !== 'off' && sel) bits.push(`<span>${LOOKS[look].label} view</span>`);
     if (sel?.note) bits.push(`<span class="warn">${escHtml(sel.note)}</span>`);
     h.innerHTML = bits.join('');
   }
   function syncButtons() {
     const live = !!stream && !sel;
-    $('btnCapture').disabled = $('btnBurst').disabled = $('btnStack').disabled = !live || stacking;
-    $('btnBurst').title = 'Take 8 frames, merge them, and auto enhance';
+    const checkable = !stream && uploadedOriginals().length > 0;
+    $('btnCapture').disabled = $('btnStack').disabled = !live || stacking;
+    $('btnBurst').disabled = !(live || checkable) || stacking;
+    $('btnBurst').title = stream ? 'Take 8 frames, merge them, and auto enhance' : 'Score the sharpness of your uploaded images';
     $('btnLive').disabled = !stream || !sel;
     ['btnEnhance', 'btnMeasure', 'btnDownload', 'btnDelete', 'btnCal'].forEach(id => $(id).disabled = !sel);
     $('btnRaw').disabled = !sel?.pair || !frames.includes(sel.pair);
@@ -242,8 +244,25 @@
   // Best of 8: grab 8 frames, align all of them to the sharpest and merge with a per-pixel median,
   // then run Auto enhance and show the result as the main capture.
   const ZOOM_MIN_SHARPNESS = 300;
+  // Without a microscope, the same button scores the uploaded originals. No frames are created.
+  const uploadedOriginals = () => frames.filter(f => f.source === 'upload' && !f.calibScale);
+  async function sharpnessCheck() {
+    const list = uploadedOriginals();
+    if (!list.length || stacking) return;
+    stacking = true; syncButtons();
+    try {
+      for (const f of frames) { delete f.check; delete f.checkBest; }
+      for (let i = 0; i < list.length; i++) { showHint(`Scoring sharpness… ${i + 1}/${list.length}`); list[i].score = sharpness(list[i].canvas); await new Promise(r => setTimeout(r, 140)); }
+      const best = list.reduce((a, b) => (b.score > a.score ? b : a));
+      const label = `Sharpness check (${list.length} image${list.length === 1 ? '' : 's'})`;
+      for (const f of list) f.check = `${label}: ${f.score}${list.length > 1 && f === best ? ' · sharpest' : ''}`;
+      if (list.length > 1) best.checkBest = true;
+      showHint(''); showFrame(best);
+    } finally { showHint(''); stacking = false; syncButtons(); }
+  }
   $('btnBurst').onclick = async () => {
-    if (!stream || sel || stacking) return;
+    if (!stream) return sharpnessCheck();
+    if (sel || stacking) return;
     stacking = true; syncButtons();
     try {
       const shots = [];
@@ -828,9 +847,9 @@
   function renderGallery() {
     const g = $('gallery');
     if (!frames.length && !stream) { g.innerHTML = '<div class="gallery-empty">Captured and uploaded images appear here, scored for sharpness.</div>'; return; }
-    const best = frames.reduce((m, f) => Math.max(m, f.score), -1);
+    const best = frames.reduce((m, f) => Math.max(m, f.score), -1), anyCheck = frames.some(f => f.checkBest);
     g.innerHTML = (stream ? `<button class="thumb live-thumb${sel ? '' : ' sel'}" data-live>● Live</button>` : '') +
-      frames.map(f => `<button class="thumb${sel === f ? ' sel' : ''}" data-id="${f.id}" title="${escHtml(f.name || 'Capture')}"><img src="${f.thumb}" alt=""><span class="sc">${f.score}</span>${frames.length > 1 && f.score === best ? '<span class="best">SHARPEST</span>' : ''}</button>`).join('');
+      frames.map(f => `<button class="thumb${sel === f ? ' sel' : ''}" data-id="${f.id}" title="${escHtml(f.name || 'Capture')}"><img src="${f.thumb}" alt=""><span class="sc">${f.score}</span>${(anyCheck ? f.checkBest : frames.length > 1 && f.score === best) ? '<span class="best">SHARPEST</span>' : ''}</button>`).join('');
     g.querySelectorAll('.thumb').forEach(b => b.onclick = () => b.dataset.live !== undefined ? goLive() : showFrame(frames.find(f => f.id === b.dataset.id)));
   }
   $('btnDelete').onclick = () => {
@@ -1051,6 +1070,7 @@
     ['capture', /^(capture|take a (picture|photo|pic|snapshot)|snap|take picture)( now)?$/],
     ['enhance', /^(enhance|enhancement|toggle enhance|enhance on|turn on (enhance|enhancement)|turn (enhance|enhancement) on)$/],
     ['calibrate', /^(calibrate|start calibration|open calibration|calibration)$/],
+    ['detect', /^(detect|detect (the )?(capillaries|loops)|run (the )?(trained )?model|find (the )?(loops|capillaries)|analy[sz]e with (the )?trained model)$/],
     ['analyze', /^(analy[sz]e|run analysis|analy[sz]e (this|the) (image|picture))$/],
   ];
   function matchCommand(text) {
@@ -1066,7 +1086,7 @@
     switch (c) {
       case 'stop': if (canTalk) speechSynthesis.cancel(); vLine('voiceReply', 'Okay.'); return;
       case 'capture': if ($('btnCapture').disabled) return say(needLive()); $('btnCapture').click(); return say('Captured.');
-      case 'best8': if ($('btnBurst').disabled) return say(stacking ? 'Already capturing.' : needLive()); $('btnBurst').click(); return say('Best of eight. Hold still.');
+      case 'best8': if ($('btnBurst').disabled) return say(stacking ? 'Already capturing.' : needLive()); const wasLive = !!stream; $('btnBurst').click(); return say(wasLive ? 'Best of eight. Hold still.' : 'Checking sharpness.');
       case 'enhance':
         if (!sel) return say('Capture or select an image first.');
         if (look === 'off') { $('btnEnhance').click(); return say(`Enhance on. ${LOOKS[look].label} view.`); }
@@ -1076,10 +1096,28 @@
         if (!sel) return say('Capture the calibration card first, then say calibrate.');
         $('btnCal').click(); $('calStatus').closest('.panel').scrollIntoView({ block: 'center', behavior: 'smooth' });
         return say('Calibration on. Click the outer edges of two long lines two millimeters apart, then enter 2000.');
+      case 'detect': return detectByVoice();
       case 'analyze':
         if ($('btnAnalyze').disabled) return say(analyzing ? 'Already analyzing.' : 'Capture or select an image first.');
         $('btnAnalyze').click(); return say('Analyzing.');
     }
+  }
+  // Runs the trained model in the research workspace on the selected capture.
+  const DETECT_REPLIES = {
+    noimage: 'Capture or upload an image first.',
+    signin: 'Please sign in to the trained model first.',
+    consent: 'Please tick the permission box in the AI analysis panel first.',
+    pseudonym: 'Please enter a participant ID first. No real names.',
+    offline: 'The trained model is offline right now.',
+    busy: 'The trained model is already working.',
+    error: "The trained model couldn't finish. Check the AI analysis panel.",
+  };
+  async function detectByVoice() {
+    const research = window.CapTrailResearch;
+    if (!sel) return say(DETECT_REPLIES.noimage);
+    if (!research) return say(DETECT_REPLIES.offline);
+    const status = await research.detect({ onStart: () => say('Detecting capillaries.') });
+    say(status === 'ok' ? 'Done.' : DETECT_REPLIES[status] || DETECT_REPLIES.error);
   }
   // Only these facts go to the helper: no images, no audio.
   function voiceState() {

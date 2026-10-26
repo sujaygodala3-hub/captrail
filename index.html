@@ -13,7 +13,7 @@
 <body>
 
 <div class="announce" id="announce">
-  <span class="dot"></span>Research prototype in development: now capturing and calibrating our first real images.
+  <span class="dot"></span>Open-source research prototype. Calibrated at 3.745 µm per pixel. <a href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener">Read the code on GitHub →</a>
   <button aria-label="Dismiss" onclick="this.parentElement.remove()">×</button>
 </div>
 
@@ -22,24 +22,74 @@
 <main id="top">
 
   <!-- HERO -->
-  <section class="hero">
-    <div class="hero-mark" aria-hidden="true">
-      <svg viewBox="0 0 640 640">
-        <path class="loop-bg" d="M150 590V330c0-70 90-70 90 0v260"/>
-        <path class="loop-bg" d="M270 590V170c0-110 130-110 130 0v420"/>
-        <path class="loop-bg" d="M430 590V290c0-80 90-80 90 0v300"/>
-        <path class="loop-flow" d="M150 590V330c0-70 90-70 90 0v260"/>
-        <path class="loop-flow" d="M270 590V170c0-110 130-110 130 0v420"/>
-        <path class="loop-flow" d="M430 590V290c0-80 90-80 90 0v300"/>
-      </svg>
-    </div>
-    <div class="hero-inner">
-      <h1>See disease<br>where it starts</h1>
-      <p>Captrail is a low-cost nailfold microscope that uses AI to flag early signs of autoimmune and vascular disease, so a doctor can take a closer look sooner.</p>
-      <div class="hero-ctas">
-        <a class="btn btn-ghost" href="#how">How it works</a>
-        <a class="btn btn-red" href="#build">See the build</a>
+  <section class="hero2">
+    <div class="hero2-bg" aria-hidden="true"></div>
+    <div class="hero2-grid">
+      <div class="hero2-copy">
+        <a class="chip rise" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener"><i></i>Open source · built by four high school students</a>
+        <h1 class="rise" style="--d:.08s">See disease<br><span class="grad">where it&nbsp;starts.</span></h1>
+        <p class="rise" style="--d:.16s">Captrail is a $32 nailfold microscope. It images the tiny blood vessels at the base of your fingernail, measures them in real micrometers, and flags unusual loops for a doctor to review.</p>
+        <div class="hero2-ctas rise" style="--d:.24s">
+          <a class="btn btn-red" href="scan.html">Open the microscope <span aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="#how">How it works</a>
+          <a class="btn btn-gh" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#gh"/></svg>GitHub</a>
+        </div>
+        <dl class="hero2-stats rise" style="--d:.32s">
+          <div><dt>Build cost</dt><dd>$32</dd></div>
+          <div><dt>Microns per pixel</dt><dd>3.745</dd></div>
+          <div><dt>Printed parts</dt><dd>2</dd></div>
+          <div><dt>Open source</dt><dd>100%</dd></div>
+        </dl>
       </div>
+
+      <figure class="lens-wrap rise" style="--d:.2s" aria-label="Illustration of the Captrail microscope view">
+        <div class="lens">
+          <svg class="lens-svg" viewBox="0 0 520 520" aria-hidden="true">
+            <defs>
+              <radialGradient id="tissue" cx="50%" cy="42%" r="65%">
+                <stop offset="0" stop-color="#F6C9C3"/><stop offset=".55" stop-color="#E9A49D"/><stop offset="1" stop-color="#B9646A"/>
+              </radialGradient>
+              <filter id="soft"><feGaussianBlur stdDeviation="1.6"/></filter>
+              <linearGradient id="scanG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".35"/></linearGradient>
+              <clipPath id="lensClip"><circle cx="260" cy="260" r="236"/></clipPath>
+            </defs>
+            <g clip-path="url(#lensClip)">
+              <rect width="520" height="520" fill="url(#tissue)"/>
+              <path d="M0 150 C120 120 380 120 520 150 L520 0 L0 0Z" fill="#FBE3DD" opacity=".75"/>
+              <g class="caps" filter="url(#soft)">
+                <path d="M70 470V240c0-34 40-34 40 0v230"/>
+                <path d="M128 470V215c0-36 44-36 44 0v255"/>
+                <path d="M190 470V230c0-32 38-32 38 0v240"/>
+                <path class="hot" d="M246 470V200c0-44 56-44 56 0v270"/>
+                <path d="M322 470V225c0-34 40-34 40 0v245"/>
+                <path d="M380 470V240c0-30 36-30 36 0v230"/>
+                <path d="M432 470V250c0-30 34-30 34 0v220"/>
+              </g>
+              <g class="flow">
+                <path d="M70 470V240c0-34 40-34 40 0v230"/>
+                <path d="M128 470V215c0-36 44-36 44 0v255"/>
+                <path d="M190 470V230c0-32 38-32 38 0v240"/>
+                <path d="M246 470V200c0-44 56-44 56 0v270"/>
+                <path d="M322 470V225c0-34 40-34 40 0v245"/>
+                <path d="M380 470V240c0-30 36-30 36 0v230"/>
+                <path d="M432 470V250c0-30 34-30 34 0v220"/>
+              </g>
+              <g class="scan"><rect x="0" y="-60" width="520" height="60" fill="url(#scanG)"/></g>
+              <g class="detect">
+                <rect x="232" y="160" width="84" height="112" rx="10"/>
+                <path class="mline" d="M246 300H302"/><path class="mline" d="M246 292v16M302 292v16"/>
+              </g>
+              <g class="scalebar"><path d="M330 108h80"/><text x="370" y="96">100 µm</text></g>
+            </g>
+            <circle cx="260" cy="260" r="236" fill="none" stroke="#2A0609" stroke-opacity=".25" stroke-width="2"/>
+          </svg>
+          <div class="ticks" aria-hidden="true"></div>
+        </div>
+        <div class="tag t1"><b>Best of 8</b><span>Sharpest frame kept</span></div>
+        <div class="tag t2"><b>Hairpin loop</b><span>Model label, for review</span></div>
+        <div class="tag t3"><b>Calibrated</b><span>3.745 µm per pixel</span></div>
+        <figcaption>Illustration of the view through the lens</figcaption>
+      </figure>
     </div>
   </section>
 
@@ -261,16 +311,39 @@
           <p class="eyebrow rv">Who we are</p>
           <h2 class="rv">The founders</h2>
         </div>
-        <p class="rv">Four students building a cheaper, faster way to spot disease in the smallest blood vessels.</p>
+        <p class="rv">Four students from four Georgia high schools, building a cheaper, faster way to spot disease in the smallest blood vessels.</p>
       </div>
       <!-- PHOTOS: add <img src="images/name.jpg" alt="Full name"> inside each .pic to replace the initials,
            and a <p class="why">one line</p> after the role -->
       <div class="people">
-        <article class="person rv"><div class="pic"><span class="ini">SG</span></div><h3>Sujay Godala</h3><div class="r">Co-founder</div></article>
-        <article class="person rv"><div class="pic"><span class="ini">SR</span></div><h3>Smyan Reddy</h3><div class="r">Co-founder</div></article>
-        <article class="person rv"><div class="pic"><span class="ini">AS</span></div><h3>Aryan Senthilkumar</h3><div class="r">Co-founder</div></article>
-        <article class="person rv"><div class="pic"><span class="ini">AM</span></div><h3>Ansh Mishra</h3><div class="r">Co-founder</div></article>
+        <article class="person rv"><div class="pic"><span class="ini">SG</span></div><h3>Sujay Godala</h3><div class="r">Co-founder · Denmark High School</div></article>
+        <article class="person rv"><div class="pic"><span class="ini">SR</span></div><h3>Smyan Reddy</h3><div class="r">Co-founder · Lambert High School</div></article>
+        <article class="person rv"><div class="pic"><span class="ini">AS</span></div><h3>Aryan Senthilkumar</h3><div class="r">Co-founder · Northview High School</div></article>
+        <article class="person rv"><div class="pic"><span class="ini">AM</span></div><h3>Ansh Mishra</h3><div class="r">Co-founder · Alliance Academy for Innovation</div></article>
       </div>
+    </div>
+  </section>
+
+  <!-- OPEN SOURCE -->
+  <section class="oss" id="code" data-header="dark">
+    <div class="wrap oss-grid">
+      <div>
+        <p class="eyebrow rv">Open source</p>
+        <h2 class="rv">Every line, every part, in the open.</h2>
+        <p class="rv">The website, the microscope app, the print files and our physics simulations all live in one public repository. Read it, build it, test it, improve it.</p>
+        <a class="btn btn-light rv" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#gh"/></svg>sujaygodala3-hub/captrail <span aria-hidden="true">→</span></a>
+      </div>
+      <a class="repo rv" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener" aria-label="Open the Captrail repository on GitHub">
+        <div class="repo-top"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#gh"/></svg><span>sujaygodala3-hub / <b>captrail</b></span><em>Public</em></div>
+        <ul>
+          <li><code>index.html · scan.html</code><span>Website and the in-browser microscope app</span></li>
+          <li><code>api/</code><span>Server functions for AI review and voice</span></li>
+          <li><code>captrail_print_files/</code><span>Cradle and base board, .stl and .gcode</span></li>
+          <li><code>sims/</code><span>Microscope physics simulations and tests</span></li>
+          <li><code>tests/</code><span>Automated checks for the model bridge</span></li>
+        </ul>
+        <div class="repo-foot"><span><i class="lang js"></i>JavaScript</span><span><i class="lang py"></i>Python</span><span><i class="lang html"></i>HTML/CSS</span></div>
+      </a>
     </div>
   </section>
 
@@ -403,11 +476,11 @@
      live: true adds a link to the Microscope page. */
   const JOURNEY = [
     { title: 'Prototype built', status: 'done', live: true,
-      text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated with the coordinate cross on its calibration card.',
-      stats: [['Build cost', '$32'], ['Calibration', '6.094 µm/px'], ['Assembly time', 'about 3 h 30 min (mostly printing)']] },
+      text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated at nail zoom with the coordinate cross on its calibration card.',
+      stats: [['Build cost', '$32'], ['Calibration', '3.745 µm/px'], ['Assembly time', 'about 3 h 30 min (mostly printing)']] },
     { title: 'First images', status: 'now', live: true,
-      text: 'Microscope calibrated. Capturing our first real nailfold images now.',
-      stats: [['Resolution', '640 × 480'], ['Scale', '6.094 µm/px'], ['Field of view', 'about 3.9 × 2.9 mm']] },
+      text: 'Recalibrated at the exact zoom we use on the nail. Capturing real nailfold images and measuring loops in micrometers.',
+      stats: [['Resolution', '640 × 480'], ['Scale', '3.745 µm/px'], ['Field of view', 'about 2.4 × 1.8 mm']] },
     { title: 'Train the AI', status: 'next', goals: true,
       text: 'Our team is training a model to find and measure capillary loops in our images.',
       stats: [['Goal', 'Loops detected automatically'], ['Goal', 'Loop width measured in µm'], ['Goal', 'Results in under 10 seconds']] },

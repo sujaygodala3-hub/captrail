@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research workspace | CapTrail</title>
+<meta name="description" content="Connect the USB microscope, capture nailfold images, calibrate to micrometers and send scans to the Captrail model.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#B5171F">
+<link rel="canonical" href="https://captrail-app.vercel.app/workspace.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Captrail">
+<meta property="og:title" content="Research workspace | Captrail">
+<meta property="og:description" content="Connect the USB microscope, capture nailfold images, calibrate to micrometers and send scans to the Captrail model.">
+<meta property="og:url" content="https://captrail-app.vercel.app/workspace.html">
+<meta property="og:image" content="https://captrail-app.vercel.app/images/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<style>
+  .page-hero{padding:140px 0 44px}
+  .page-hero h1{font-size:clamp(46px,7vw,96px)}
+  .page-hero .sub{font-size:clamp(16px,1.5vw,19px);max-width:760px;margin-top:22px;color:#2c2422}
+  .how3{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+  .how3 span{font-size:14px;padding:8px 14px;border-radius:999px;background:var(--paper);border:1px solid var(--line)}
+  .how3 b{color:var(--red);font-weight:600;margin-right:6px}
+
+  .lab{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;padding-bottom:110px;align-items:start}
+  .stage-wrap{background:var(--dark);border-radius:20px;padding:14px;color:#fff;position:sticky;top:76px}
+  .dual{display:grid;gap:10px}
+  .dual.has-sim{grid-template-columns:1fr 1fr;align-items:start}
+  .sim{margin:0}
+  .sim canvas{display:block;width:100%;height:auto;border-radius:12px;background:#f0d9c8}
+  .sim figcaption{font-size:12px;line-height:1.4;color:rgba(255,255,255,.65);margin-top:6px}
+  .stage{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000;max-height:calc(100vh - 260px);margin:0 auto}
+  .stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .stage video{object-fit:contain}
+  #overlay{cursor:default;touch-action:none}
+  .stage.picking #overlay{cursor:crosshair}
+  .empty-state{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:rgba(255,255,255,.7);
+    background:radial-gradient(600px 300px at 50% 120%,rgba(176,30,44,.45),transparent 70%)}
+  .empty-state svg{width:54px;height:54px;color:#E0535F;margin:0 auto 14px}
+  .empty-state b{display:block;color:#fff;font:500 22px/1.2 var(--display);margin-bottom:6px}
+  .hud{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+  .hud span{font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+  .hud .warn{background:#FFF1D6;color:#7a4b00;font-weight:600}
+  .hud .live{color:#fff}.hud .live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#E0535F;margin-right:7px;animation:blink 1.4s infinite}
+  .hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font-size:13px;padding:8px 14px;border-radius:999px;background:var(--red);color:#fff;white-space:nowrap;pointer-events:none}
+
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 2px 2px}
+  .tb{display:inline-flex;align-items:center;gap:8px;font:500 14px/1 var(--body);padding:11px 15px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;transition:background .2s,border-color .2s}
+  .tb:hover:not(:disabled){background:rgba(255,255,255,.14)}
+  .tb:disabled{opacity:.35;cursor:not-allowed}
+  .tb.primary{background:var(--red);border-color:var(--red)}
+  .tb.primary:hover:not(:disabled){background:#a3222d}
+  .tb.on{background:#fff;color:var(--ink);border-color:#fff}
+  .tb svg{width:16px;height:16px}
+  .bar .spacer{flex:1}
+
+  .gallery{display:flex;gap:10px;overflow-x:auto;padding:14px 2px 4px;scrollbar-width:thin}
+  .thumb{position:relative;flex:none;width:120px;aspect-ratio:16/10;border-radius:8px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:#222;padding:0}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb.sel{border-color:#E0535F}
+  .thumb .sc{position:absolute;left:5px;bottom:5px;font-size:10.5px;padding:3px 6px;border-radius:5px;background:rgba(0,0,0,.65);color:#fff}
+  .thumb .best{position:absolute;right:5px;top:5px;font-size:10px;font-weight:600;letter-spacing:.08em;padding:3px 6px;border-radius:5px;background:var(--red);color:#fff}
+  .live-thumb{display:grid;place-items:center;color:#fff;font-size:12px;background:linear-gradient(135deg,#3a0a10,#1a0507)}
+  .gallery-empty{font-size:13px;color:rgba(255,255,255,.5);padding:10px 4px}
+
+  .side{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);min-width:0}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px}
+  .panel h3{font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .panel h3 .n{font:600 11px/1 var(--body);letter-spacing:.1em;color:#fff;background:var(--red);border-radius:999px;padding:5px 8px}
+  .panel p{font-size:14.5px;color:var(--muted);margin:0 0 14px}
+  .panel label{display:block;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+  .cam summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+  .cam summary::-webkit-details-marker{display:none}
+  .cam summary::after{content:"+";font-size:22px;color:var(--muted);line-height:1}
+  .cam[open] summary::after{content:"–"}
+  .cam summary h3{margin:0}
+  .cam[open] summary{margin-bottom:10px}
+  .slider{margin-top:14px}
+  .slider .top{display:flex;justify-content:space-between;font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+  .slider .top output{color:var(--ink);font-variant-numeric:tabular-nums;text-transform:none}
+  .slider input{width:100%;accent-color:var(--red);margin-top:6px}
+  .slider.off{opacity:.45}
+  .slider.off .top output{color:var(--muted)}
+  .panel select,.panel input[type=number]{width:100%;font:inherit;font-size:15px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .pb{font:500 14px/1 var(--body);padding:11px 16px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+  .pb:hover:not(:disabled){background:var(--ink);color:#fff}
+  .pb.red{background:var(--red);border-color:var(--red);color:#fff}
+  .pb.red:hover:not(:disabled){background:var(--red-deep);border-color:var(--red-deep)}
+  .pb:disabled{opacity:.4;cursor:not-allowed}
+  .status{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--bg)}
+  .status i{width:8px;height:8px;border-radius:50%;background:#bdb3b0;flex:none}
+  .status.ok i{background:#2f9e5b}.status.warn i{background:#d08a1c}.status.err i{background:var(--red)}
+  .big-val{font:500 34px/1 var(--display);letter-spacing:-.03em;color:var(--red);margin-top:4px}
+  .big-val small{font-size:15px;color:var(--muted);letter-spacing:0;margin-left:4px}
+  .mlist{list-style:none;margin:12px 0 0;padding:0;font-size:14.5px}
+  .mlist li{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
+  .mlist li button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+  .findings{list-style:none;margin:12px 0 0;padding:0;font-size:14.5px}
+  .findings li{padding:10px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+  .findings b{font-weight:500}
+  .exp-tag{margin-left:auto;font:600 10.5px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:#8a5a00;background:#FFF1D6;border:1px solid #F0D49A;padding:5px 8px;border-radius:999px;white-space:nowrap}
+  .ai-note{margin:12px 0 0;padding:12px 14px;border-radius:10px;background:var(--bg);font-size:14px;color:#4a403d;line-height:1.5}
+  .ai-note b{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .note{font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.5}
+  .note code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
+  .calib-form{display:none;margin-top:12px;padding:14px;border-radius:12px;background:var(--red-tint)}
+  .calib-form.show{display:block}
+  .calib-form label{margin-top:0}
+  .privacy{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:flex-start;padding:14px 4px 0}
+  .privacy svg{width:18px;height:18px;flex:none;color:var(--red);margin-top:1px}
+
+  /* voice assistant */
+  .mic{position:fixed;right:20px;bottom:20px;z-index:60;width:60px;height:60px;border-radius:50%;border:0;background:var(--red);color:#fff;
+    display:grid;place-items:center;cursor:pointer;box-shadow:0 12px 30px -10px rgba(94,14,22,.6);transition:background .2s,transform .2s}
+  .mic:hover{background:var(--red-deep);transform:translateY(-1px)}
+  .mic svg{width:26px;height:26px}
+  .mic.listening{background:var(--red-deep)}
+  .mic.listening::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid rgba(224,83,95,.55);animation:micpulse 1.2s ease-out infinite}
+  @keyframes micpulse{from{transform:scale(.92);opacity:1}to{transform:scale(1.25);opacity:0}}
+  .mic:focus-visible{outline:3px solid #E0535F;outline-offset:3px}
+  .voice{position:fixed;right:20px;bottom:92px;z-index:60;width:min(340px,calc(100vw - 40px));background:var(--paper);border:1px solid var(--line);
+    border-radius:18px;padding:16px 18px 14px;box-shadow:0 24px 50px -24px rgba(42,6,9,.45);font-size:14.5px}
+  .voice-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .voice-status{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .voice-status i{width:8px;height:8px;border-radius:50%;background:#cfc5c2}
+  .voice.listening .voice-status{color:var(--red)} .voice.listening .voice-status i{background:#E0535F;animation:blink 1s infinite}
+  .voice-close{background:none;border:0;font-size:20px;line-height:1;color:var(--muted);cursor:pointer}
+  .voice-line{margin:6px 0 0;color:#4a403d;line-height:1.45}
+  .voice-line b{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .voice-line.reply span{color:var(--ink)}
+  .voice-tip{margin:10px 0 0;font-size:12px;color:var(--muted)}
+  .voice-note{position:fixed;right:20px;bottom:20px;z-index:60;font-size:13px;padding:10px 14px;border-radius:999px;background:var(--ink);color:#fff;
+    box-shadow:0 12px 30px -12px rgba(0,0,0,.4)}
+
+  @media (max-width:1060px){
+    .dual.has-sim{grid-template-columns:1fr}
+    .lab{grid-template-columns:minmax(0,1fr)}
+    .stage-wrap{position:relative;top:0}
+    .stage{max-height:none}
+  }
+  @media (max-width:560px){
+    .stage-wrap{padding:10px;border-radius:16px}
+    .tb{padding:10px 12px;font-size:13px}
+    .tb .lbl{display:none}
+    .hint{font-size:12px;white-space:normal;width:90%;text-align:center}
+  }
+</style>
+<link rel="stylesheet" href="research/workspace.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap">
+<section class="research-workspace" aria-label="CapTrail research workspace">
+  <div class="work-heading"><div><div class="overline"><span class="berry-dot"></span> PRIVATE RESEARCH WORKSPACE <span class="version-tag">V7</span></div><h1>See the detail.<br><em>Follow the evidence.</em></h1><p>Your microscope images, trained detection, and a closer look at every candidate.</p></div><div class="workspace-actions"><button class="r-btn" id="openCalibration">Calibration</button><button class="r-btn" id="openCapture"><span aria-hidden="true">⊙</span> Connect microscope</button><button class="r-btn primary" id="sessionButton"><span aria-hidden="true">↗</span> Sign in</button></div></div>
+  <nav class="work-nav" aria-label="Workspace sections"><a class="active" href="#researchStage">Image workspace</a><a href="#savedSessions">Saved sessions <span id="sessionCount">—</span></a><a href="#captureStudio">Capture studio</a><span class="research-badge">RESEARCH USE ONLY</span></nav>
+  <div id="researchMessage" class="r-message" role="status" aria-live="polite" hidden></div>
+  <div class="research-grid">
+    <section class="image-column" aria-label="Image workspace">
+      <div class="optical-stage" id="researchStage" tabindex="0" aria-label="Image viewer. Use plus or minus to zoom, arrow keys to pan, zero to fit.">
+        <div class="stage-top"><span><i class="stage-dot"></i><span id="imageTitle">YOUR NEXT OBSERVATION</span></span><span id="imageDimensions">ORIGINAL PIXELS</span></div>
+        <div class="drop-zone" id="dropZone"><div class="optics-mark" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="35"/><circle cx="50" cy="50" r="22"/><path d="M50 4v17M50 79v17M4 50h17M79 50h17M43 50h14M50 43v14"/></svg></div><div class="overline">A CLOSER LOOK STARTS HERE</div><h2>Bring your image into focus.</h2><p>Drop microscope photographs here, or choose files.<br>Preview locally before you decide to upload.</p><button class="r-btn light" id="chooseImages">Choose images <span aria-hidden="true">↗</span></button><span class="upload-spec">JPEG or PNG · up to 3.8 MiB each · original resolution</span></div>
+        <input id="researchFiles" type="file" accept="image/jpeg,image/png" multiple hidden>
+        <svg id="vesselViewport" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Original microscope image and returned research geometry" preserveAspectRatio="xMidYMid meet" hidden><image id="researchImage" preserveAspectRatio="none"/><g id="maskLayer"></g><g id="traceLayer"></g><g id="boxLayer"></g><g id="reviewGeometryLayer"></g><g id="draftGeometryLayer"></g><g id="labelLayer"></g></svg>
+        <div class="stage-bottom"><span id="stageCaption">LOCAL PREVIEW · NOTHING UPLOADED</span><div class="zoom-controls"><button id="zoomOut" aria-label="Zoom out" disabled>−</button><output id="zoomLevel">Fit</output><button id="zoomIn" aria-label="Zoom in" disabled>+</button><button id="zoomFit" aria-label="Fit image" disabled>⌗</button></div></div>
+        <div class="model-working" id="modelWorking" hidden><span class="orbit-loader" aria-hidden="true"></span><strong id="workingTitle">Running trained detection</strong><span>Your original image remains unchanged.</span><span id="elapsedTime">0s elapsed</span><ol class="processing-stages" id="processingStages"><li>Original selected · local pixels preserved</li><li>Upload and server validation · awaiting response</li><li>Quality, detection and tracing · server processing</li><li>Encrypted persistence · confirmed only on response</li></ol></div>
+      </div>
+      <div class="viewer-tools"><div class="layer-tools"><label><input id="showBoxes" type="checkbox" checked disabled> Candidates</label><label><input id="showTraces" type="checkbox" checked disabled> Centerlines</label><label><input id="showMasks" type="checkbox" disabled> Masks</label><label><input id="showReview" type="checkbox" checked disabled> Review geometry</label></div><button class="text-button" id="replayTrace" disabled>↻ Replay trace</button></div>
+      <details class="display-options"><summary>Display &amp; comparison</summary><div class="opacity-grid"><label>Candidate opacity<input id="boxOpacity" type="range" min="0" max="1" step="0.05" value="1"></label><label>Trace opacity<input id="traceOpacity" type="range" min="0" max="1" step="0.05" value="1"></label><label>Mask opacity<input id="maskOpacity" type="range" min="0" max="1" step="0.05" value="1"></label><label>Review opacity<input id="reviewOpacity" type="range" min="0" max="1" step="0.05" value="1"></label></div><div class="inline-actions"><label><input type="checkbox" id="showLabels"> Region labels</label><button id="fullscreenViewer" class="text-button">Expand viewer ↗</button><button id="openComparison" class="text-button" disabled>Compare representations ↗</button></div></details>
+      <div class="image-queue" id="imageQueue" role="group" aria-label="Local photographs"></div>
+      <div class="evidence-note"><span class="note-symbol" aria-hidden="true">i</span><p id="geometryNotice"><strong>Every line needs evidence.</strong> Tracing uses returned image coordinates. Candidates and trace fragments require human review; neither establishes anatomical accuracy.</p></div>
+      <section class="result-card" id="morphologyCard"><div class="section-label"><span>01 / MORPHOLOGY</span><span id="morphologyLayer">AWAITING ANALYSIS</span></div><div class="morphology-heading"><h2>A pattern, not a diagnosis.</h2><p>Four source-trained classes. Counts describe candidates in this image.</p></div><div id="morphologyChart" class="morphology-chart"><div class="morph-empty">Upload and analyze an image to explore its morphology.</div></div></section>
+    </section>
+    <aside class="research-inspector" aria-label="Analysis and candidate inspector">
+      <section class="inspector-section intake-section"><div class="section-label"><span>YOUR OBSERVATION</span><span class="tiny-lock" aria-hidden="true">⌑</span></div><h2>Make it traceable.</h2><p class="r-muted">Give this observation a research identity.</p><label class="r-label" for="participantId">Participant pseudonym</label><input class="r-input" list="participantOptions" id="participantId" placeholder="e.g. CT-001" maxlength="60" autocomplete="off"><datalist id="participantOptions"></datalist><div class="inline-actions"><button id="registerParticipant" class="text-button">Register pseudonym</button><button id="archiveParticipant" class="text-button" disabled>Archive</button></div>
+<details class="acquisition-details"><summary>Examination &amp; acquisition</summary><label class="r-label" for="examId">Examination ID</label><input id="examId" class="r-input" maxlength="100"><button id="newExam" class="text-button">＋ New examination</button><div class="input-pair"><div><label class="r-label" for="visitId">Visit ID</label><input id="visitId" class="r-input" maxlength="100" placeholder="Optional"></div><div><label class="r-label" for="fieldId">Field ID</label><input id="fieldId" class="r-input" maxlength="100" placeholder="Optional"></div></div><label class="r-label" for="acquisitionProfile">Calibration profile</label><select id="acquisitionProfile" class="r-input"><option value="">No physical calibration</option></select><p id="profileDetails" class="consent-note">Physical dimensions remain unavailable.</p><label class="consent-row"><input id="acquisitionOpticsConfirmed" type="checkbox"><span>This capture uses the profile’s exact device, zoom, focus, working distance and uncropped resolution.</span></label></details>
+<div class="input-pair"><div><label class="r-label" for="handId">Hand</label><select class="r-input" id="handId"><option value="unknown">Not recorded</option><option value="left">Left</option><option value="right">Right</option></select></div><div><label class="r-label" for="fingerId">Finger</label><select class="r-input" id="fingerId"><option value="unknown">Not recorded</option><option>thumb</option><option>index</option><option>middle</option><option>ring</option><option>pinky</option></select></div></div><label class="consent-row"><input type="checkbox" id="storageConsent"><span>I have permission to upload and store these images in this private research workspace.</span></label><p class="consent-note">Training permission is separate and stays off.</p><button class="r-btn primary analyze-button" id="analyzeImage" disabled>Analyze original <span aria-hidden="true">↗</span></button><div class="model-status" id="modelStatus"><span class="status-led"></span><span>Checking model connection…</span></div></section>
+      <section class="inspector-section" id="candidateInspector"><div class="section-label"><span>02 / INSPECTION</span><span id="candidateCount">—</span></div><h2 id="inspectorTitle">Look a little closer.</h2><p id="inspectorEmpty" class="r-muted">After analysis, select a candidate on the image or in the list to inspect its geometry.</p><div id="inspectionContent" hidden><div class="candidate-navigation"><button id="previousCandidate" class="r-btn" aria-label="Previous candidate">←</button><select id="candidateSelect" class="r-input" aria-label="Select candidate"></select><button id="nextCandidate" class="r-btn" aria-label="Next candidate">→</button></div><dl class="candidate-facts" id="candidateFacts"></dl><label class="r-label" for="correctClass">Provisional morphology correction</label><select class="r-input" id="correctClass"><option value="">Unclassified</option><option value="0">Bushy</option><option value="1">Crossing</option><option value="2">Hairpin</option><option value="3">Tortuous</option></select><div class="annotation-tools"><button class="r-btn" id="markCenterline">Mark centerline</button><button class="r-btn" id="markBoundary">Mark boundary</button><button class="r-btn" id="markApex">Mark apex</button></div><div id="annotationActions" hidden><p class="consent-note" id="annotationHint"></p><button class="text-button" id="undoPoint">Undo point</button> · <button class="text-button" id="finishGeometry">Finish annotation</button> · <button class="text-button" id="cancelGeometry">Cancel</button></div><label class="consent-row"><input id="excludeCandidate" type="checkbox"><span>Exclude this candidate from my review</span></label></div><div id="reviewControls" hidden><div class="inline-actions"><button id="undoReview" class="text-button" disabled>↶ Undo edit</button><button id="redoReview" class="text-button" disabled>Redo edit ↷</button></div><label class="r-label" for="reviewNotes">Review notes</label><textarea class="r-input" id="reviewNotes" rows="3" maxlength="4000" placeholder="Describe uncertainty or correction…"></textarea><button class="r-btn" id="saveReview">Save provisional review</button><p class="consent-note" id="reviewState">Expert approval is not assigned by this interface.</p></div></section>
+      <section class="inspector-section trace-section" hidden><div class="section-label"><span>03 / TRACING</span><span class="outline-tag">EXPERIMENTAL</span></div><label class="r-label" for="traceModel">Geometry source</label><select class="r-input" id="traceModel" disabled><option value="ridge">Image ridge proposals</option></select><button id="runTraceModel" class="r-btn" disabled>Apply selected source</button><p class="r-muted">Neural models use generated training labels. Fragments are not individual capillaries. Changing this layer does not change saved detection.</p></section>
+      <section class="inspector-section provenance-section" hidden><div class="section-label"><span>RESEARCH RECORD</span><span id="recordRevision">—</span></div><dl id="recordFacts" class="candidate-facts"><dt>Physical measurements</dt><dd>Unavailable until a verified reference matches this image.</dd></dl><div class="export-actions"><button id="exportJson" class="r-btn" disabled>JSON ↗</button><button id="exportReport" class="r-btn" disabled>Report ↗</button><button id="exportOverlay" class="r-btn" disabled>Overlay ↗</button></div><div class="record-management"><label class="consent-row"><input id="trainingConsent" type="checkbox"><span>Separately permit research training from this record.</span></label><p class="consent-note">Consent alone does not make an image eligible for training; a doctor must review it first. Revocation affects future use; published model changes require a managed withdrawal review.</p><button id="saveTrainingConsent" class="text-button">Record training permission</button><button id="deleteObservation" class="text-button" hidden>Delete this observation</button><a id="openAnatomy" class="text-button" href="research/anatomy.html" target="_blank" rel="noopener">Independent anatomy workspace ↗</a></div></section>
+    </aside>
+  </div>
+  <section id="savedSessions" class="saved-sessions"><div class="section-label"><span>CONTINUE YOUR WORK</span><button class="text-button" id="refreshSessions">↻ Refresh</button></div><h2>Every observation has a history.</h2><p class="r-muted">Sign in to reopen saved originals, model results, and review revisions.</p><label for="sessionFilter" class="r-label">Filter by participant pseudonym</label><input id="sessionFilter" class="r-input" placeholder="All participants"><div id="examinationList" class="examination-list"></div><div id="sessionList" class="session-list"></div><div id="historyList" class="history-list" hidden></div></section>
+<dialog id="calibrationDialog" class="calibration-dialog" aria-labelledby="calibrationTitle">
+  <div class="calibration-heading"><div><div class="overline">CAPTRAIL / METROLOGY</div><h2 id="calibrationTitle">A scale you can account for.</h2><p>Trace a known physical distance at the exact acquisition settings.</p></div><button class="r-btn" id="closeCalibration" aria-label="Close calibration">×</button></div>
+  <div class="calibration-grid"><section><div class="calibration-stage" id="calStage" tabindex="0" aria-label="Ruler viewer. Arrow keys adjust the selected endpoint; plus and minus zoom; zero fits."><div id="calEmpty"><span class="overline">START WITH A REFERENCE</span><h3>Every measurement begins here.</h3><p>Choose an original ruler photograph.<br>Synthetic fixtures can test the workflow, but cannot verify a microscope.</p><button class="r-btn light" id="chooseCalibration">Choose ruler image ↗</button></div><svg id="calViewport" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" hidden><image id="calImage"/><g id="calTicks"></g><g id="calEndpoints"></g></svg><div class="cal-stage-tools"><button class="r-btn" id="calZoomOut" aria-label="Zoom ruler out">−</button><output id="calZoomLevel">100%</output><button class="r-btn" id="calZoomIn" aria-label="Zoom ruler in">+</button><button class="r-btn" id="calFit">Fit</button></div></div><input id="calFile" type="file" accept="image/png,image/jpeg" hidden>
+  <div class="calibration-actions"><button class="r-btn" id="changeCalibration">Change image</button><button class="r-btn primary" id="proposeTicks">Find tick proposals</button><label><input type="checkbox" id="calPointMode" checked> Edit endpoints</label><select id="calEndpoint" class="r-input" aria-label="Active endpoint"><option value="0">Endpoint A</option><option value="1">Endpoint B</option></select></div>
+  <p id="calibrationStatus" class="r-message" role="status">No physical scale is established by an image alone.</p><div class="cal-statistics" id="calStatistics"></div><p class="consent-note">Tick marks are pixel proposals. Autocorrelation and spectral checks assess periodicity; they cannot establish the physical divisions, lens distortion, or optical configuration.</p></section>
+  <section class="calibration-form"><div class="section-label">REFERENCE &amp; ACQUISITION PROFILE</div><div class="input-pair"><div><label for="calDevice" class="r-label">Microscope / device ID</label><input id="calDevice" class="r-input" maxlength="100" placeholder="e.g. SCOPE-01"></div><div><label for="calProfile" class="r-label">Settings profile ID</label><input id="calProfile" class="r-input" maxlength="100" placeholder="e.g. nail-zoom-A"></div></div><label for="calOptics" class="r-label">Zoom, focus, working distance</label><input id="calOptics" class="r-input" maxlength="200" placeholder="Record exact optical configuration">
+  <label for="calSource" class="r-label">Reference provenance</label><select id="calSource" class="r-input"><option value="unknown">Not established</option><option value="real_reference">Real physical standard photograph</option><option value="synthetic_test_fixture">Synthetic test fixture</option></select>
+  <div class="input-pair"><div><label for="calDistance" class="r-label">A–B physical distance (µm)</label><input id="calDistance" class="r-input" type="number" min="0.001" max="1000000" step="any" placeholder="From reference specification"></div><div><label for="calPhysicalSE" class="r-label">Distance standard uncertainty (µm)</label><input id="calPhysicalSE" class="r-input" type="number" min="0" step="any" placeholder="Required"></div></div><label for="calPixelSE" class="r-label">Endpoint-span standard uncertainty (px)</label><input id="calPixelSE" class="r-input" type="number" min="0" step="any" value="1"><div class="endpoint-grid"><label>A x<input id="calAx" class="r-input" type="number" step="0.1"></label><label>A y<input id="calAy" class="r-input" type="number" step="0.1"></label><label>B x<input id="calBx" class="r-input" type="number" step="0.1"></label><label>B y<input id="calBy" class="r-input" type="number" step="0.1"></label></div>
+  <div id="calibrationScale" class="cal-scale">— <small>conditional µm / px</small></div><label class="consent-row"><input id="calPhysicalConfirmed" type="checkbox"><span>The standard’s physical divisions and uncertainty are documented and confirmed.</span></label><label class="consent-row"><input id="calOpticsConfirmed" type="checkbox"><span>This profile records the exact device, zoom, focus, working distance and uncropped resolution.</span></label><label class="consent-row"><input id="calVerify" type="checkbox" disabled><span>Verify this real reference (qualified named reviewer only).</span></label><label class="consent-row"><input id="calStoreConsent" type="checkbox"><span>I permit storing this reference and its device profile in this workspace.</span></label><button id="saveCalibration" class="r-btn primary">Save provisional profile ↗</button><p class="consent-note">A provisional scale never enables verified physical measurements. A saved verified profile must also match each acquisition.</p></section></div>
+  <section class="cal-profile-section"><div class="section-label">SAVED DEVICE PROFILES</div><div id="calProfileList" class="session-list"></div></section>
+</dialog>
+
+  <dialog id="signInDialog" class="research-dialog"><form id="signInForm"><button type="button" id="closeSignIn" class="dialog-close" aria-label="Close sign-in">×</button><div class="overline">CAPTRAIL / PRIVATE RESEARCH</div><h2>Back to the detail.</h2><p>Sign in to your research workspace.</p><div id="accountFields"><label for="researchUser" class="r-label">Username</label><input id="researchUser" class="r-input" autocomplete="username"><label for="researchPassword" class="r-label">Password</label><input id="researchPassword" class="r-input" type="password" autocomplete="current-password"></div><div id="tokenFields" hidden><label for="researchToken" class="r-label">Workspace access token</label><input id="researchToken" class="r-input" type="password" autocomplete="off"></div><p id="signInError" class="dialog-error" role="alert"></p><button class="r-btn primary" id="submitSignIn" type="submit">Sign in securely ↗</button><p class="consent-note">Credentials are never saved in browser storage. Your session uses an HttpOnly cookie.</p></form></dialog>
+</section>
+
+
+<details class="capture-studio" id="captureStudio"><summary>Microscope capture studio <small>USB · 40-frame stacking · best of 8 · manual calibration</small></summary><div class="capture-transfer"><span>Capture locally, then send the untouched original into your research workspace.</span><button class="r-btn primary" id="useCapture">Use selected capture ↗</button></div>
+  <section class="lab">
+    <div class="stage-wrap">
+      <div class="dual" id="dual">
+      <div class="stage" id="stage">
+        <video id="video" playsinline muted hidden></video>
+        <canvas id="view" hidden></canvas>
+        <canvas id="overlay" hidden></canvas>
+        <div class="empty-state" id="empty">
+          <div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h4l-1 7H10z"/><path d="M11 10v3"/><circle cx="11" cy="15" r="2"/><path d="M15 11a6 6 0 0 1 0 9M4 21h16"/></svg>
+            <b>No microscope connected</b>
+            Plug in the microscope, then press Connect.<br>Or upload images saved from the microscope’s app.
+          </div>
+        </div>
+        <div class="hud" id="hud"></div>
+        <div class="hint" id="hint" hidden></div>
+      </div>
+      <!-- Simulated view: a drawn illustration, not a capture. Never saved, measured or sent to AI analysis. -->
+      <figure class="sim" id="simFig" hidden>
+        <canvas id="simCanvas" width="1280" height="960" aria-label="Simulated illustration of capillary loops"></canvas>
+        <figcaption>Simulated illustration from the detected loop positions. Not a real image: never saved, measured or analyzed.</figcaption>
+      </figure>
+      </div>
+
+      <div class="bar">
+        <button class="tb primary" id="btnCapture" disabled title="Capture one frame (tap Space; hold Space to talk)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><span class="lbl">Capture</span></button>
+        <button class="tb" id="btnStack" disabled title="Take 40 frames, align the sharpest 20 and merge them">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 3 8l9 5 9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg><span class="lbl">Stack 40</span></button>
+        <button class="tb" id="btnBurst" disabled title="Take 8 frames and keep the sharpest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="M7 4h12a2 2 0 0 1 2 2v9"/></svg><span class="lbl">Best of 8</span></button>
+        <button class="tb" id="btnLive" disabled title="Back to live view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l5-3v10l-5-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg><span class="lbl">Live</span></button>
+        <span class="spacer"></span>
+        <button class="tb" id="btnEnhance" disabled title="Cycle mode: Off, Warm, Sharpen, Capillary, Grayscale">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span class="lbl" id="enhanceLbl">Enhance: Off</span></button>
+        <button class="tb" id="btnRaw" disabled title="Switch between the enhanced view and the original">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg><span class="lbl" id="rawLbl">Show original</span></button>
+        <button class="tb" id="btnMeasure" disabled title="Click two points to measure">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2"/></svg><span class="lbl">Measure</span></button>
+        <button class="tb" id="btnDownload" disabled title="Save this image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Save</span></button>
+        <button class="tb" id="btnZip" hidden title="Download every image from the last upload batch (raw + enhanced) as a zip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M12 8v7M9 12l3 3 3-3"/></svg><span class="lbl" id="zipLbl">Download all</span></button>
+        <button class="tb" id="btnDelete" disabled title="Remove this image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button>
+      </div>
+      <div class="gallery" id="gallery"><div class="gallery-empty">Captured and uploaded images appear here, scored for sharpness.</div></div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <h3><span class="n">01</span>Connect</h3>
+        <p>Use Chrome, Edge or Safari. Your browser will ask for camera permission.</p>
+        <div class="row"><button class="pb red" id="btnConnect">Connect microscope</button>
+          <label class="pb" style="display:inline-flex;align-items:center;margin:0;text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;color:var(--ink)">Upload images<input type="file" id="fileIn" accept="image/*" multiple hidden></label></div>
+        <label for="devSel">Camera</label>
+        <select id="devSel" disabled><option>Connect first</option></select>
+        <label for="resSel">Resolution</label>
+        <select id="resSel"><option value="640x480" selected>640 × 480</option><option value="1280x720">1280 × 720</option></select>
+        <div class="status" id="connStatus"><i></i><span>Not connected</span></div>
+      </div>
+
+      <details class="panel cam" id="camPanel">
+        <summary><h3>Camera settings</h3></summary>
+        <p>Locked white balance and exposure keep color and brightness the same from scan to scan. Applied automatically on connect and remembered for this camera.</p>
+        <div id="camSliders"></div>
+        <div class="row"><button class="pb" id="camReset" disabled>Reset to camera defaults</button></div>
+        <div class="status" id="camStatus"><i></i><span>Connect the microscope to adjust its settings.</span></div>
+      </details>
+
+      <div class="panel">
+        <h3><span class="n">02</span>Calibrate</h3>
+        <p>Operator calibration only: use a physical reference of known spacing at the same device settings. This does not create a verified research calibration.</p>
+        <div class="big-val" id="calVal">— <small>µm / px</small></div>
+        <div class="row"><button class="pb" id="btnCal" disabled>Calibrate on this image</button><button class="pb" id="btnCalClear">Reset</button></div>
+        <div class="calib-form" id="calForm">
+          <label for="calUm">Distance between your two clicks (µm)</label>
+          <input type="number" id="calUm" value="100" min="1" step="1">
+          <div class="row"><button class="pb red" id="calSave">Save calibration</button><button class="pb" id="calCancel">Cancel</button></div>
+        </div>
+        <div class="status" id="calStatus"><i></i><span>Not calibrated</span></div>
+      </div>
+
+      <div class="panel">
+        <h3><span class="n">03</span>Measurements</h3>
+        <p>Pick Measure in the toolbar and click across a capillary loop.</p>
+        <ul class="mlist" id="mlist"><li style="color:var(--muted)">None yet</li></ul>
+      </div>
+
+      <div class="panel">
+        <h3><span class="n">04</span>Optional external commentary <span class="exp-tag">Experimental, not a diagnosis</span></h3>
+        <p>An optional external model can describe your image. This is separate from the trained research workflow above, and cannot establish anatomy or diagnosis.</p>
+        <div class="row"><button class="pb red" id="btnAnalyze" disabled>Experimental visual review</button><button class="pb" id="btnTrained" disabled hidden>Trained capillary model</button></div>
+        <label class="consent-row"><input type="checkbox" id="externalReviewConsent"><span>I separately agree to send this image to Anthropic for experimental commentary. This is not the trained CapTrail model.</span></label>
+        <div class="status" id="aiStatus"><i></i><span>Model not connected yet</span></div>
+        <ul class="findings" id="findings"></ul>
+        <p class="ai-note" id="aiNote" hidden></p>
+        <p class="note">External commentary is not an anatomical annotation or a validated measurement.</p>
+      </div>
+
+      <div class="privacy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg>
+        <span>Captures stay local until you explicitly upload with permission. Saved research sessions persist in your authenticated workspace. External commentary requires separate permission.</span>
+      </div>
+    </aside>
+  </section>
+</details><div class="research-footer"><span><strong>CapTrail</strong> / A closer look, responsibly.</span><span>Private research · Anatomical and clinical validation remain incomplete.</span></div></main>
+
+<!-- Voice assistant: speech is recognized by the browser; only the question text is sent to /api/voice. -->
+<button class="mic" id="micBtn" type="button" aria-label="Talk to Captrail" title="Talk to Captrail (or hold Space)" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+</button>
+<section class="voice" id="voicePanel" aria-live="polite" hidden>
+  <div class="voice-head"><span class="voice-status" id="voiceStatus"><i></i><span>Ready</span></span><button class="voice-close" id="voiceClose" type="button" aria-label="Close voice panel">×</button></div>
+  <p class="voice-line" id="voiceHeard" hidden><b>You said</b><span></span></p>
+  <p class="voice-line reply" id="voiceReply" hidden><b>Captrail</b><span></span></p>
+  <p class="voice-tip">Try “capture”, “best of eight”, “calibrate”, or ask a question. Hold Space to talk.</p>
+  <p class="voice-tip">Voice is processed by your browser; questions are sent as text.</p>
+</section>
+<div class="voice-note" id="voiceNote" role="status" hidden>Voice works in Chrome and Safari</div>
+
+<div id="site-footer"></div>
+<script src="site.js"></script>
+
+<script src="capture-core.js"></script>
+<script type="module" src="research/workspace.js"></script>
+</body>
+</html>

@@ -179,3 +179,23 @@ body .wrap{padding:0 clamp(16px,3.4vw,48px)}
   .capture-studio>summary small{margin-right:40px}
 }
 @media (prefers-reduced-motion:reduce){.optics-mark:before,.stage-dot{animation:none}}
+
+/* Capture studio first, at the original Microscope page dimensions
+   (stage beside a 360 px control column, 1176 px content width) */
+.capture-studio{max-width:1226px;margin:118px auto 48px;padding:0 24px 24px}
+.capture-studio>summary{padding:26px 4px 22px}
+.capture-studio>summary::after{right:4px}
+.capture-studio>summary:hover{background:none}
+.capture-studio[open]>summary{margin-bottom:6px}
+.capture-studio .capture-transfer{padding:0 0 18px}
+.capture-studio .lab{grid-template-columns:minmax(0,1fr) 360px;gap:22px;padding-bottom:0}
+.capture-studio .panel{border-radius:18px}
+.capture-studio .stage-wrap{border-radius:20px;padding:14px}
+.capture-studio .stage{max-height:calc(100vh - 260px)}
+.capture-studio+.research-workspace{padding-top:24px}
+@media (max-width:1060px){.capture-studio .lab{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:500px){.capture-studio{margin-top:96px;padding:0 14px 14px}.capture-studio .side{grid-template-columns:minmax(0,1fr)}}
+.capture-studio .panel h3{flex-wrap:wrap}
+.capture-studio .exp-tag{white-space:normal}
+@media (max-width:500px){.capture-studio .exp-tag{margin-left:0}.work-nav{overflow-x:auto;max-width:100%}}
+@media (max-width:560px){.capture-studio .stage{aspect-ratio:4/3}.capture-studio .empty-state b{font-size:18px}.capture-studio .empty-state{font-size:13.5px;padding:16px}.capture-studio .empty-state svg{width:40px;height:40px;margin-bottom:8px}}

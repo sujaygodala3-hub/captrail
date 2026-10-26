@@ -41,7 +41,7 @@ const server=http.createServer(async(req,res)=>{
   res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)Readable.fromWeb(result.body).pipe(res);else res.end();return;
  }
  if(incoming.pathname.startsWith('/api/')){res.writeHead(503,{'content-type':'application/json'});res.end(JSON.stringify({error:'Optional external commentary is not configured in this private preview.'}));return;}
- const pathname=decodeURIComponent(incoming.pathname);const relative=pathname==='/'?'scan.html':pathname.replace(/^\//,'');
+ const pathname=decodeURIComponent(incoming.pathname);const relative=pathname==='/'?'workspace.html':pathname.replace(/^\//,'');
  const p=path.resolve(root,relative);
  if(!p.startsWith(root+path.sep)||relative.split('/').some(s=>s.startsWith('.'))||!mime[path.extname(p)]||relative.startsWith('api/')||relative.startsWith('scripts/')||relative.startsWith('tests/')){res.writeHead(404);res.end();return;}
  const body=await fs.readFile(p);res.writeHead(200,{'content-type':mime[path.extname(p)],'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','x-frame-options':'DENY','permissions-policy':'camera=(self), microphone=(self)'});res.end(body);

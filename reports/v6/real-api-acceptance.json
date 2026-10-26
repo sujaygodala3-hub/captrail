@@ -1,0 +1,14 @@
+{
+  "auth": true,
+  "actual_model": "nguyen-yolov8n-514af033-b68e404a",
+  "candidates": 12,
+  "ridge_fragments": 93,
+  "upload_to_saved_ms": [
+    789.5577520000002,
+    702.8688929999998,
+    686.4937129999998
+  ],
+  "neural_fragments": 106,
+  "review_persistence_and_conflict": true,
+  "session_revocation": true
+}

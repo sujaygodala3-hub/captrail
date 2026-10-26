@@ -1,14 +1,14 @@
 """Turn a batch run (batch_run.py output) into a versioned, documented training dataset.
 
-    python export_dataset.py results/batch --out datasets/captrail-v3
-    python export_dataset.py results/batch --out datasets/captrail-v3 --compare-with <second batch dir>
-    python export_dataset.py --check datasets/captrail-v3          # verify hashes, schema, splits, privacy
-    python export_dataset.py results/batch --out datasets/captrail-v3 --vision-images <folder of zips> \
+    python export_dataset.py results/batch --out datasets/captrail-v1
+    python export_dataset.py results/batch --out datasets/captrail-v1 --compare-with <second batch dir>
+    python export_dataset.py --check datasets/captrail-v1          # verify hashes, schema, splits, privacy
+    python export_dataset.py results/batch --out datasets/captrail-v1 --vision-images <folder of zips> \
         --vision-out datasets/_local_vision                         # images + COCO keypoints, stays LOCAL
 
 What it writes (all text, no images, subjects pseudonymized):
     tables/      sessions, frames, loops, sites, paired_views, splits          (one row per thing, tidy)
-    calibration/ every card/ruler photo (nail zoom or not), the scale used, blank-card noise spectrum
+    calibration/ ruler photos, ruler summary, blank-card noise spectrum
     sims/        scenarios (every scope the sims ran), headline metrics, and the S1 S2 S4 S6 S7 curves
     qa/          reproducibility on identical inputs, optional cross-platform stability
     llm/         records.jsonl (one per frame) and chat-format SFT files per split
@@ -33,36 +33,16 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "3.0.0"   # 3: measured nail-zoom scale (*_um columns), card photos from every zoom, calibration_qc task
+VERSION = "2.0.0"
 SIG = 6                                   # significant digits kept in every float
-UM_PER_PX_EST, UM_LOW, UM_HIGH = 1.6, 1.3, 2.0   # anatomical fallback, used only when the batch has no nail-zoom card
+UM_PER_PX_EST, UM_LOW, UM_HIGH = 1.6, 1.3, 2.0
 STEPS = ("s1", "s2", "s4", "s6", "s7")
 SPLIT_FRACTIONS = (("test", 0.15), ("val", 0.15))   # the rest is train
-SYSTEM_BASE = ("You are the Captrail measurement assistant for a low-cost USB nailfold capillaroscope. "
-               "You judge image quality, report capillary measurements and explain how reliable they are. "
-               "Captrail is a student research prototype, not a diagnostic device: never diagnose. ")
-SCALE = {}       # set by build(): the scale every um column uses (see scale_of)
-
-
-def scale_of(bs):
-    """The scale for every um value: the card photographed at nail zoom when the batch has one (status
-    'measured'), else the anatomical estimate. low/high: mean -/+ 2 SD over the card photos (measured) or the
-    anatomical bounds."""
-    sc = (bs.get("calibration") or {}).get("scale") or {}
-    if sc.get("status") == "measured":
-        u, sd = float(sc["um_per_px"]), float(sc.get("sd") or 0.0)
-        return dict(um=u, low=u - 2 * sd, high=u + 2 * sd, status="measured", n=sc.get("n"), source=sc.get("source", ""),
-                    tick_sigma_px=sc.get("tick_sigma_px"), aspect=sc.get("aspect_v_over_h"))
-    return dict(um=UM_PER_PX_EST, low=UM_LOW, high=UM_HIGH, status="anatomical_estimate", n=0,
-                source="anatomical estimate from healthy loop spacing and widths (no card at nail zoom)")
-
-
-def system_prompt():
-    if SCALE.get("status") == "measured":
-        return SYSTEM_BASE + (f"Widths are measured in pixels and converted with the scale measured from the calibration card at the "
-                              f"nail zoom ({SCALE['um']:.4f} um per pixel). If zoom, height or focus changes, the card must be photographed again.")
-    return SYSTEM_BASE + ("Widths are measured in pixels; micrometre values use an estimated scale until the card is "
-                          "photographed at the same zoom as the nail.")
+SYSTEM_PROMPT = ("You are the Captrail measurement assistant for a low-cost USB nailfold capillaroscope. "
+                 "You judge image quality, report capillary measurements and explain how reliable they are. "
+                 "Captrail is a student research prototype, not a diagnostic device: never diagnose. "
+                 "Widths are measured in pixels; micrometre values use an estimated scale until the ruler is "
+                 "photographed at the same zoom as the nail.")
 
 # ------------------------------------------------------------------------------------------- schema
 # (column, type, unit, meaning). Exports select exactly these columns, in this order; --check enforces it.
@@ -78,11 +58,10 @@ S["sessions"] = [
     ("n_measured_frames", "int", "", "Measured frames: one per capture per input zip (raw preferred)"),
     ("n_usable_frames", "int", "", "Measured frames passing the usability rule"),
     ("n_loops_resolved", "int", "", "Loops with both limbs measured, usable frames"),
-    ("um_per_px", "float", "um/px", "Scale used for every *_um column"),
-    ("um_per_px_low", "float", "um/px", "Lower bound: mean - 2 SD over the card photos (measured) or the anatomical bound"),
-    ("um_per_px_high", "float", "um/px", "Upper bound: mean + 2 SD over the card photos (measured) or the anatomical bound"),
-    ("scale_status", "str", "", "measured (calibration card photographed at nail zoom) or anatomical_estimate"),
-    ("scale_source", "str", "", "Where the scale comes from"),
+    ("um_per_px_est", "float", "um/px", "Scale used for every *_um_est column (anatomical estimate)"),
+    ("um_per_px_low", "float", "um/px", "Lower bound of the scale estimate"),
+    ("um_per_px_high", "float", "um/px", "Upper bound of the scale estimate"),
+    ("scale_status", "str", "", "How the scale was obtained; 'anatomical_estimate' until a ruler is shot at nail zoom"),
 ]
 S["frames"] = [
     ("frame_id", "str", "", "Stable id: session/subject-hand+digit-capture-view"),
@@ -118,8 +97,8 @@ S["frames"] = [
     ("median_limb_right_px", "float", "px", "Median right (venous-side) limb FWHM"),
     ("median_apical_px", "float", "px", "Median apical FWHM"),
     ("median_total_px", "float", "px", "Median total loop width, outer edge to outer edge"),
-    ("median_apical_um", "float", "um", "median_apical_px x um_per_px (sessions.csv)"),
-    ("median_total_um", "float", "um", "median_total_px x um_per_px"),
+    ("median_apical_um_est", "float", "um", "median_apical_px x um_per_px_est (ESTIMATE)"),
+    ("median_total_um_est", "float", "um", "median_total_px x um_per_px_est (ESTIMATE)"),
 ]
 S["loops"] = [
     ("loop_id", "str", "", "frame_id + '/L' + index left to right"),
@@ -137,10 +116,10 @@ S["loops"] = [
     ("apical_px", "float", "px", "Apical FWHM"),
     ("total_px", "float", "px", "Total loop width"),
     ("depth_frac", "float", "fraction", "Darkening of the limbs relative to background"),
-    ("limb_left_um", "float", "um", "limb_left_px x um_per_px"),
-    ("limb_right_um", "float", "um", "limb_right_px x um_per_px"),
-    ("apical_um", "float", "um", "apical_px x um_per_px"),
-    ("total_um", "float", "um", "total_px x um_per_px"),
+    ("limb_left_um_est", "float", "um", "ESTIMATE at um_per_px_est"),
+    ("limb_right_um_est", "float", "um", "ESTIMATE at um_per_px_est"),
+    ("apical_um_est", "float", "um", "ESTIMATE at um_per_px_est"),
+    ("total_um_est", "float", "um", "ESTIMATE at um_per_px_est"),
 ]
 S["sites"] = [
     ("site_id", "str", "", "Subject + hand + digit"),
@@ -182,14 +161,10 @@ S["splits"] = [
     ("rank_key", "str", "", "First 12 hex of sha256(site_id); sites are dealt to splits in this order"),
 ]
 S["ruler"] = [
-    ("input_id", "str", "", "Input alias (IN-xx) the photo came from"),
-    ("photo", "str", "", "Photo number within that input"),
-    ("nail_zoom", "bool", "", "True when this card photo is at the nail zoom (its scale is the one every um column uses)"),
-    ("method", "str", "", "crosshair tick ladder (high zoom) or tick-band autocorrelation (low zoom)"),
-    ("um_per_px", "float", "um/px", "Scale at this photo's zoom (one fine tick = 100 um)"),
+    ("photo", "str", "", "Ruler photo number"),
+    ("um_per_px", "float", "um/px", "Scale at the RULER's zoom (one fine tick = pitch_um)"),
     ("se_um_per_px", "float", "um/px", "Standard error of that photo's fit"),
-    ("pitch_px", "float", "px", "Fine-tick pitch"),
-    ("aspect_v_over_h", "float", "ratio", "Vertical-arm pitch / horizontal-arm pitch (1.0 = square pixels); ladder only"),
+    ("pitch_px", "float", "px", "Fine-tick pitch from the tick-band autocorrelation"),
     ("tilt_deg", "float", "deg", "Best rotation"),
     ("long_tick_px", "float", "px", "Long-tick spacing (independent check, 10 pitches expected)"),
     ("long_over_10_fine", "float", "ratio", "long_tick_px / (10 x pitch_px); 1.0 = consistent"),
@@ -207,7 +182,7 @@ S["scenarios"] = [
     ("scenario_id", "str", "", "session-view-scenario"),
     ("session_id", "str", "", "Session whose frames set the parameters"),
     ("view", "str", "", "View the parameters were measured on"),
-    ("scenario", "str", "", "measured (the measured nail-zoom scale) or anat_central / anat_low / anat_high (no card at nail zoom), white_noise_only (ablation), site_* (one site), ruler_zoom (what-if at the low-zoom card)"),
+    ("scenario", "str", "", "anat_central / anat_low / anat_high (scale), white_noise_only (ablation), site_* (one site), ruler_zoom"),
     ("site_id", "str", "", "Site for site_* scenarios, else empty"),
     ("um_per_px", "float", "um/px", "Pixel size simulated"),
     ("sigma_um", "float", "um", "Blur simulated"),
@@ -216,7 +191,7 @@ S["scenarios"] = [
     ("photons", "float", "", "Photons per pixel at full scale (white part of the noise)"),
     ("corr_noise", "str", "", "JSON [[scale_px, std], ...] correlated noise, empty = white only"),
     ("texture_amp", "float", "fraction", "Skin texture amplitude used in S2/S4"),
-    ("scale_status", "str", "", "measured, anatomical_estimate, or ruler (ruler_zoom: the low-zoom card, a what-if)"),
+    ("scale_status", "str", "", "anatomical_estimate or ruler (ruler_zoom only)"),
 ]
 S["metrics"] = [
     ("scenario_id", "str", "", "Scenario"),
@@ -268,7 +243,7 @@ S["platform_stability"] = [("metric", "str", "", "Headline sim metric"), ("n_sce
 
 ROW_DESC = {"sessions": "capture session", "frames": "image file", "loops": "detected capillary loop",
             "sites": "finger site and view", "paired_views": "capture seen in both raw and enhanced view",
-            "splits": "finger site and its split", "ruler": "calibration card photo", "noise_spectrum": "noise band of the blank card",
+            "splits": "finger site and its split", "ruler": "ruler photo", "noise_spectrum": "noise band of the blank card",
             "scenarios": "simulated scope (parameters)", "metrics": "simulated scope (headline errors)",
             "s1_width_bias": "S1 width point", "s2_density": "S2 density trial", "s2_texture": "S2 texture trial",
             "s4_misclassification": "S4 blur level", "s6_propagation": "S6 width and assumption",
@@ -416,9 +391,6 @@ def assign_splits(sites):
 def build(batch, out, compare_with=None):
     out = Path(out)
     bs, runs = load_batch(batch)
-    SCALE.clear()
-    SCALE.update(scale_of(bs))
-    U_ = SCALE["um"]
     groups, dups = group_sessions(runs)
     smap = subject_map(groups)
     alias = {i["input"]: f"IN-{k + 1:02d}" for k, i in enumerate(sorted(bs["inputs"], key=lambda i: (i["sha256"], i["input"])))}
@@ -465,8 +437,8 @@ def build(batch, out, compare_with=None):
                            median_gap_px=x.median_gap_px, median_limb_left_px=x.median_limb_left_px,
                            median_limb_right_px=x.median_limb_right_px, median_apical_px=x.median_apical_px,
                            median_total_px=x.median_total_px)
-                row["median_apical_um"] = row["median_apical_px"] * U_
-                row["median_total_um"] = row["median_total_px"] * U_
+                row["median_apical_um_est"] = row["median_apical_px"] * UM_PER_PX_EST
+                row["median_total_um_est"] = row["median_total_px"] * UM_PER_PX_EST
                 frames_rows.append(row)
                 site_frames.setdefault((sid, site), 0)
                 site_frames[(sid, site)] += 1
@@ -478,7 +450,7 @@ def build(batch, out, compare_with=None):
                               limb_left_px=l.limb_left, limb_right_px=l.limb_right, apical_px=l.apical, total_px=l.total,
                               depth_frac=l.depth_frac)
                     for c in ("limb_left", "limb_right", "apical", "total"):
-                        lr[f"{c}_um"] = lr[f"{c}_px"] * U_
+                        lr[f"{c}_um_est"] = lr[f"{c}_px"] * UM_PER_PX_EST
                     loops_rows.append(lr)
         Fs = [f for f in frames_rows if f["session_id"] == sid]
         sessions_rows.append(dict(session_id=sid, subjects=";".join(sorted({f["subject_id"] for f in Fs})),
@@ -487,8 +459,8 @@ def build(batch, out, compare_with=None):
                                   input_sha256=";".join(r["sha256"] for r in g), n_frames=len(Fs),
                                   n_measured_frames=sum(f["measured"] for f in Fs), n_usable_frames=sum(f["usable"] for f in Fs),
                                   n_loops_resolved=sum(1 for l in loops_rows if l["session_id"] == sid and l["frame_usable"] and l["resolved"]),
-                                  um_per_px=U_, um_per_px_low=SCALE["low"], um_per_px_high=SCALE["high"],
-                                  scale_status=SCALE["status"], scale_source=SCALE["source"]))
+                                  um_per_px_est=UM_PER_PX_EST, um_per_px_low=UM_LOW, um_per_px_high=UM_HIGH,
+                                  scale_status="anatomical_estimate"))
 
     split_of, rank = {}, {}
     for sid in sorted({sid for sid, _ in site_frames}):          # stratified: every session feeds val and test
@@ -550,45 +522,23 @@ def build(batch, out, compare_with=None):
 
     # calibration
     cal = bs["calibration"]
-    nail_sha = {i["sha256"] for i in bs["inputs"] if i["kind"] in ("ruler", "calibration")
-                and ((i.get("result") or {}).get("ruler", i.get("result")) or {}).get("nail_zoom")}
-    Rs = []
-    for r in sorted([r for r in runs if r["kind"] in ("ruler", "calibration") and not r.get("duplicate_of")], key=lambda r: alias[r["input"]]):
-        if not (r["dir"] / "ruler_frames.csv").exists():
-            continue
-        R = pd.read_csv(r["dir"] / "ruler_frames.csv")
-        R["input_id"] = alias[r["input"]]
+    rruns = [r for r in runs if r["kind"] == "ruler"]
+    if rruns:
+        R = pd.read_csv(rruns[0]["dir"] / "ruler_frames.csv")
         R["photo"] = [str(i + 1) for i in range(len(R))]
-        R["nail_zoom"] = r["sha256"] in nail_sha
         R = R.rename(columns={"se": "se_um_per_px", "um_per_px_peakpicking_old": "um_per_px_old_peakpicking", "tick_sigma_px": "tick_blur_sigma_px"})
-        if "method" not in R:
-            R["method"] = "tick-band autocorrelation"
-        Rs.append(R)
-    if Rs:
-        R = pd.concat(Rs, ignore_index=True)
         for c, *_ in S["ruler"]:
             if c not in R:
                 R[c] = np.nan
         T["ruler"] = write_table(out, "ruler", R)
-    used = ((cal.get("noise_used") or {}).get("source") or "")
-    braw = [r for r in runs if r["kind"] in ("blank", "calibration") and (r["dir"] / "noise_spectrum.csv").exists() and not r.get("duplicate_of")]
-    bpick = next((r for r in braw if f"blank card {r['input']}," in used), braw[0] if braw else None)
-    if bpick:
-        T["noise_spectrum"] = write_table(out, "noise_spectrum", pd.read_csv(bpick["dir"] / "noise_spectrum.csv"))
-    if SCALE["status"] == "measured":
-        note = (f"Every um value uses {SCALE['um']:.4f} um/px, measured from the calibration card photographed at the nail zoom "
-                f"({SCALE['n']} photos; both arms of the cross; vertical/horizontal pitch ratio {SCALE['aspect']:.4f}). A card photographed "
-                "at a lower zoom (nail_zoom false in ruler_photos.csv) is kept only as a record and for the ruler_zoom what-if scenario. "
-                "The card's own printing accuracy has not been checked against a certified micrometer.")
-    else:
-        note = ("No card was photographed at the nail zoom: every um column uses the anatomical estimate in sessions.csv. "
-                "Photograph the card at the exact nail zoom and height to replace it.")
-    calib = dict(scale=dict(um_per_px=SCALE["um"], low=SCALE["low"], high=SCALE["high"], status=SCALE["status"], n_photos=SCALE["n"],
-                            card_blur_sigma_px=SCALE.get("tick_sigma_px"), aspect_v_over_h=SCALE.get("aspect")),
-                 low_zoom_ruler=cal.get("ruler"), blank_card={k: v for k, v in (cal.get("blank") or {}).items() if k != "corr_fit"},
+    braw = [r for r in runs if r["kind"] == "blank"]
+    if braw and (braw[0]["dir"] / "noise_spectrum.csv").exists():
+        T["noise_spectrum"] = write_table(out, "noise_spectrum", pd.read_csv(braw[0]["dir"] / "noise_spectrum.csv"))
+    calib = dict(ruler=cal.get("ruler"), blank_card={k: v for k, v in (cal.get("blank") or {}).items() if k != "corr_fit"},
                  noise_model_used=dict(cal.get("noise_used") or {}, source="blank card, one exposure level"),
-                 cards=[dict({k: v for k, v in c.items() if k != "input"}, input_id=alias.get(c["input"], "")) for c in cal.get("rulers_all", [])],
-                 note=note)
+                 note=("The calibration card (0.1 mm small ticks) was photographed at a lower zoom than the nail captures: its scale "
+                       "would make loops ~190 um wide and ~1.5 per mm, which is anatomically impossible. Every *_um_est column uses the "
+                       "anatomical estimate in sessions.csv until the card is photographed at the nail zoom."))
     (out / "calibration").mkdir(parents=True, exist_ok=True)
     (out / "calibration" / "calibration.json").write_text(jdump(calib))
 
@@ -612,9 +562,7 @@ def build(batch, out, compare_with=None):
                 scen_rows.append(dict(scenario_id=scid, session_id=sid, view=view, scenario=name, site_id=site, um_per_px=sp["um_per_px"],
                                       sigma_um=sp["sigma_um"], contrast=sp["contrast"], illum_strength=sp["illum_strength"],
                                       photons=sp["photons"], corr_noise=json.dumps(rnd(sp.get("corr_noise"))) if sp.get("corr_noise") else "",
-                                      texture_amp=sp.get("texture_amp"),
-                                      scale_status=("ruler" if scen == "ruler_zoom" else
-                                                    "measured" if (sp.get("measured") or {}).get("um_per_px") else "anatomical_estimate")))
+                                      texture_amp=sp.get("texture_amp"), scale_status="ruler" if scen == "ruler_zoom" else "anatomical_estimate"))
                 m = json.loads((r["dir"] / "sim_metrics.json").read_text()).get(scen, {}) if (r["dir"] / "sim_metrics.json").exists() else {}
                 met_rows.append(dict(scenario_id=scid, mode=mode,
                                      **{k: m.get(k) for k in ("s1_limb_mean_abs_bias_pct", "s1_apical_mean_abs_bias_pct", "s1_total_mean_abs_bias_pct",
@@ -705,8 +653,8 @@ def frame_text(f):
          f"capture {f['capture']}. Glare {_f(f['glare_pct'])}%, sharpness {_f(f['sharpness'])}, noise {_f(f['noise_dn'], 2)} DN, "
          f"blur {_f(f['blur_sigma_px'], 2)} px. {int(f['n_apices'])} apexes detected, {int(f['n_loops_resolved'])} loops with both limbs resolved.")
     if f["usable"]:
-        s += (f" Usable. Median apical width {_f(f['median_apical_px'])} px (about {_f(f['median_apical_um'])} um at the "
-              f"{'measured' if SCALE.get('status') == 'measured' else 'estimated'} scale), total width {_f(f['median_total_px'])} px.")
+        s += (f" Usable. Median apical width {_f(f['median_apical_px'])} px (about {_f(f['median_apical_um_est'])} um at the estimated scale), "
+              f"total width {_f(f['median_total_px'])} px.")
     else:
         s += f" Not usable: {f['unusable_reason'].replace('_', ' ').replace(';', ', ')}."
     return s
@@ -747,11 +695,9 @@ def write_llm(out, T):
                          text=frame_text(f)))
     (d / "records.jsonl").write_text("".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in recs))
 
-    SP = system_prompt()
-
     def chat(task, split, user, assistant, source):
         return dict(task=task, split=split, source=source,
-                    messages=[dict(role="system", content=SP), dict(role="user", content=user), dict(role="assistant", content=assistant)])
+                    messages=[dict(role="system", content=SYSTEM_PROMPT), dict(role="user", content=user), dict(role="assistant", content=assistant)])
 
     ex = []
     for f in sorted(F, key=lambda r: r["frame_id"]):
@@ -762,28 +708,18 @@ def write_llm(out, T):
             qc_answer(f), f["frame_id"]))
     for l in L[(L.frame_usable == True) & (L.resolved == True)].sort_values("loop_id").to_dict("records"):  # noqa: E712
         scen = f"{l['session_id']}-{l['view']}-site_{l['site_id']}"
-        fb = next((f"{l['session_id']}-{l['view']}-{k}" for k in ("measured", "anat_central") if f"{l['session_id']}-{l['view']}-{k}" in M.index), None)
-        m = M.loc[scen] if scen in M.index else (M.loc[fb] if fb else None)
+        m = M.loc[scen] if scen in M.index else (M.loc[f"{l['session_id']}-{l['view']}-anat_central"] if f"{l['session_id']}-{l['view']}-anat_central" in M.index else None)
         sc = SC.loc[scen] if scen in SC.index else None
         bias = "" if m is None else (f" At this site's measured blur the simulator puts the typical bias at about {_f(m['s1_limb_mean_abs_bias_pct'])}% for limbs, "
                                      f"{_f(m['s1_apical_mean_abs_bias_pct'])}% for apical width and {_f(m['s1_total_mean_abs_bias_pct'])}% for total width"
                                      + (" (quick-mode figure that varies between platforms; treat as approximate)." if isinstance(m["platform_unstable"], str) and m["platform_unstable"] else "."))
-        px_txt = (f"Limb widths {_f(l['limb_left_px'], 2)} px and {_f(l['limb_right_px'], 2)} px, "
-                  f"apical width {_f(l['apical_px'], 2)} px, total width {_f(l['total_px'], 2)} px.")
-        if SCALE["status"] == "measured":
-            ex.append(chat("loop_measurement", l["split"], (
-                f"Report this capillary loop in micrometres. {px_txt} The calibration card photographed at this zoom gives "
-                f"{SCALE['um']:.4f} um per pixel."),
-                (f"At {SCALE['um']:.4f} um/px: limbs {_f(l['limb_left_um'])} and {_f(l['limb_right_um'])} um, apical {_f(l['apical_um'])} um, "
-                 f"total {_f(l['total_um'])} um. The scale itself is tight (the card photos agree to about 0.01%); the uncertainty is in "
-                 f"the width measurement." + bias), l["loop_id"]))
-        else:
-            ex.append(chat("loop_measurement", l["split"], (
-                f"Report this capillary loop in micrometres. {px_txt} The scale has not been calibrated at this zoom."),
-                (f"Using the anatomical scale estimate of {UM_PER_PX_EST} um/px (plausible range {UM_LOW} to {UM_HIGH}): limbs about "
-                 f"{_f(l['limb_left_um'])} and {_f(l['limb_right_um'])} um, apical about {_f(l['apical_um'])} um "
-                 f"(range {_f(l['apical_px'] * UM_LOW)} to {_f(l['apical_px'] * UM_HIGH)}), total about {_f(l['total_um'])} um. "
-                 f"These are estimates until the card is photographed at the nail zoom." + bias), l["loop_id"]))
+        ex.append(chat("loop_measurement", l["split"], (
+            f"Report this capillary loop in micrometres. Limb widths {_f(l['limb_left_px'], 2)} px and {_f(l['limb_right_px'], 2)} px, "
+            f"apical width {_f(l['apical_px'], 2)} px, total width {_f(l['total_px'], 2)} px. The scale has not been calibrated at this zoom."),
+            (f"Using the anatomical scale estimate of {UM_PER_PX_EST} um/px (plausible range {UM_LOW} to {UM_HIGH}): limbs about "
+             f"{_f(l['limb_left_um_est'])} and {_f(l['limb_right_um_est'])} um, apical about {_f(l['apical_um_est'])} um "
+             f"(range {_f(l['apical_px'] * UM_LOW)} to {_f(l['apical_px'] * UM_HIGH)}), total about {_f(l['total_um_est'])} um. "
+             f"These are estimates until the ruler is photographed at the nail zoom." + bias), l["loop_id"]))
     for scid, sc in (SC.iterrows() if len(SC) else []):
         if scid not in M.index:
             continue
@@ -797,48 +733,13 @@ def write_llm(out, T):
              f"total {_f(m['s1_total_mean_abs_bias_pct'])}% (mean absolute over the S1 grid). Telling a 45 um loop from a 55 um giant loop fails "
              f"{_f(100 * m['s4_giant_error'] if pd.notna(m['s4_giant_error']) else None)}% of the time. Repeat captures vary by about {_f(m['s7_cv_pct'])}% "
              f"(simulated ICC {_f(m['s7_icc'], 2)}). Widths smaller than {_f(m['s1_min_limb_under_10pct_um'], 0)} um are biased more than 10%." + caveat), scid))
-    PV = T["paired_views"]
-    if len(PV):
-        nz = PV[["raw_noise_dn", "enhanced_noise_dn"]].dropna()
-        ap = PV[["raw_median_apical_px", "enhanced_median_apical_px"]].dropna()
-        lr = PV[["raw_n_loops_resolved", "enhanced_n_loops_resolved"]].dropna()
-        noise_x = float(nz.enhanced_noise_dn.mean() / nz.raw_noise_dn.mean()) if len(nz) else float("nan")
-        ap_pct = float(100 * (ap.enhanced_median_apical_px.mean() / ap.raw_median_apical_px.mean() - 1)) if len(ap) else float("nan")
-        lr_d = float((lr.enhanced_n_loops_resolved - lr.raw_n_loops_resolved).mean()) if len(lr) else float("nan")
-        why = (f"Measure the raw view. Over the {len(PV)} captures in this dataset seen in both views, the enhanced view has "
-               f"{noise_x:.1f} times the pixel noise, resolves {abs(lr_d):.1f} {'fewer' if lr_d < 0 else 'more'} loops per frame on average and reads "
-               f"apical width {abs(ap_pct):.0f}% {'narrower' if ap_pct < 0 else 'wider'}, so it adds bias without adding information.")
     for p in T["paired_views"].to_dict("records"):
         ex.append(chat("raw_vs_enhanced", p["split"], (
             f"Same capture in two views. Raw: noise {_f(p['raw_noise_dn'], 2)} DN, {int(p['raw_n_loops_resolved'])} loops resolved, apical "
             f"{_f(p['raw_median_apical_px'])} px. Enhanced: noise {_f(p['enhanced_noise_dn'], 2)} DN, {int(p['enhanced_n_loops_resolved'])} loops resolved, "
             f"apical {_f(p['enhanced_median_apical_px'])} px. Which should I measure?"),
-            why, p["capture_id"]))
-    if "ruler" in T and len(T["ruler"]):
-        Fu = T["frames"][T["frames"].usable == True]   # noqa: E712
-        tot_px = float(Fu.median_total_px.median()) if len(Fu) else float("nan")
-        gap_px = float(Fu.median_gap_px.median()) if len(Fu) else float("nan")
-        nail = [r for r in T["ruler"].to_dict("records") if r["nail_zoom"] is True and pd.notna(r["um_per_px"])]
-        for r in T["ruler"].sort_values(["input_id", "photo"]).to_dict("records"):
-            if pd.isna(r["um_per_px"]):
-                continue
-            asp = r.get("aspect_v_over_h")
-            q = (f"A photo of the Captrail calibration card (0.1 mm between small ticks, 1 mm between long lines) shows the small ticks "
-                 f"{_f(r['pitch_px'], 2)} px apart" + (f", and the vertical arm's ticks {_f(asp, 4)} times the horizontal spacing" if pd.notna(asp) else "")
-                 + ". What is the scale, and can I use it for my nail images?")
-            u = float(r["um_per_px"])
-            if r["nail_zoom"] is True:
-                a = (f"100 um / {_f(r['pitch_px'], 2)} px = {u:.4f} um per pixel" + (", and the two arms agree, so the pixels are square" if pd.notna(asp) and abs(asp - 1) < 0.005 else "")
-                     + f". Yes, provided the photo was taken at exactly the zoom, height and focus of the nail captures. A 640 x 480 frame then spans "
-                       f"{640 * u / 1000:.2f} x {480 * u / 1000:.2f} mm, and this dataset's median loop is {tot_px * u:.0f} um across with loops "
-                       f"{gap_px * u:.0f} um apart, which fits healthy anatomy.")
-            else:
-                ref = (f" Use the card photographed at nail zoom instead ({nail[0]['um_per_px']:.4f} um/px)." if nail else
-                       " Photograph the card again at the exact nail zoom and height.")
-                a = (f"100 um / {_f(r['pitch_px'], 2)} px = {u:.3f} um per pixel, but not for the nail images: this photo was taken at a lower zoom. "
-                     f"At {u:.2f} um/px this dataset's median loop would be {tot_px * u:.0f} um across with loops {gap_px * u:.0f} um apart, far "
-                     "outside healthy anatomy, so the nail captures were taken at a higher zoom." + ref)
-            ex.append(chat("calibration_qc", "train", q, a, f"{r['input_id']}/photo{r['photo']}"))
+            ("Measure the raw view. The enhanced view sharpens edges but roughly doubles pixel noise, never resolves more loops on average "
+             "(59 paired captures), and reads apical width slightly narrower, so it adds bias without adding information."), p["capture_id"]))
     for s in ("train", "val", "test"):
         rows = [e for e in ex if e["split"] == s]
         (d / f"sft_{s}.jsonl").write_text("".join(json.dumps(e, sort_keys=True, ensure_ascii=False) + "\n" for e in rows))
@@ -846,8 +747,7 @@ def write_llm(out, T):
 
 # ------------------------------------------------------------------------------------------- docs
 def write_schema_md(out):
-    L = ["# Schema", "", "Every CSV column: type, unit and meaning. `*_um` columns use the scale in `tables/sessions.csv` "
-         "(`scale_status` says whether it was measured at nail zoom or estimated).", ""]
+    L = ["# Schema", "", "Every CSV column: type, unit and meaning. `*_um_est` columns use the ESTIMATED scale in `tables/sessions.csv`.", ""]
     for name, cols in S.items():
         if not (out / TABLE_PATH[name]).exists():
             continue
@@ -857,24 +757,9 @@ def write_schema_md(out):
     L += ["## `llm/records.jsonl`", "", "One JSON object per frame: `id`, `split`, `session_id`, `site_id`, `view`, `usable`, `unusable_reason`,",
           "`metrics` (frame numbers), `loops` (per-loop numbers), `text` (the same facts as one paragraph).", "",
           "## `llm/sft_{train,val,test}.jsonl`", "", "Chat-format supervised examples: `messages` (system, user, assistant), `task`, `split`, `source` (the frame,",
-          "loop, scenario, capture or card photo the answer was computed from). Tasks: `frame_qc`, `loop_measurement`, `simulation_lookup`,",
-          "`raw_vs_enhanced`, `calibration_qc`.",
+          "loop, scenario or capture the answer was computed from). Tasks: `frame_qc`, `loop_measurement`, `simulation_lookup`, `raw_vs_enhanced`.",
           "Answers are generated by fixed templates from the pipeline's own numbers and rules.", ""]
     (out / "SCHEMA.md").write_text("\n".join(L))
-
-
-def density_note(F):
-    """Loop density from the median apex spacing of usable measured frames, checked against the healthy >= 7/mm."""
-    Fu = F[(F.usable == True) & (F.measured == True)]   # noqa: E712
-    gap = float(Fu.median_gap_px.median()) * SCALE["um"] if len(Fu) else float("nan")
-    if not np.isfinite(gap) or gap <= 0:
-        return "- **Loop density not available.**"
-    per_mm = 1000.0 / gap
-    if per_mm < 7:
-        return (f"- **Loop density is not reliable.** Detected apexes are a median {gap:.0f} um apart (about {per_mm:.1f} per mm) in "
-                "healthy volunteers, below the 7 per mm normal cut-off: the detector misses faint or out-of-focus loops. Do not train "
-                "on, or quote, density from this data.")
-    return f"- **Loop density.** Detected apexes are a median {gap:.0f} um apart (about {per_mm:.1f} per mm)."
 
 
 def write_card(out, bs, T, groups, dups, stab):
@@ -908,26 +793,20 @@ def write_card(out, bs, T, groups, dups, stab):
     for s in ("train", "val", "test"):
         L.append(f"| {s} | {int((Sp.split == s).sum())} | {int((F.split == s).sum())} | {int((Lp.split == s).sum())} |")
     L += ["", "## LLM files", "", "| task | examples | what the model learns |", "|---|---|---|"]
-    desc = dict(frame_qc="decide if a capture is usable and say how to fix it", loop_measurement="turn pixel widths into micrometres at the right scale, with the right caveats",
-                simulation_lookup="expected error for a given scale, blur, contrast and noise", raw_vs_enhanced="which view to measure and why",
-                calibration_qc="read a card photo's scale and say whether it applies to the nail images")
-    for k in ("frame_qc", "loop_measurement", "simulation_lookup", "raw_vs_enhanced", "calibration_qc"):
+    desc = dict(frame_qc="decide if a capture is usable and say how to fix it", loop_measurement="turn pixel widths into estimated micrometres with the right caveats",
+                simulation_lookup="expected error for a given scale, blur, contrast and noise", raw_vs_enhanced="which view to measure and why")
+    for k in ("frame_qc", "loop_measurement", "simulation_lookup", "raw_vs_enhanced"):
         L.append(f"| `{k}` | {int(tasks.get(k, 0))} | {desc[k]} |")
     L += ["", "Fine-tune on `sft_train.jsonl`, pick checkpoints on `sft_val.jsonl`, report once on `sft_test.jsonl`. `records.jsonl` is for",
           "retrieval (embed `text`, filter on `split`). Every answer comes from the pipeline's numbers and rules, so a model trained here learns",
           "Captrail's pipeline, not clinical judgement.", "",
           "## Limits (read before training or quoting)", "",
           "- **Not validated.** No human rater has measured these loops yet (S5). Labels are the pipeline's output.",
-          (f"- **Scale is measured at nail zoom.** Every `*_um` column uses {SCALE['um']:.4f} um/px from the calibration card photographed at the "
-           f"nail zoom ({SCALE['n']} photos, both arms of the cross, vertical/horizontal {SCALE['aspect']:.4f}; card blur {_f(SCALE.get('tick_sigma_px'), 2)} px). "
-           "It holds only for captures at that exact zoom, height and focus. The card's printing accuracy has not been checked against a "
-           "certified micrometer." + (f" An earlier card photo at a lower zoom ({ruler_um:.3f} um/px) is kept in `calibration/ruler_photos.csv` "
-                                      "with nail_zoom = false." if ruler_um else "")
-           if SCALE.get("status") == "measured" else
-           f"- **Scale is estimated.** `*_um` uses {UM_PER_PX_EST} um/px (bounds {UM_LOW} to {UM_HIGH}) from healthy anatomy (loop spacing and widths). "
-           "Photograph the card at the exact nail zoom to replace the estimate."),
+          f"- **Scale is estimated.** `*_um_est` uses {UM_PER_PX_EST} um/px (bounds {UM_LOW} to {UM_HIGH}) from healthy anatomy (loop spacing and widths). "
+          + (f"The calibration card measures {ruler_um:.3f} um/px (0.1 mm ticks; the build guide's own value is 6.094), but at a lower zoom than the "
+             "nail captures: at that scale the loops would be ~190 um wide and ~1.5 per mm, which is anatomically impossible. Photograph the card "
+             "at the exact nail zoom to replace the estimate." if ruler_um else ""),
           f"- **Small and healthy.** {len(set(F.subject_id))} subjects, all healthy volunteers; no disease labels. Do not train a diagnostic classifier on this.",
-          density_note(F),
           ("- **Quick-mode sims.** Few replicates per scenario. `sims/metrics.csv` column `platform_unstable` lists metrics that changed between two "
            "platforms; see `qa/platform_stability.csv`." if stab else
            "- **Quick-mode sims.** Few replicates per scenario, all computed on one platform. A cross-platform check on dataset v1 found S1 apical "
@@ -966,23 +845,6 @@ def write_manifest(out, bs):
 
 
 # ------------------------------------------------------------------------------------------- check
-def schema_from_md(out):
-    """{csv path: [columns]} from a dataset's own SCHEMA.md (used to check releases made by an older exporter)."""
-    exp, cur = {}, None
-    for line in (Path(out) / "SCHEMA.md").read_text().splitlines():
-        m = re.match(r"^## `([^`]+\.csv)`", line)
-        if m:
-            cur = m.group(1)
-            exp[cur] = []
-            continue
-        if line.startswith("## "):
-            cur = None
-        m = re.match(r"^\| `([^`]+)` \|", line)
-        if cur and m:
-            exp[cur].append(m.group(1))
-    return exp
-
-
 def check(out):
     """Problems found (empty list = good): hashes, schema, splits, JSONL, privacy."""
     out = Path(out)
@@ -994,14 +856,11 @@ def check(out):
             p.append(f"missing {rel}")
         elif sha(f.read_bytes()) != info["sha256"]:
             p.append(f"hash mismatch {rel}")
-    expected = {rel: [c for c, *_ in S[name]] for name, rel in TABLE_PATH.items()}
-    if str(man.get("version", VERSION)).split(".")[0] != VERSION.split(".")[0]:
-        expected = schema_from_md(out)     # an older release: check it against the schema it shipped with
-    for rel, cols_ok in expected.items():
+    for name, rel in TABLE_PATH.items():
         f = out / rel
         if f.exists():
             cols = list(pd.read_csv(f, nrows=0).columns)
-            if cols != cols_ok:
+            if cols != [c for c, *_ in S[name]]:
                 p.append(f"schema mismatch {rel}")
     fr = pd.read_csv(out / TABLE_PATH["frames"])
     sp = fr.groupby("site_id").split.nunique()

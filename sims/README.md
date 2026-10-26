@@ -4,18 +4,9 @@ Synthetic capillary, optical forward model, automated measurement, error curves,
 tools that tie them to the real microscope (Jiusion 40-1000x USB digital microscope, 640 x 480). **All numbers are model outputs until S5 passes.**
 Anything computed from a scope value that was not measured is stamped ASSUMED on its figures.
 
-
-> **Scale update (Oct 25, 2026):** the team recalibrated the microscope at nail zoom and now uses
-> **3.745 µm per pixel** (the website and app say the same). The `captrail-v3` dataset and the
-> `2026-10-23_nailzoom-calibration` session below were computed from the Oct 23 card photos, which
-> measured 1.8749 µm/px. Those um values are on that older scale. To bring the dataset onto 3.745,
-> add the new card photos (card plus white card, at nail zoom) as a calibration zip and rerun
-> `batch_run.py` and `export_dataset.py`. The pipeline reads the scale from the card photos, so no
-> code change is needed.
-
 ```
 pip install -r requirements.txt
-python -m pytest -q                                   # 90 tests, ~6 min
+python -m pytest -q                                   # 83 tests, ~3 min
 python run_s0.py                                      # real calibration -> results/scope_params.json
 python run_sims.py all --scope results/scope_params.json
 python run_sims.py all --quick                        # smoke run on assumed defaults (not a result)
@@ -30,38 +21,26 @@ python run_experiments.py                             # legacy E1 to E6 first pa
 | `prepare_inputs.py` | A team capture collection (person<K>-unenhanced/enhanced folders, ruler, white) -> clean, uniquely named inputs | yes |
 | `batch_run.py` | One pipeline for every capture zip in a folder: S0, session analysis, sims, manifests | yes |
 | `export_dataset.py` | Batch run -> versioned, documented training dataset (`--check` verifies one) | yes |
-| `datasets/captrail-v3/` | **The dataset**: tables, calibration, sims, splits, LLM files, card, schema, manifest. Scale measured at nail zoom | yes |
-| `datasets/captrail-v2/` | Previous release (anatomical scale estimate), kept for comparison | yes (archive) |
-| `datasets/*/_private/` | Real subject names and file names | **no** |
-| `tests/fixtures/card_nailzoom/` | The team's calibration-card and white-card photos at nail zoom (no people) | yes |
+| `datasets/captrail-v2/` | **The dataset**: tables, calibration, sims, splits, LLM files, card, schema, manifest | yes |
+| `datasets/captrail-v2/_private/` | Real subject names and file names | **no** |
 | `datasets/_local_vision/` | Images + apex labels for detector training | **no** (real fingers) |
 | `results/batch/` | Raw batch output (35 MB, reproducible) | **no** |
-| `sessions/2026-10-23_nailzoom-calibration/` | The card measured at nail zoom: 1.8749 um/px, and what changed | yes |
 | `sessions/2026-10-21_sujay/` | First single-session analysis, superseded by the dataset | yes (archive) |
 | `results/e*.csv`, `fig*.png` | Legacy E1 to E6 first pass | yes (archive) |
 
 ## From capture zips to a training dataset
 
 ```
-python prepare_inputs.py "captrail images.zip" --out inputs --also sujay.zip   # folder = person; unique names
-cp "calibration (6).zip" inputs/                                             # card + white card at NAIL zoom
-python batch_run.py inputs --out results/batch --work /tmp/bw                # every input, cached and resumable
-python export_dataset.py results/batch --out datasets/captrail-v3            # tidy dataset, pseudonymized
-python export_dataset.py --check datasets/captrail-v3                        # hashes, schema, splits, privacy
-python export_dataset.py results/batch --out datasets/captrail-v3 \
+python prepare_inputs.py "captrail images.zip" --out inputs_v2 --also sujay.zip   # folder = person; unique names
+python batch_run.py inputs_v2 --out results/batch                            # every input, cached and resumable
+python export_dataset.py results/batch --out datasets/captrail-v2            # tidy dataset, pseudonymized
+python export_dataset.py --check datasets/captrail-v2                        # hashes, schema, splits, privacy
+python export_dataset.py results/batch --out datasets/captrail-v2 \
     --vision-images ~/Desktop/Coding/Caprprp --vision-out datasets/_local_vision   # local images + COCO apex labels
 ```
 
-Read `datasets/captrail-v3/README.md` (dataset card) before training: what each file is, the splits, the LLM
-formats and the limits (not validated by a human rater, healthy subjects only, loop density unreliable, quick-mode sims).
-
-**The scale.** A zip holding card photos (and optionally white-card frames) is a calibration input. A card
-whose scale lands in the nail-zoom range (0.8 to 3.0 um/px) becomes THE measured scale: every um value,
-texture estimate and sim scope uses it, and the dataset says `scale_status = measured`. Without one, the
-pipeline falls back to the anatomical estimate (1.6 um/px, bounds 1.3 to 2.0) and says so. High-zoom cards are
-read by `calibration.tick_ladder` (each tick located, both arms of the cross, pixel aspect checked); low-zoom
-cards and stage micrometers by the tick-band autocorrelation. Re-photograph the card whenever zoom, height or
-focus changes. `--work` puts the scratch images somewhere deletable (needed on a folder where deleting is off).
+Read `datasets/captrail-v2/README.md` (dataset card) before training: what each file is, the splits, the LLM
+formats and the limits (not validated, estimated scale, 3 healthy subjects, quick-mode sims).
 
 ## Workflow once the microscope captures exist
 

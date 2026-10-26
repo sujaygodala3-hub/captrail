@@ -115,9 +115,9 @@ def _tick_band_rows(img, pmin=8.0, pmax=40.0, frac=0.2):
     g = np.asarray(img, float)
     x = np.arange(g.shape[1])
     rd = g - g.mean(1, keepdims=True)
-    pitches = np.arange(pmin, pmax, 0.1)
-    E = np.exp(-2j * np.pi * x[:, None] / pitches[None, :])      # every trial pitch in one matrix product
-    pw = np.abs(rd @ E).max(1)
+    pw = np.zeros(g.shape[0])
+    for pitch in np.arange(pmin, pmax, 0.1):
+        pw = np.maximum(pw, np.abs(rd @ np.exp(-2j * np.pi * x / pitch)))
     return pw >= np.percentile(pw, 100 * (1 - frac))
 
 
@@ -410,27 +410,23 @@ def white_from_pixel_noise(pixel_hp_dn, mean_dn, bits=8, shape=(480, 640), seed=
     return dict(photons=float(level / (sd_dn / q) ** 2), white_dn=float(sd_dn), hp_attenuation=float(atten))
 
 
-def tick_blur_sigma(img, pitch_px=None, bins_per_px=4, band=None, rows=None):
+def tick_blur_sigma(img, pitch_px=None, bins_per_px=4):
     """Blur at the RULER's zoom. The band profile is folded on the tick pitch (all ticks averaged onto one
     period, sub-pixel), then fit as one dark box of unknown width blurred by a Gaussian (the same model as the
     capillary limbs). Folding uses every tick, so dust and split dips average out.
-    `band` (with pitch_px): a tick-band profile already extracted (tick_ladder does this for crosshair cards).
     Returns dict(sigma_px, tick_width_px, pitch_px, rows, n_ticks)."""
     from scipy.optimize import least_squares
-    if band is None:
-        g = np.asarray(img, float)
-        r0 = slide_pitch_px(g)
-        if pitch_px is None:
-            pitch_px = r0["pitch_px"]
-        if r0["angle_deg"]:
-            g = ndi.rotate(g, r0["angle_deg"], reshape=False, order=1, mode="nearest")
-        h, w = g.shape
-        g = g[h // 10: h - h // 10, w // 10: w - w // 10]
-        keep = _tick_band_rows(g)
-        band = g[keep].mean(0)
-        rows = int(keep.sum())
-    band = np.asarray(band, float)
-    band = band / ndi.uniform_filter1d(band, int(4 * pitch_px) | 1, mode="nearest")
+    g = np.asarray(img, float)
+    r0 = slide_pitch_px(g)
+    if pitch_px is None:
+        pitch_px = r0["pitch_px"]
+    if r0["angle_deg"]:
+        g = ndi.rotate(g, r0["angle_deg"], reshape=False, order=1, mode="nearest")
+    h, w = g.shape
+    g = g[h // 10: h - h // 10, w // 10: w - w // 10]
+    keep = _tick_band_rows(g)
+    band = g[keep].mean(0)
+    band = band / ndi.uniform_filter1d(band, int(4 * pitch_px) | 1)
     x = np.arange(len(band), dtype=float)
     ph = (x % pitch_px)
     nb = int(round(pitch_px * bins_per_px))
@@ -455,127 +451,5 @@ def tick_blur_sigma(img, pitch_px=None, bins_per_px=4, band=None, rows=None):
     q0 = [np.percentile(prof, 95), np.ptp(prof), c0, pitch_px / 2, 1.0]
     r = least_squares(lambda q: (model(q, xb) - prof)[ok], q0,
                       bounds=([0, 0, c0 - pitch_px / 4, 0.5, 0.05], [np.inf, np.inf, c0 + pitch_px / 4, pitch_px - 0.5, pitch_px / 2]))
-    return dict(sigma_px=float(r.x[4]), tick_width_px=float(r.x[3]), pitch_px=float(pitch_px), rows=rows,
+    return dict(sigma_px=float(r.x[4]), tick_width_px=float(r.x[3]), pitch_px=float(pitch_px), rows=int(keep.sum()),
                 n_ticks=int(len(band) / pitch_px), rmse=float(np.sqrt(np.mean(r.fun ** 2))))
-
-
-# ---------------------------------------------------------------- crosshair cards at high zoom
-def _axis_row(g):
-    """Darkest straight row (a crosshair arm) and its contrast: median row brightness minus that row's."""
-    rows = ndi.uniform_filter1d(g.mean(1), 3)
-    i = int(np.argmin(rows))
-    return i, float(np.median(rows) - rows[i])
-
-
-def tick_ladder(img, angles=np.linspace(-4, 4, 17), near=(6, 16), far=(28, 40), fine_angle=True):
-    """Fine-tick pitch of a CROSSHAIR calibration card (the Captrail card: a dark cross, 0.1 mm ticks across each
-    arm, a longer tick every 1 mm) when the ticks are far apart (about 25 px or more, nail zoom), where the
-    band-autocorrelation in slide_pitch_px sees too few periods.
-
-    Rotate so the arm is level (the angle that makes the darkest row darkest), average the rows just beside the
-    arm where only ticks cross (`near`, px from the arm), find every tick centre to sub-pixel, then fit centre =
-    a + pitch * k. The crossing arm and the long ticks sit on the same lattice, so outliers are only dust; they
-    are dropped by a 3-sigma residual cut. On synthetic cards (pitch 30 to 53 px, tilt up to 2.6 deg) the pitch
-    is within 0.013 %. Returns dict(ok, pitch_px, se_px, n_ticks, span_ticks, rms_res_px, angle_deg, axis_row,
-    axis_contrast, long_ticks_px, band). Call on np.rot90(img) for the other arm."""
-    g0 = np.asarray(img, float)
-    def level(a):
-        g = ndi.rotate(g0, a, reshape=False, order=1, mode="nearest") if a else g0
-        i, c = _axis_row(g)
-        return c, a, g, i
-    best = max((level(a) for a in angles), key=lambda t: t[0])
-    if fine_angle:
-        step = float(angles[1] - angles[0]) if len(angles) > 1 else 0.5
-        best = max([best] + [level(best[1] + d) for d in np.linspace(-step, step, 5) if d], key=lambda t: t[0])
-    c, ang, g, ax = best
-    h, w = g.shape
-
-    def prof(lo, hi):
-        rr = [r for r in list(range(ax - hi, ax - lo + 1)) + list(range(ax + lo, ax + hi + 1)) if 0 <= r < h]
-        return g[rr].mean(0) if rr else np.zeros(w)
-    raw = prof(*near)
-    p = raw - ndi.uniform_filter1d(raw, 151, mode="nearest")
-    x0, x1 = int(0.03 * w), int(0.97 * w)
-    seg = -p[x0:x1]
-    base = dict(ok=False, angle_deg=float(ang), axis_row=int(ax), axis_contrast=c, n_ticks=0)
-    if not np.isfinite(seg).all() or seg.max() <= 0:
-        return base
-    pk, _ = find_peaks(seg, prominence=max(3.0, 0.35 * float(seg.max())), distance=8)
-    xs = np.array([_subpixel_peak(p, i + x0) if 1 <= i + x0 < w - 1 else float(i + x0) for i in pk], float)
-    if len(xs) < 4:
-        return dict(base, n_ticks=int(len(xs)))
-    step = float(np.median(np.diff(xs)))
-    k = np.round((xs - xs[0]) / step)
-    for _ in range(4):
-        A = np.c_[np.ones_like(k), k]
-        coef, *_ = np.linalg.lstsq(A, xs, rcond=None)
-        res = xs - A @ coef
-        keep = np.abs(res) <= max(1.5, 3 * float(np.std(res)))
-        if keep.all():
-            break
-        xs, k = xs[keep], k[keep]
-    A = np.c_[np.ones_like(k), k]
-    coef, *_ = np.linalg.lstsq(A, xs, rcond=None)
-    res = xs - A @ coef
-    se = float(np.sqrt(res @ res / max(1, len(k) - 2) / ((k - k.mean()) ** 2).sum())) if len(k) > 2 else float("nan")
-    pl = prof(*far)
-    pl = pl - ndi.uniform_filter1d(pl, 151, mode="nearest")
-    segl = -pl[x0:x1]
-    pkl = []
-    if segl.max() > 0:
-        pkl, _ = find_peaks(segl, prominence=max(3.0, 0.35 * float(segl.max())), distance=max(8, int(5 * coef[1])))
-    return dict(ok=True, pitch_px=float(coef[1]), se_px=se, n_ticks=int(len(xs)), span_ticks=int(k.max() - k.min()),
-                rms_res_px=float(np.sqrt((res ** 2).mean())), angle_deg=float(ang), axis_row=int(ax), axis_contrast=c,
-                long_ticks_px=[float(v + x0) for v in pkl], band=raw)
-
-
-def straight_line_dip(img, ds=2, angles=np.linspace(-4, 4, 17), window=15):
-    """How strongly the image holds one thin, dark, straight, nearly level line (a crosshair arm): on a 2x
-    downsampled copy, for each small rotation, the deepest dip of the row means below their own 15-row running
-    mean, in DN. Card photos at nail zoom give 56 to 71, real capillary frames at most 18, white cards about 2.
-    Cheap (about 0.07 s), so classify_image runs the full tick_ladder only when this passes. Returns (dip_dn, angle_deg)."""
-    g = np.asarray(img, float)
-    H, W = (g.shape[0] // ds) * ds, (g.shape[1] // ds) * ds
-    sm = g[:H, :W].reshape(H // ds, ds, W // ds, ds).mean((1, 3))
-    best = (-1.0, 0.0)
-    for a in angles:
-        r = ndi.rotate(sm, a, reshape=False, order=1, mode="nearest") if a else sm
-        rows = r[8:-8, 8:-8].mean(1)
-        d = ndi.uniform_filter1d(rows, window, mode="nearest") - rows
-        if d.max() > best[0]:
-            best = (float(d.max()), float(a))
-    return best
-
-
-def is_card_ladder(r, h, max_rel_res=0.005, min_ticks=6, min_contrast=25.0, border=5):
-    """A tick ladder that only a calibration card produces: >= 6 ticks on one straight lattice (rms residual
-    under 0.5 % of the pitch), along a dark straight arm that is not the image border. Real capillary frames
-    reach >= 2 % (checked on 32 real frames); real card photos give 0.07 to 0.18 %."""
-    return bool(r.get("ok") and r["n_ticks"] >= min_ticks and r["rms_res_px"] / r["pitch_px"] < max_rel_res
-                and r["axis_contrast"] > min_contrast and border <= r["axis_row"] < h - border)
-
-
-def umpx_from_ladder(img, pitch_um=100.0):
-    """um per pixel from a crosshair card at high zoom, both arms (the horizontal arm, then the vertical arm on
-    the transposed image). Returns (um_per_px, se, info) with info = dict(h=..., v=..., aspect=v/h pitch ratio,
-    arms=[...] used). Only arms that pass is_card_ladder are used; ValueError if none does."""
-    g = np.asarray(img, float)
-    arms = {}
-    for nm, gg in (("h", g), ("v", np.rot90(g))):
-        r = tick_ladder(gg)
-        if is_card_ladder(r, gg.shape[0]):
-            arms[nm] = r
-    if not arms:
-        raise ValueError("no card tick ladder found")
-    p = np.array([a["pitch_px"] for a in arms.values()])
-    se = np.array([max(a["se_px"], 1e-6) for a in arms.values()])
-    wgt = 1 / se ** 2
-    pm = float((p * wgt).sum() / wgt.sum())
-    pse = float(np.sqrt(1 / wgt.sum()))
-    info = dict(pitch_px=pm, se_px=pse, arms=sorted(arms), angle_deg=next(iter(arms.values()))["angle_deg"],
-                n_periods=int(sum(a["span_ticks"] for a in arms.values())),
-                aspect=(arms["v"]["pitch_px"] / arms["h"]["pitch_px"]) if len(arms) == 2 else None,
-                **{f"{k}_pitch_px": a["pitch_px"] for k, a in arms.items()}, **{f"{k}_ticks": a["n_ticks"] for k, a in arms.items()},
-                **{f"{k}_rms_res_px": a["rms_res_px"] for k, a in arms.items()})
-    info["_ladders"] = arms
-    return float(pitch_um / pm), float(pitch_um * pse / pm ** 2), info

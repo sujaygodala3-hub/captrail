@@ -5,20 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Build guide | Captrail</title>
 <meta name="description" content="Parts, measurements and step-by-step assembly for the Captrail nailfold microscope.">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#B5171F">
-<link rel="canonical" href="https://captrail-app.vercel.app/build.html">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Captrail">
-<meta property="og:title" content="Build guide | Captrail">
-<meta property="og:description" content="Parts, measurements and step-by-step assembly for the Captrail nailfold microscope.">
-<meta property="og:url" content="https://captrail-app.vercel.app/build.html">
-<meta property="og:image" content="https://captrail-app.vercel.app/images/brand/og-image.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -194,7 +180,7 @@
           <h3>Calibration slide (came with the microscope)</h3>
           <span class="tag req">Came with the microscope</span>
           <ul>
-            <li>Coordinate cross: confirm the documented physical divisions</li>
+            <li>Coordinate cross: 0.1 mm per small tick</li>
             <li>1 mm per long line</li>
           </ul>
           <p class="why">Lets the software convert image pixels into real micrometers.</p>
@@ -362,6 +348,11 @@
         <li class="rv"><div class="n">06</div><div><h3>Test stability</h3>
           <p>Lift and reposition your finger a few times. Because the cradle locks onto the pegs, it should land in the same place each time.</p></div></li>
         <li class="rv"><div class="n">07</div><div><h3>Calibrate measurements</h3>
+          <p>Set the zoom and height you will use on the nail. Then put the calibration card under the lens at that exact zoom and height, and focus on its coordinate cross (0.1 mm per small tick, 1 mm per long line).</p>
+          <p>On the <a href="scan.html">Microscope page</a>, click the outer edges of two long lines that are 2 mm apart and enter 2000 µm:</p>
+          <div class="formula">µm per pixel = <span class="frac"><span>known distance in µm</span><span>distance in pixels</span></span></div>
+          <p>Our result at nail zoom: <b>3.745 µm per pixel</b>, so a 640 × 480 frame covers about 2.4 × 1.8 mm. The number depends on your zoom and height, so measure your own.</p>
+          <p class="callout">Recalibrate whenever zoom, height or focus changes, and always at the zoom you use on the nail.</p></div></li>
         <li class="rv"><div class="n">08</div><div><h3>Capture your first nailfold image</h3>
           <p>Put your finger back in the cradle. Use a drop of mineral oil on the nailfold only, no plastic wrap, and avoid irritated or broken skin.</p>
           <p>Keep any glare on the nail, not the skin.</p>

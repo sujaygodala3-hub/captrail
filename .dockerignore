@@ -1,9 +1,0 @@
-.git
-node_modules
-.preview-*
-.env*
-sims
-tests
-reports
-docs
-captrail_print_files

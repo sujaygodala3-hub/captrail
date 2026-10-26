@@ -84,21 +84,21 @@ export async function POST(request) {
       return json({ error: "The voice helper is busy. Try again in a moment." }, 429);
     }
     if (error instanceof Anthropic.AuthenticationError) {
-      console.error("Voice helper request failed");
+      console.error("Anthropic auth failed: check ANTHROPIC_API_KEY");
       return json({ error: "The voice helper isn't configured correctly." }, 500);
     }
     if (error instanceof Anthropic.BadRequestError) {
-      console.error("Voice helper request failed");
+      console.error("Anthropic rejected the request:", error.message);
       if (/credit balance/i.test(error.error?.error?.message ?? "")) {
         return json({ error: "The voice helper is out of API credits." }, 503);
       }
       return json({ error: "I couldn't answer that one. Try asking another way." }, 400);
     }
     if (error instanceof Anthropic.APIError) {
-      console.error("Voice helper request failed");
+      console.error(`Anthropic API error ${error.status}:`, error.message);
       return json({ error: "The voice helper had a problem. Try again." }, 502);
     }
-    console.error("Voice helper request failed");
+    console.error("Voice request failed:", error);
     return json({ error: "Couldn't reach the voice helper. Try again." }, 502);
   }
 

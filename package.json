@@ -4,14 +4,5 @@
   "type": "module",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0"
-  },
-  "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "test": "node --test tests/*.test.mjs",
-    "check": "node --check capture-core.js && node --check research/workspace.js && node --check research/contract.js && node --check api/ml-bridge.js && node --check research/calibration.js && node --check research/observations.js && node --check research/comparison.js && node --check research/anatomy.js"
-  },
-  "devDependencies": {
-    "@axe-core/playwright": "^4.14.0",
-    "@playwright/test": "^1.64.1"
   }
 }

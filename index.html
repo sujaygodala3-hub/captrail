@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Captrail | Nailfold screening at the fingertip</title>
+<meta name="description" content="Captrail is a low-cost nailfold microscope that uses AI to flag early signs of autoimmune and vascular disease for a doctor to review.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,11 +22,29 @@
 <main id="top">
 
   <!-- HERO -->
+  <section class="hero2">
+    <div class="hero2-bg" aria-hidden="true"></div>
+    <div class="hero2-grid">
+      <div class="hero2-copy">
+        <a class="chip rise" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener"><i></i>Open source · built by four high school students</a>
+        <h1 class="rise" style="--d:.08s">See disease<br><span class="grad">where it&nbsp;starts.</span></h1>
+        <p class="rise" style="--d:.16s">Captrail is a $32 nailfold microscope. It images the tiny blood vessels at the base of your fingernail, measures them in real micrometers, and flags unusual loops for a doctor to review.</p>
+        <div class="hero2-ctas rise" style="--d:.24s">
+          <a class="btn btn-red" href="scan.html">Open the microscope <span aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="#how">How it works</a>
+          <a class="btn btn-gh" href="https://github.com/sujaygodala3-hub/captrail" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#gh"/></svg>GitHub</a>
+        </div>
+        <dl class="hero2-stats rise" style="--d:.32s">
+          <div><dt>Build cost</dt><dd>$32</dd></div>
+          <div><dt>Microns per pixel</dt><dd>3.745</dd></div>
+          <div><dt>Printed parts</dt><dd>2</dd></div>
+          <div><dt>Open source</dt><dd>100%</dd></div>
+        </dl>
       </div>
 
-      <figure class="hv-wrap rise" style="--d:.2s" aria-label="Illustration of the Captrail microscope view">
-        <div class="hv-lens">
-          <svg class="hv-svg" viewBox="0 0 520 520" aria-hidden="true">
+      <figure class="lens-wrap rise" style="--d:.2s" aria-label="Illustration of the Captrail microscope view">
+        <div class="lens">
+          <svg class="lens-svg" viewBox="0 0 520 520" aria-hidden="true">
             <defs>
               <radialGradient id="tissue" cx="50%" cy="42%" r="65%">
                 <stop offset="0" stop-color="#F6C9C3"/><stop offset=".55" stop-color="#E9A49D"/><stop offset="1" stop-color="#B9646A"/>
@@ -37,7 +56,7 @@
             <g clip-path="url(#lensClip)">
               <rect width="520" height="520" fill="url(#tissue)"/>
               <path d="M0 150 C120 120 380 120 520 150 L520 0 L0 0Z" fill="#FBE3DD" opacity=".75"/>
-              <g class="hv-caps" filter="url(#soft)">
+              <g class="caps" filter="url(#soft)">
                 <path d="M70 470V240c0-34 40-34 40 0v230"/>
                 <path d="M128 470V215c0-36 44-36 44 0v255"/>
                 <path d="M190 470V230c0-32 38-32 38 0v240"/>
@@ -46,7 +65,7 @@
                 <path d="M380 470V240c0-30 36-30 36 0v230"/>
                 <path d="M432 470V250c0-30 34-30 34 0v220"/>
               </g>
-              <g class="hv-flow">
+              <g class="flow">
                 <path d="M70 470V240c0-34 40-34 40 0v230"/>
                 <path d="M128 470V215c0-36 44-36 44 0v255"/>
                 <path d="M190 470V230c0-32 38-32 38 0v240"/>
@@ -55,20 +74,20 @@
                 <path d="M380 470V240c0-30 36-30 36 0v230"/>
                 <path d="M432 470V250c0-30 34-30 34 0v220"/>
               </g>
-              <g class="hv-scan"><rect x="0" y="-60" width="520" height="60" fill="url(#scanG)"/></g>
-              <g class="hv-detect">
+              <g class="scan"><rect x="0" y="-60" width="520" height="60" fill="url(#scanG)"/></g>
+              <g class="detect">
                 <rect x="232" y="160" width="84" height="112" rx="10"/>
                 <path class="mline" d="M246 300H302"/><path class="mline" d="M246 292v16M302 292v16"/>
               </g>
-              <g class="hv-scalebar"><path d="M330 108h80"/><text x="370" y="96">100 µm</text></g>
+              <g class="scalebar"><path d="M330 108h80"/><text x="370" y="96">100 µm</text></g>
             </g>
             <circle cx="260" cy="260" r="236" fill="none" stroke="#2A0609" stroke-opacity=".25" stroke-width="2"/>
           </svg>
-          <div class="hv-ticks" aria-hidden="true"></div>
+          <div class="ticks" aria-hidden="true"></div>
         </div>
-        <div class="hv-tag hv-t1"><b>Best of 8</b><span>Sharpest frame kept</span></div>
-        <div class="hv-tag hv-t2"><b>Hairpin loop</b><span>Model label, for review</span></div>
-        <div class="hv-tag hv-t3"><b>Calibrated</b><span>3.745 µm per pixel</span></div>
+        <div class="tag t1"><b>Best of 8</b><span>Sharpest frame kept</span></div>
+        <div class="tag t2"><b>Hairpin loop</b><span>Model label, for review</span></div>
+        <div class="tag t3"><b>Calibrated</b><span>3.745 µm per pixel</span></div>
         <figcaption>Illustration of the view through the lens</figcaption>
       </figure>
     </div>
@@ -76,54 +95,10 @@
 
   <div class="ticker" aria-hidden="true">
     <div class="ticker-track">
-      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>Research morphology</span><span>Clinician in the loop</span><span>Research validation ongoing</span>
-      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>Research morphology</span><span>Clinician in the loop</span><span>Research validation ongoing</span>
+      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>AI pattern flagging</span><span>Clinician in the loop</span><span>Built for referral, not diagnosis</span>
+      <span>USB digital microscope</span><span>3D-printed finger cradle</span><span>Micrometer calibration</span><span>AI pattern flagging</span><span>Clinician in the loop</span><span>Built for referral, not diagnosis</span>
     </div>
   </div>
-
-  <!-- IN ACTION: real clips from our setup -->
-  <section class="action" id="action">
-    <div class="wrap">
-      <div class="action-head">
-        <div>
-          <p class="eyebrow rv">See it in action</p>
-          <h2 class="rv">Real hardware.<br>Real capillaries.</h2>
-        </div>
-        <p class="rv">Two unedited clips from our own setup. A drop of oil, a finger in the printed cradle, the microscope on its dock. Then the capillaries themselves, on the Microscope page.</p>
-      </div>
-      <div class="action-grid">
-        <figure class="clip rv">
-          <div class="clip-frame">
-            <video class="autoclip" poster="images/media/rig-poster.jpg" muted loop playsinline preload="none" aria-label="Top-down clip of the Captrail base board, finger cradle and USB microscope while a finger is placed and oil is applied"><source src="images/media/rig.mp4" type="video/mp4"><source src="images/media/rig.webm" type="video/webm"></video>
-            <span class="clip-badge"><i></i>Our setup</span>
-          </div>
-          <figcaption><b>01 · The rig</b><span>Printed base board and cradle, Jiusion USB microscope, mineral oil and swabs. $32 in parts.</span></figcaption>
-        </figure>
-        <figure class="clip rv">
-          <div class="clip-frame">
-            <video class="autoclip" poster="images/media/app-poster.jpg" muted loop playsinline preload="none" aria-label="Clip moving from a finger in the Captrail cradle to a laptop showing capillary loops on the Microscope page"><source src="images/media/app.mp4" type="video/mp4"><source src="images/media/app.webm" type="video/webm"></video>
-            <span class="clip-badge"><i></i>Rig to Microscope page</span>
-          </div>
-          <figcaption><b>02 · Finger to screen</b><span>From the finger in the cradle to the laptop, where the Microscope page shows a real nailfold image: hairpin capillaries, a fraction of a millimeter tall.</span></figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- WHY IT MATTERS -->
-  <section class="impact" id="why">
-    <div class="wrap">
-      <p class="eyebrow rv">Why it matters</p>
-      <h2 class="rv">The people who need a closer look are the ones least likely to get one.</h2>
-      <div class="impact-grid">
-        <div class="impact-stat rv"><b data-count="40.1" data-dec="1">40.1</b><small>million</small><p>Americans have diabetes.</p><a href="https://www.cdc.gov/diabetes/php/data-research/index.html" target="_blank" rel="noopener">CDC, 2023 data ↗</a></div>
-        <div class="impact-stat rv"><b data-count="11.0" data-dec="1">11.0</b><small>million</small><p>of them have not been diagnosed.</p><a href="https://www.cdc.gov/diabetes/php/data-research/index.html" target="_blank" rel="noopener">CDC, 2023 data ↗</a></div>
-        <div class="impact-stat rv"><b data-count="70" data-dec="0" data-pre="~">~70</b><small>%</small><p>of U.S. counties have no endocrinologist.</p><a href="https://www.goodrx.com/healthcare-access/research/endocrinology-deserts-healthcare-gap" target="_blank" rel="noopener">GoodRx Research, Dec 2024 ↗</a></div>
-        <div class="impact-stat accent rv"><b data-count="32" data-dec="0" data-pre="$">$32</b><small>total</small><p>to build a Captrail. Specialist video capillaroscopes cost many times more.</p><a href="build.html">See the parts list →</a></div>
-      </div>
-      <p class="impact-note rv">Nailfold capillaries are studied in diabetes, systemic sclerosis, lupus, Raynaud’s and other conditions. Captrail does not diagnose any of them. It gives a clinician a measured, repeatable image to look at.</p>
-    </div>
-  </section>
 
   <!-- PURPOSE QUOTES -->
   <section class="purpose" id="purpose">
@@ -133,7 +108,7 @@
         <div class="who">Our purpose</div><div class="role">The Captrail team</div>
       </figure>
       <figure class="quote">
-        <blockquote>“CapTrail brings microscope images and research evidence into <em>one place for closer review.</em>”</blockquote>
+        <blockquote>“Captrail doesn’t diagnose. It gives a doctor <em>a clearer, earlier reason</em> to look closer.”</blockquote>
         <div class="who">How we think about AI</div><div class="role">The Captrail team</div>
       </figure>
       <figure class="quote">
@@ -179,12 +154,12 @@
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.9.7 3.2 2.4 3.5 5.2"/></svg>Clinician review</span>
         </button>
         <button class="layer" style="z-index:5;--f:#F8ECEC;--s:#CDBDBD;--t:#F8ECEC;--c:#17110F"
-          data-title="AI pattern detection" data-tag="1" data-text="The source-trained detector proposes bushy, crossing, hairpin, and tortuous regions. Scores are uncalibrated; geometry requires human review. No disease prediction or independent microscope accuracy is established.">
+          data-title="AI pattern detection" data-tag="1" data-text="A model trained on labeled capillaroscopy images looks for enlarged and giant loops, microhemorrhages and missing capillaries, then marks where it saw them and how confident it is. Dataset and accuracy will be published here once we have real numbers.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>AI pattern detection</span>
         </button>
         <button class="layer" style="z-index:4;--f:#EFD3D5;--s:#C3A2A5;--t:#EFD3D5;--c:#17110F"
-          data-title="Calibrated measurement" data-text="The coordinate cross on the calibration card that came with the microscope (physical divisions must be confirmed from the reference specification) can support conditional pixel-to-micrometer conversion only after a qualified reviewer verifies the physical standard and matching acquisition settings. Vessel dimensions also require validated geometry; a detector box is not a vessel diameter.">
+          data-title="Calibrated measurement" data-text="The coordinate cross on the calibration card that came with the microscope (0.1 mm per small tick, 1 mm per long line) converts pixels into micrometers, so each scan reports real numbers, like loop width in µm and capillaries per millimeter, instead of just a picture.">
           <span class="top"></span><span class="side"></span>
           <span class="front"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16.5 16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l1.5 1.5M12.5 7l2 2M15.5 4.5 17 6"/></svg>Calibrated measurement</span>
         </button>
@@ -251,67 +226,12 @@
     </div>
   </section>
 
-  <!-- SOFTWARE WALKTHROUGH: screen recordings of the Microscope page -->
-  <section class="walk" id="software">
-    <div class="wrap">
-      <div class="action-head">
-        <div>
-          <p class="eyebrow rv">The Microscope page</p>
-          <h2 class="rv">Pixels in.<br>Micrometers out.</h2>
-        </div>
-        <p class="rv">Screen recordings of our app in the browser. No install, no special software: the USB microscope shows up as a camera.</p>
-      </div>
-      <div class="walk-grid">
-        <figure class="clip rv">
-          <div class="clip-frame clip-screen">
-            <video class="autoclip" poster="images/media/calibrate-poster.jpg" muted loop playsinline preload="none" aria-label="Screen recording: clicking tick marks on the calibration card cross, entering the known distance, and getting 3.745 micrometers per pixel"><source src="images/media/calibrate.mp4" type="video/mp4"><source src="images/media/calibrate.webm" type="video/webm"></video>
-          </div>
-          <figcaption><b>01 · Calibrate</b><span>Click two ticks on the card, enter the real distance, and the scale locks in: 3.745 µm per pixel at our nail zoom.</span></figcaption>
-        </figure>
-        <figure class="clip rv">
-          <div class="clip-frame clip-screen">
-            <video class="autoclip" poster="images/media/measure-poster.jpg" muted loop playsinline preload="none" aria-label="Screen recording: clicking two points on a capillary loop to measure it in micrometers"><source src="images/media/measure.mp4" type="video/mp4"><source src="images/media/measure.webm" type="video/webm"></video>
-          </div>
-          <figcaption><b>02 · Measure</b><span>Click two points on a loop and get the distance in micrometers, labeled right on the image.</span></figcaption>
-        </figure>
-        <figure class="clip rv">
-          <div class="clip-frame clip-screen">
-            <video class="autoclip" poster="images/media/enhance-poster.jpg" muted loop playsinline preload="none" aria-label="Screen recording: cycling through the Enhance views on a capillary image"><source src="images/media/enhance.mp4" type="video/mp4"><source src="images/media/enhance.webm" type="video/webm"></video>
-          </div>
-          <figcaption><b>03 · Enhance to look</b><span>Warm, Sharpen, Capillary and Grayscale views help the eye. Measurements stay on the raw image.</span></figcaption>
-        </figure>
-      </div>
-      <a class="link-arrow rv walk-cta" href="scan.html">Try the Microscope page <span>→</span></a>
-    </div>
-  </section>
-
-  <!-- AI RESULTS -->
-  <section class="ai" id="ai" data-header="dark">
-    <div class="wrap">
-      <div class="ai-grid">
-        <div class="ai-copy">
-          <p class="eyebrow rv">The AI, measured honestly</p>
-          <h2 class="rv">Five times fewer<br>false vessels.</h2>
-          <p class="rv">Our trained model outlines capillaries and labels their shape. Version 5 adds negative regularization: training penalizes it for marking vessels where there are none, so it stops tracing specks of noise.</p>
-          <div class="ai-stats rv">
-            <div><small>V4 model</small><b>12.75%</b></div>
-            <i aria-hidden="true">→</i>
-            <div class="good"><small>V5 model</small><b>2.62%</b></div>
-          </div>
-          <p class="ai-def rv">False vessel area on 12 test control images. Lower is better.</p>
-          <p class="ai-note rv">These are our own tests. No expert accuracy has been established yet, and every label is a suggestion for a person to review.</p>
-        </div>
-        <figure class="ai-fig rv">
-          <img src="images/media/model-v4-v5.jpg" alt="Four panels of the same nailfold image: the original, the previous weak-label model, the V5 matched control and the V5 negative-regularized model, each with outlined capillaries" width="956" height="806" loading="lazy">
-          <figcaption>Actual model predictions on one of our images. Top: the original and the previous weak-label model, which also marks specks of noise. Bottom: two V5 models. The regularized one (bottom right) outlines the loops and nothing else.</figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
   <!-- WHO IT'S FOR -->
   <section class="forsec" data-header="dark">
+    <!-- PHOTO: replace .photo's background with your real setup photo, e.g.
+         style="background:url('setup.jpg') center/cover" -->
     <div class="photo" aria-hidden="true"></div>
+    <span class="ph-tag photo-note">Photo placeholder: your setup</span>
     <div class="wrap">
       <p class="eyebrow">Who it's for</p>
       <h2>Earlier referrals, wherever patients are.</h2>
@@ -339,7 +259,7 @@
           <table class="parts">
             <tr><td class="n">01</td><td class="what"><b>Jiusion 40X–1000X USB digital microscope + included stand</b><span>640 × 480 images, advertised 40–1000× magnification, built-in adjustable LED</span></td><td class="price">$25</td></tr>
             <tr><td class="n">02</td><td class="what"><b>Captrail base board and finger cradle (3D printed, about 82 g PLA)</b><span>Our shortened version of the Attune finger rest, plus a base board with pegs that lock the cradle in place and a dip that holds the microscope stand</span></td><td class="price">$2</td></tr>
-            <tr><td class="n">03</td><td class="what"><b>Calibration slide (came with the microscope)</b><span>Its coordinate cross: physical divisions must be confirmed from the reference specification</span></td><td class="price">Included</td></tr>
+            <tr><td class="n">03</td><td class="what"><b>Calibration slide (came with the microscope)</b><span>Its coordinate cross: 0.1 mm per small tick, 1 mm per long line</span></td><td class="price">Included</td></tr>
             <tr><td class="n">04</td><td class="what"><b>Mineral oil</b><span>One tiny drop on the nailfold cuts surface glare</span></td><td class="price">$3</td></tr>
             <tr><td class="n">05</td><td class="what"><b>Cotton swabs</b><span>Applying and removing the drop of oil</span></td><td class="price">$2</td></tr>
           </table>
@@ -374,7 +294,7 @@
   <section class="safety" data-header="dark">
     <div class="wrap">
       <p class="eyebrow">Safety and limits</p>
-      <blockquote class="rv">Captrail is a research prototype for image analysis, not a diagnostic tool. It does not replace a doctor.</blockquote>
+      <blockquote class="rv">Captrail is a research prototype for screening and referral, not a diagnostic tool. It does not replace a doctor.</blockquote>
       <div class="safety-grid">
         <div class="rv"><b>Consent first</b><p>We get consent before imaging anyone, every time.</p></div>
         <div class="rv"><b>How images are handled</b><p>Images stay on the device unless you choose to run AI analysis. We don’t store names with images, and we only image people who give consent.</p></div>
@@ -422,7 +342,7 @@
           <li><code>sims/</code><span>Microscope physics simulations and tests</span></li>
           <li><code>tests/</code><span>Automated checks for the model bridge</span></li>
         </ul>
-        <div class="repo-foot"><span><i class="repo-lang js"></i>JavaScript</span><span><i class="repo-lang py"></i>Python</span><span><i class="repo-lang html"></i>HTML/CSS</span></div>
+        <div class="repo-foot"><span><i class="lang js"></i>JavaScript</span><span><i class="lang py"></i>Python</span><span><i class="lang html"></i>HTML/CSS</span></div>
       </a>
     </div>
   </section>
@@ -556,6 +476,15 @@
      live: true adds a link to the Microscope page. */
   const JOURNEY = [
     { title: 'Prototype built', status: 'done', live: true,
+      text: 'Cradle and base board printed, Jiusion microscope locked onto the board, and calibrated at nail zoom with the coordinate cross on its calibration card.',
+      stats: [['Build cost', '$32'], ['Calibration', '3.745 µm/px'], ['Assembly time', 'about 3 h 30 min (mostly printing)']] },
+    { title: 'First images', status: 'now', live: true,
+      text: 'Recalibrated at the exact zoom we use on the nail. Capturing real nailfold images and measuring loops in micrometers.',
+      stats: [['Resolution', '640 × 480'], ['Scale', '3.745 µm/px'], ['Field of view', 'about 2.4 × 1.8 mm']] },
+    { title: 'Train the AI', status: 'next', goals: true,
+      text: 'Our team is training a model to find and measure capillary loops in our images.',
+      stats: [['Goal', 'Loops detected automatically'], ['Goal', 'Loop width measured in µm'], ['Goal', 'Results in under 10 seconds']] },
+    { title: 'Test with more people', status: 'planned', goals: true,
       text: 'Scan volunteers who give consent, using the same setup every time.',
       stats: [['Goal', '10 volunteers'], ['Goal', '3 images per finger'], ['Goal', 'Same settings for every scan']] },
     { title: 'Work with a clinician', status: 'planned', goals: true,

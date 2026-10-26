@@ -1,7 +1,0 @@
-input_id,photo,nail_zoom,method,um_per_px,se_um_per_px,pitch_px,aspect_v_over_h,tilt_deg,long_tick_px,long_over_10_fine,um_per_px_old_peakpicking,tick_blur_sigma_px,tick_width_px
-IN-02,1,False,tick-band autocorrelation,6.11244,0.000933127,16.3601,,0.0,,,5.90343,0.706881,8.70819
-IN-02,2,False,tick-band autocorrelation,6.09736,0.00164421,16.4006,,0.0,166.0,1.01216,5.83433,0.816589,8.63048
-IN-02,3,False,tick-band autocorrelation,6.09695,0.00156653,16.4016,,0.5,165.0,1.006,5.88162,0.868353,8.83535
-IN-06,1,True,crosshair tick ladder,1.87487,0.000240401,53.337,1.00021,-0.75,,,1.87491,1.02056,2.21152
-IN-06,2,True,crosshair tick ladder,1.87495,0.00021512,53.3348,0.999891,1.5,,,1.87488,1.05435,2.41854
-IN-06,3,True,crosshair tick ladder,1.87498,0.000156467,53.3339,1.00006,2.5,,,1.87488,0.976654,2.02189

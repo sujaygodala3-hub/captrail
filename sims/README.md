@@ -4,6 +4,15 @@ Synthetic capillary, optical forward model, automated measurement, error curves,
 tools that tie them to the real microscope (Jiusion 40-1000x USB digital microscope, 640 x 480). **All numbers are model outputs until S5 passes.**
 Anything computed from a scope value that was not measured is stamped ASSUMED on its figures.
 
+
+> **Scale update (Oct 25, 2026):** the team recalibrated the microscope at nail zoom and now uses
+> **3.745 µm per pixel** (the website and app say the same). The `captrail-v3` dataset and the
+> `2026-10-23_nailzoom-calibration` session below were computed from the Oct 23 card photos, which
+> measured 1.8749 µm/px. Those um values are on that older scale. To bring the dataset onto 3.745,
+> add the new card photos (card plus white card, at nail zoom) as a calibration zip and rerun
+> `batch_run.py` and `export_dataset.py`. The pipeline reads the scale from the card photos, so no
+> code change is needed.
+
 ```
 pip install -r requirements.txt
 python -m pytest -q                                   # 90 tests, ~6 min

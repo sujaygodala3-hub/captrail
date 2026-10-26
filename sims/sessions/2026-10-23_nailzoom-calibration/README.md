@@ -1,5 +1,7 @@
 # 2026-10-23: the calibration card at nail zoom
 
+> **Superseded scale (Oct 25, 2026):** the team recalibrated and now uses 3.745 µm/px at nail zoom. The numbers in this session are on the 1.8749 µm/px scale from the Oct 23 photos. See `sims/README.md`.
+
 **Result: 1.8749 um per pixel at the nail zoom.** This replaces the anatomical estimate (1.6 um/px, bounds
 1.3 to 2.0) that datasets v1 and v2 used. Every um value moves up by 1.8749 / 1.6 = 17.2%.
 

@@ -586,3 +586,5 @@ footer .foot-bot a:hover{color:#fff}
 .person .pic{background:linear-gradient(160deg,#B5171F,#6E0D14)}
 .person .pic::before{content:"";position:absolute;right:-18%;bottom:-14%;width:78%;aspect-ratio:274/271;background:url("images/brand/captrail-mark-white.svg") center/contain no-repeat;opacity:.12}
 .person .pic .ini{position:relative;color:#fff;opacity:.95}
+.j-card.final .j-live{color:#fff}
+.j-card.final .pill.done{background:#fff;color:var(--red);border-color:#fff}
